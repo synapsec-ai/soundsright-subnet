@@ -21,7 +21,7 @@ $ apt-get -y install podman
 
 2. Python venv
 ```
-$ cd SoundsRightSubnet
+$ cd soundsright-subnet
 $ python3 -m venv .venv
 $ source .venv/bin/activate
 ```

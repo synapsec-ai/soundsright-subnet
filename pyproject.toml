@@ -37,7 +37,7 @@ dependencies = [
 ]
 
 [project.urls]
-homepage = "https://github.com/synapsec-ai/SoundsRightSubnet"
+homepage = "https://github.com/synapsec-ai/soundsright-subnet"
 
 [project.optional-dependencies]
 validator = [

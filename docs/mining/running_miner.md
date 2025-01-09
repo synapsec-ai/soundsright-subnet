@@ -54,8 +54,8 @@ $ apt-get install python3.12-venv
 #### 3.1 Setup the GitHub repository and python virtualenv
 To clone the repository and setup the Python virtualenv, execute the following commands:
 ```
-$ git clone https://github.com/synapsec-ai/SoundsRightSubnet.git
-$ cd SoundsRightSubnet
+$ git clone https://github.com/synapsec-ai/soundsright-subnet.git
+$ cd soundsright-subnet
 $ python3 -m venv .venv
 $ source .venv/bin/activate
 (.venv) $ pip install bittensor
@@ -117,10 +117,10 @@ $ docker compose logs soundsright-miner -f
 
 ### 5. Updating the Miner
 
-Updating the miner is done by re-launching the docker compose with the `--force-recreate` flag enabled after the git repository has been updated. This will re-create the containers and download the latest images from the container registry.
+Updating the miner is done by re-launching the docker compose with the `--force-recreate` flag enabled after the git repository has been updated. This will re-create the containers.
 
 ```
-$ cd SoundsRightSubnet
+$ cd soundsright-subnet
 $ git pull
 $ docker compose up soundsright-miner -d --force-recreate
 ```

@@ -1,7 +1,7 @@
 # Validating in the SoundsRight Subnet 
 
 ## Summary
-Running a validator the in Subnet requires **3,000 staked TAO**. 
+Running a validator the in Subnet requires **1,000 staked TAO**. 
 
 **We also implore validators to run:**
 1. **In a separate environment dedicated to validating for only the SoundsRight subnet.**
@@ -79,8 +79,8 @@ This section covers setting up the repository, virtual environment, regenerating
 #### 3.1 Setup the GitHub repository and python virtualenv
 To clone the repository and setup the Python virtualenv, execute the following commands:
 ```
-$ git clone https://github.com/synapsec-ai/SoundsRightSubnet.git
-$ cd SoundsRightSubnet
+$ git clone https://github.com/synapsec-ai/soundsright-subnet.git
+$ cd soundsright-subnet
 $ python3 -m venv .venv
 $ source .venv/bin/activate
 (.venv) $ pip install bittensor
@@ -156,7 +156,7 @@ $ pm2 logs <process-name-or-id>
 To update the validator, pull the newest changes to main and restart the pm2 process:
 
 ```
-$ cd SoundsRightSubnet
+$ cd soundsright-subnet
 $ git pull && pm2 restart
 ```
 
