@@ -9,7 +9,7 @@ The following roadmap outlines our plans to bring a SoTA speech enhancement API 
 ## Versioning and release management
 In order to ensure the subnet users can prepare in advance we have defined a formal patching policy for the subnet components.
 
-The subnet uses **semantic versioning** in which the version number consists of three parts (Major.Minor.Patch) and an optional pre-release tag (-beta, -alpha). Depending on the type of release, there are a few things that the subnet users should be aware of.
+The subnet uses **semantic versioning** in which the version number consists of three parts (Major.Minor.Patch). Depending on the type of release, there are a few things that the subnet users should be aware of.
 
 - Major Releases (**X**.0.0)
     - There can be breaking changes and updates are mandatory for all subnet users.
