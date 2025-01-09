@@ -1,0 +1,31 @@
+services:
+  common-miner: &common-miner
+    image: ghcr.io/synapsec-ai/soundsright-miner:v1.0.0
+    restart: unless-stopped
+    pull_policy: always
+    ports:
+      - "6000:6001"
+    volumes:
+      - SoundsRightSubnet:/root/.SoundsRightSubnet
+      - ${HOME}/.bittensor:/root/.bittensor
+
+  soundsright-miner:
+    <<: *common-miner
+    command: /bin/bash -c "source /SoundsRightSubnet/.venv/bin/activate && python3 /SoundsRightSubnet/soundsright/neurons/miner.py --netuid ${NETUID} --subtensor.chain_endpoint ${SUBTENSOR_CHAIN_ENDPOINT} --wallet.name ${WALLET} --wallet.hotkey ${HOTKEY} --log_level ${LOG_LEVEL} --healthcheck_host ${HEALTHCHECK_API_HOST} --healthcheck_port ${HEALTHCHECK_API_PORT}"
+
+  soundsright-miner-dev:
+    restart: unless-stopped
+    pull_policy: always
+    ports:
+      - "6000:6000"
+      - "6001:6001"
+    volumes:
+      - SoundsRightSubnet:/root/.SoundsRightSubnet
+      - ${HOME}/.bittensor:/root/.bittensor
+    build:
+      context: .
+      dockerfile: miner.Dockerfile
+    command: /bin/bash -c "source /SoundsRightSubnet/.venv/bin/activate && python3 /SoundsRightSubnet/soundsright/neurons/miner.py --netuid ${NETUID} --subtensor.chain_endpoint ${SUBTENSOR_CHAIN_ENDPOINT} --wallet.name ${WALLET} --wallet.hotkey ${HOTKEY} --log_level ${LOG_LEVEL} --healthcheck_host ${HEALTHCHECK_API_HOST} --healthcheck_port ${HEALTHCHECK_API_PORT} --validator_min_stake 0"
+
+volumes:
+  SoundsRightSubnet:

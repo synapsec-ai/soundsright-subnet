@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "SoundsRight"
+version = "1.0.0"
+description = "This project implements the SoundsRight Bittensor subnet."
+authors = [
+    { name = "synapsec.ai", email = "contact@synapsec.ai" }
+]
+readme = { file = "README.md", content-type = "text/markdown" }
+license = { file = "LICENSE" }
+classifiers = [
+    "Development Status :: 3 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Build Tools",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules"
+]
+requires-python = ">=3.10,<3.13"
+
+dependencies = [
+    "bittensor==8.5.1",
+    "python-dotenv==1.0.1",
+    "fastapi==0.110.1",
+    "pydantic==2.9.2",
+    "uvicorn==0.30.0",
+    "numpy==2.0.1",
+]
+
+[project.urls]
+homepage = "https://github.com/synapsec-ai/SoundsRightSubnet"
+
+[project.optional-dependencies]
+validator = [
+    "PyYAML==6.0.2", 
+    "requests==2.32.3", 
+    "librosa==0.10.2.post1",
+    "scipy==1.14.1",
+    "GitPython==3.1.43",
+    "soundfile==0.12.1",
+    "pyloudnorm==0.1.1",
+    "openai==1.54.5",
+    "torch==2.5.1",
+    "torchaudio==2.5.1",
+    "pystoi==0.4.1",
+]
+testing = [
+    "pytest==8.3.3",
+]
+
+[tool.setuptools.packages.find]
+include = ["soundsright"]
