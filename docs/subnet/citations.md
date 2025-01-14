@@ -1,7 +1,5 @@
 # Citations
 
-Portions of the subnet code are derived from the following sources:
-
 1.  **Prawda, Karolina, Schlecht, Sebastian J., & Välimäki, Vesa.**
     **Dataset of impulse responses from variable acoustics room Arni at Aalto Acoustic Labs [Data set]**. 
     *Zenodo*. [https://doi.org/10.5281/zenodo.6985104](https://doi.org/10.5281/zenodo.6985104), 2022.

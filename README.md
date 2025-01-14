@@ -5,7 +5,7 @@
 
 If you are unfamiliar with how Bittensor works, please check out [this primer](https://docs.bittensor.com/learn/bittensor-building-blocks) first!
 
-SoundsRight is dedicated to incentivizing the research and development of open-source models for speech enhancement through daily fine-tuning competitions, powered by the decentralized Bittensor ecosystem. 
+The SoundsRight subnet incentivizes the research and development of speech enhancement models through daily fine-tuning competitions, powered by the decentralized Bittensor ecosystem. 
 
 Miners in the subnet will upload their fine-tuned models to HuggingFace, and the subnet's validators are in charge of downloading the models, benchmarking their performance and rewarding miners accordingly. 
 
@@ -45,3 +45,7 @@ To get started with mining or validating in the subnet, please reference the fol
 <h3 align="center">Validator Documentation</h3>
  
 <h4 align="center">| <a href="docs/validating/running_validator.md">Running a Validator</a> | <a href="docs/validating/validator_architecture.md">Validator Architecture</a> |</h4>
+
+<h1 align="center">Running on Testnet</h1>
+
+Recently the Bittensor testnet has been updated with dynamic TAO, and a few changes have been made to the functionality of the Bittensor module. To run the subnet on the testnet, use the `testnet/1.0.0` branch instead of `main`.

@@ -4,7 +4,7 @@ Models submitted to validators must follow a few formatting guidelines, and we h
 
 The `main` branch of this template is what should be modified by miners to create their own models. The branches `DENOISING_16000Hz` and `DEREVERBERATION_16000HZ` serve as tutorials, being fitted with different pretrained checkpoints of [SGMSE+](https://huggingface.co/sp-uhh/speech-enhancement-sgmse). 
 
-For detailed instructions on how to format your model, please reference the `README.md` in the `main` branch.
+For detailed instructions on how to format your model, please reference the `README.md` in the `main` branch of the model template.
 
 # Model Testing
 
@@ -21,7 +21,7 @@ $ apt-get -y install podman
 
 2. Python venv
 ```
-$ cd SoundsRightSubnet
+$ cd soundsright-subnet
 $ python3 -m venv .venv
 $ source .venv/bin/activate
 ```
