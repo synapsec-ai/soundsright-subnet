@@ -9,9 +9,6 @@ monitoring tools used to monitor the server. The health metrics are not
 persistent and will be lost if neuron is restarted.
 
 Endpoints:
-    /healthcheck
-        Returns boolean depicting the health of the neuron based on the
-        health metrics
     /healthcheck/metrics
         Returns a dictionary of the metrics the health is derived from
     /healthcheck/events
@@ -59,7 +56,7 @@ class HealthCheckScoreResponse(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 class HealthCheckAPI:
-    def __init__(self, host: str, port: int, is_validator: bool, current_models: dict = None, best_models: dict = None):
+    def __init__(self, host: str, port: int, is_validator: bool, current_models: dict | None = None, best_models: dict | None = None):
 
         # Variables
         self.host = host
@@ -112,11 +109,6 @@ class HealthCheckAPI:
 
     def _setup_routes(self):
         self.app.add_api_route(
-            "/healthcheck", 
-            self._healthcheck, 
-            response_model=HealthCheckResponse
-        )
-        self.app.add_api_route(
             "/healthcheck/metrics",
             self._healthcheck_metrics,
             response_model=HealthCheckDataResponse,
@@ -151,16 +143,6 @@ class HealthCheckAPI:
             self._healthcheck_scores,
             response_model=HealthCheckDataResponse,
         )
-
-    def _healthcheck(self):
-        try:
-            # Update health status when the /healthcheck API is invoked
-            self.healthy, checks = self.get_health()
-
-            # Return status
-            return {"status": self.healthy, "checks": checks, "timestamp": str(datetime.datetime.now())}
-        except Exception:
-            return {"status": False, "timestamp": str(datetime.datetime.now())}
 
     def _healthcheck_metrics(self):
         try:

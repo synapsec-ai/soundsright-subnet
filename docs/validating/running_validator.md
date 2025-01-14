@@ -164,26 +164,24 @@ $ git pull && pm2 restart
 
 A HealthCheck API is built into the validator, which can be queried for an assessment of the validator's performance. Note that the commands in this section assume default values for the `healthcheck_host` and `healthcheck_port` arguments of `0.0.0.0` and `6000` respectively. The following endpoints are available: 
 
-#### 6.1 Healthcheck
-
-This endpoint offers an overview of validator performance. It can be queried with:
-
-```
-$ curl http://127.0.0.1:6000/healthcheck | jq
-```
-
-#### 6.2 Metrics 
+#### 6.1 Metrics 
 
 This endpoint offers a view of all of the metrics tabulated by the Healthcheck API. It can be queried with:
 ```
 $ curl http://127.0.0.1:6000/healthcheck/metrics | jq
 ```
 
-#### 6.3 Events 
+#### 6.2 Events 
 
 This endpoint offers insight into WARNING, SUCCESS and ERROR logs in the validator. It can be queried with:
 ```
 $ curl http://127.0.0.1:6000/healthcheck/events | jq
+```
+
+#### 6.3 Models for Current Competitions
+This endpoint offers insight into the best models known by the validator for the previous day's competition. It can be queried with:
+```
+$ curl http://127.0.0.1:6000/healthcheck/current_models | jq
 ```
 
 #### 6.4 Best Models by Competition
@@ -193,8 +191,23 @@ This endpoint offers insight into the best models known by the validator for the
 $ curl http://127.0.0.1:6000/healthcheck/best_models | jq
 ```
 
-#### 6.5 Models for Current Competitions
-This endpoint offers insight into the best models known by the validator for the previous day's competition. It can be queried with:
+#### 6.5 Competitions
+
+This endpoint lists the comptitions currently run by the validator. It can be queried with:
 ```
-$ curl http://127.0.0.1:6000/healthcheck/current_models | jq
+$ curl http://127.0.0.1:6000/healthcheck/competitions | jq
+```
+
+#### 6.6 Scores by Competition
+
+This endpoint offers insight into the previous day's miner scores for each competition. It can be queried with:
+```
+$ curl http://127.0.0.1:6000/healthcheck/competition_scores | jq
+```
+
+#### 6.7 Overall Scores
+
+This endpoint offers insight into the previous day's overall miner scores. It can be queried with:
+```
+$ curl http://127.0.0.1:6000/healthcheck/scores | jq
 ```
