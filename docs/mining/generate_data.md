@@ -27,6 +27,8 @@ From there, use the `generate_dataset.py` script to generate your dataset with t
 | ---reverb_dir | The directory where the reverberation dataset will be stored. You only need to input this if you want to generate a dataset for the dereverberation task. | str | No |
 | --reverb_data_dir | The directory where data to generate reverberation datasets will be stored. You only need to input this if you want to generate a dataset for the dereverberation task. | str | No |
 
+Note that the ARNI and WHAM datasets will be downloaded automatically to the directories provided if they have not already been downloaded.
+
 Here is an example of how to call the script:
 ```
 python3 generate_dataset.py --clean_dir my_clean_dir --sample_rate 16000 --n 5000 --task denoising --noise_dir my_noise_dir --noise_data_dir my_noise_data_dir

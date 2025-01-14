@@ -45,3 +45,7 @@ To get started with mining or validating in the subnet, please reference the fol
 <h3 align="center">Validator Documentation</h3>
  
 <h4 align="center">| <a href="docs/validating/running_validator.md">Running a Validator</a> | <a href="docs/validating/validator_architecture.md">Validator Architecture</a> |</h4>
+
+<h1 align="center">Running on Testnet</h1>
+
+Recently the Bittensor testnet has been updated with dynamic TAO, and a few changes have been made to the functionality of the Bittensor module. To run the subnet on the testnet, use the `testnet/1.0.0` branch instead of `main`.

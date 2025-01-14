@@ -45,4 +45,4 @@ The subnet uses **semantic versioning** in which the version number consists of 
 - Validator performance dashboards
 
 ## SoundsRight v4.0.0 
-- Complete subnet overhaul to focus on monetization via API 
+- Complete subnet overhaul to a monetized API 
