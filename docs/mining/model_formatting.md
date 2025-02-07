@@ -6,6 +6,15 @@ The `main` branch of this template is what should be modified by miners to creat
 
 For detailed instructions on how to format your model, please reference the `README.md` in the `main` branch of the model template.
 
+# Model Suggestions
+
+If you are looking for an existing model to fine-tune, here are a few suggestions:
+
+- [SGMSE+](https://huggingface.co/sp-uhh/speech-enhancement-sgmse)
+- [StoRM](https://github.com/sp-uhh/storm/)
+- [Conv-TasNet](https://github.com/JusperLee/Conv-TasNet) (denoising only)
+- [CDiffuSE](https://github.com/neillu23/CDiffuSE) (denoising only)
+
 # Model Testing
 
 A script has been provided to test that your model is compatible with the validator architecture. 
