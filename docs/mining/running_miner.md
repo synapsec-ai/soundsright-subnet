@@ -58,7 +58,7 @@ $ git clone https://github.com/synapsec-ai/soundsright-subnet.git
 $ cd soundsright-subnet
 $ python3 -m venv .venv
 $ source .venv/bin/activate
-(.venv) $ pip install bittensor
+(.venv) $ pip install bittensor-cli==9.3.0
 ```
 
 #### 3.2 Regenerate the miner wallet
@@ -89,8 +89,6 @@ The contents of the .env file must then be adjusted. The following variables app
 | HOTKEY | The name of your hotkey. |
 | LOG_LEVEL | Specifies the level of logging you will see on the validator. Choose between INFO, INFOX, DEBUG. DEBUGX, TRACE, and TRACEX. |
 | OPENAI_API_KEY | Your OpenAI API key. This is not needed to run the miner, only to generate training datasets. |
-| HEALTHCHECK_API_HOST | Host for HealthCheck API, default is 0.0.0.0. There is no need to adjust this value unless you want to. |
-| HEALTHCHECK_API_PORT | Port for HealthCheck API, default is 6000. There is no need to adjust this value unless you want to, and you will have to modify the ports in the docker-compose.yml file if you choose to do so. |
 
 In addition to this, the model being submitted to the competition must be specified in the .env file. Specifically, the model namespace, name, and revision must be specified in the .env for the particular competition being entered in by the miner. 
 

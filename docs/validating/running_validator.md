@@ -83,7 +83,7 @@ $ git clone https://github.com/synapsec-ai/soundsright-subnet.git
 $ cd soundsright-subnet
 $ python3 -m venv .venv
 $ source .venv/bin/activate
-(.venv) $ pip install bittensor
+(.venv) $ pip install bittensor-cli==9.3.0
 ```
 
 #### 3.2 Regenerate the validator wallet
@@ -113,8 +113,6 @@ The contents of the `.env` file must be adjusted according to the validator conf
 | HOTKEY | The name of your hotkey. |
 | LOG_LEVEL | Specifies the level of logging you will see on the validator. Choose between INFO, INFOX, DEBUG. DEBUGX, TRACE, and TRACEX. |
 | OPENAI_API_KEY | Your OpenAI API key. |
-| HEALTHCHECK_API_HOST | Host for HealthCheck API, default is 0.0.0.0. There is no need to adjust this value unless you want to. |
-| HEALTHCHECK_API_PORT | Port for HealthCheck API, default is 6000. There is no need to adjust this value unless you want to. |
 
 .env example:
 ```

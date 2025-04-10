@@ -17,8 +17,8 @@ services:
       - "6000:6000"
       - "6001:6001"
     volumes:
-      - soundsright-subnet:~/.soundsright-subnet
-      - ${HOME}/.bittensor:~/.bittensor
+      - soundsright-subnet:/root/.soundsright-subnet
+      - ${HOME}/.bittensor:/root/.bittensor
     build:
       context: .
       dockerfile: miner.Dockerfile
