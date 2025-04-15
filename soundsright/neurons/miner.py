@@ -24,7 +24,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "--subtensor.chain_endpoint",
         type=str,
-        default="https://lite.chain.opentensor.ai",
         help="Chain endpoint."
     )
     
