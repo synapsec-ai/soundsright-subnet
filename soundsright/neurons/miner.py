@@ -22,12 +22,6 @@ if __name__ == "__main__":
     )
     
     parser.add_argument(
-        "--subtensor.chain_endpoint",
-        type=str,
-        help="Chain endpoint."
-    )
-    
-    parser.add_argument(
         "--logging.logging_dir",
         type=str,
         default="/var/log/bittensor",
