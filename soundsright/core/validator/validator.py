@@ -92,6 +92,10 @@ class SubnetValidator(Base.BaseNeuron):
             "DENOISING_16000HZ":None,
             "DEREVERBERATION_16000HZ":None,
         }
+        self.models_evaluated_today = {
+            "DENOISING_16000HZ":[],
+            "DEREVERBERATION_16000HZ":[],
+        }
 
         self.remote_logging_interval = 3600
         self.last_remote_logging_timestamp = 0
@@ -1200,15 +1204,6 @@ class SubnetValidator(Base.BaseNeuron):
                     
                     # Add this data to HealthCheck API 
                     self.healthcheck_api.append_metric(metric_name="responses.total_valid_responses", value=1)
-
-                    # Find existing information on miner model 
-                    miner_model_all_data = copy.deepcopy(self.find_dict_by_hotkey(competition_miner_models, self.hotkeys[uid_to_query]))
-                    
-                    # Construct a dict that has only the keys needed from previously known model data
-                    miner_model_data = {} 
-                    if miner_model_all_data and 'hf_model_namespace' in miner_model_all_data.keys() and 'hf_model_name' in miner_model_all_data.keys() and 'hf_model_revision' in miner_model_all_data.keys():
-                        for k in ['hf_model_namespace','hf_model_name','hf_model_revision']:
-                            miner_model_data[k] = miner_model_all_data[k]
                     
                     # Check that the synapse response is validly formatted
                     valid_model=False
@@ -1216,15 +1211,15 @@ class SubnetValidator(Base.BaseNeuron):
                         valid_model=True
                     
                     # In case that synapse response is not formatted correctly and no known historical data:
-                    if not valid_model and not miner_model_all_data:
+                    if not valid_model:
                         self.neuron_logger(
                             severity="DEBUG",
                             message=f"Miner response is invalid: {response.data}"
                         )
                         continue
                         
-                    # If the model in the synapse is validly formatted and not blacklisted:
-                    if (miner_model_data not in blacklisted_miner_models) and valid_model:
+                    # If the model in the synapse is validly formatted, has not been evaluated today and is not blacklisted:
+                    if (miner_model_data not in blacklisted_miner_models) and valid_model and (response.data not in self.models_evaluated_today[f"{task}_{sample_rate}HZ"]):
 
                         # Create a dictionary logging miner model metadata & benchmark values
                         model_data = self.benchmark_model(
@@ -1236,6 +1231,9 @@ class SubnetValidator(Base.BaseNeuron):
 
                         # Append to the list
                         new_competition_miner_models.append(model_data)
+                        
+                        # Append to daily cache
+                        self.models_evaluated_today[f"{task}_{sample_rate}HZ"].append(response.data)
 
                 # In the case of empty rersponse:
                 else: 
@@ -1245,6 +1243,7 @@ class SubnetValidator(Base.BaseNeuron):
 
                     # Find miner model data
                     miner_model_all_data = self.find_dict_by_hotkey(competition_miner_models, self.hotkeys[uid_to_query])
+                    
                     # In case of no known historical data:
                     if not miner_model_all_data:
                         self.neuron_logger(
@@ -1259,7 +1258,7 @@ class SubnetValidator(Base.BaseNeuron):
                             miner_model_data[k] = miner_model_all_data[k]
                         
                     # If the model in the synapse is validly formatted and not blacklisted:
-                    if (miner_model_data not in blacklisted_miner_models):
+                    if (miner_model_data not in blacklisted_miner_models) and (miner_model_data in self.models_evaluated_today[f"{task}_{sample_rate}HZ"]):
 
                         # Create a dictionary logging miner model metadata & benchmark values
                         model_data = self.benchmark_model(
@@ -1271,6 +1270,9 @@ class SubnetValidator(Base.BaseNeuron):
 
                         # Append to the list
                         new_competition_miner_models.append(model_data)
+                        
+                        # Append to daily cache
+                        self.models_evaluated_today[f"{task}_{sample_rate}HZ"].append(miner_model_data)
                     
         # In the case that multiple models have the same hash, we only want to include the model with the earliest block when the metadata was uploaded to the chain
         hash_filtered_new_competition_miner_models, same_hash_blacklist = Benchmarking.filter_models_with_same_hash(
@@ -1378,6 +1380,10 @@ class SubnetValidator(Base.BaseNeuron):
                     # Update HealthCheck API
                     self.healthcheck_api.update_competition_scores(self.competition_scores)
                     self.healthcheck_api.update_scores(self.scores)
+                    
+                    # Reset evaluated model cache
+                    for comp in self.models_evaluated_today.keys():
+                        self.models_evaluated_today[comp] = []
 
                     # Update timestamp to next day's 9AM (GMT)
                     self.update_next_competition_timestamp()
