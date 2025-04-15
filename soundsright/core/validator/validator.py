@@ -1215,26 +1215,16 @@ class SubnetValidator(Base.BaseNeuron):
                     if isinstance(response.data, dict) and 'hf_model_namespace' in response.data and 'hf_model_name' in response.data and 'hf_model_revision' in response.data and response.data['hf_model_namespace'] != "synapsecai":
                         valid_model=True
                     
-                    # In case that synapse response is not formatted correctly:
-                    if not valid_model:
-                        # Continue to next miner if there is no known historical data
-                        if not miner_model_all_data:
-                            self.neuron_logger(
-                                severity="DEBUG",
-                                message=f"Miner response is invalid: {response.data}"
-                            )
-                            continue
-                        # Keep using historical data if it exists before continuing to next miner
-                        else:
-                            self.neuron_logger(
-                                severity="DEBUG",
-                                message=f"Miner response is invalid: {response.data}. Keeping old miner model data: {miner_model_all_data}"
-                            )
-                            new_competition_miner_models.append(miner_model_all_data)
-                            continue 
+                    # In case that synapse response is not formatted correctly and no known historical data:
+                    if not valid_model and not miner_model_all_data:
+                        self.neuron_logger(
+                            severity="DEBUG",
+                            message=f"Miner response is invalid: {response.data}"
+                        )
+                        continue
                         
-                    # If the model in the synapse has never been evaluated by the validator:
-                    if (not miner_model_data or response.data != miner_model_data) and (miner_model_data not in blacklisted_miner_models) and valid_model:
+                    # If the model in the synapse is validly formatted and not blacklisted:
+                    if (miner_model_data not in blacklisted_miner_models) and valid_model:
 
                         # Create a dictionary logging miner model metadata & benchmark values
                         model_data = self.benchmark_model(
@@ -1247,17 +1237,6 @@ class SubnetValidator(Base.BaseNeuron):
                         # Append to the list
                         new_competition_miner_models.append(model_data)
 
-                    # If the model in the synapse has already been evaluated by the validator:
-                    else:
-                        
-                        self.neuron_logger(
-                            severity="DEBUG",
-                            message=f"Model has already been evaluated: {miner_model_all_data}"
-                        )
-
-                        # Append existing data the list
-                        new_competition_miner_models.append(miner_model_all_data)
-
                 # In the case of empty rersponse:
                 else: 
 
@@ -1265,13 +1244,33 @@ class SubnetValidator(Base.BaseNeuron):
                     self.healthcheck_api.append_metric(metric_name="responses.total_invalid_responses", value=1)
 
                     # Find miner model data
-                    miner_model_data = self.find_dict_by_hotkey(competition_miner_models, self.hotkeys[uid_to_query])
+                    miner_model_all_data = self.find_dict_by_hotkey(competition_miner_models, self.hotkeys[uid_to_query])
+                    # In case of no known historical data:
+                    if not miner_model_all_data:
+                        self.neuron_logger(
+                            severity="DEBUG",
+                            message=f"Miner model data is invalid."
+                        )
+                        continue
 
-                    # If any existing model exists for the hotkey:
-                    if miner_model_data:
+                    miner_model_data = {} 
+                    if miner_model_all_data and 'hf_model_namespace' in miner_model_all_data.keys() and 'hf_model_name' in miner_model_all_data.keys() and 'hf_model_revision' in miner_model_all_data.keys():
+                        for k in ['hf_model_namespace','hf_model_name','hf_model_revision']:
+                            miner_model_data[k] = miner_model_all_data[k]
+                        
+                    # If the model in the synapse is validly formatted and not blacklisted:
+                    if (miner_model_data not in blacklisted_miner_models):
 
-                        # Append existing model data to list
-                        new_competition_miner_models.append(miner_model_data)
+                        # Create a dictionary logging miner model metadata & benchmark values
+                        model_data = self.benchmark_model(
+                            model_metadata = response.data,
+                            sample_rate = sample_rate,
+                            task = task,
+                            hotkey = self.hotkeys[uid_to_query],
+                        )
+
+                        # Append to the list
+                        new_competition_miner_models.append(model_data)
                     
         # In the case that multiple models have the same hash, we only want to include the model with the earliest block when the metadata was uploaded to the chain
         hash_filtered_new_competition_miner_models, same_hash_blacklist = Benchmarking.filter_models_with_same_hash(
