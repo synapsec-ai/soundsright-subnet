@@ -19,7 +19,14 @@ if __name__ == "__main__":
         type=int,
         default=0, 
         help="The chain subnet uid"
-        )
+    )
+    
+    parser.add_argument(
+        "--subtensor.chain_endpoint",
+        type=str,
+        default="https://lite.chain.opentensor.ai",
+        help="Chain endpoint."
+    )
     
     parser.add_argument(
         "--logging.logging_dir",
