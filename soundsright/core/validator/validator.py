@@ -1180,12 +1180,6 @@ class SubnetValidator(Base.BaseNeuron):
         2. If miner submits a new model, benchmarks it with SubnetValidator.benchmark_model 
         3. Updates knowledge of miner model benchmarking results.
         """
-        # Obtain existing list of miner model data for this competition
-        competition_miner_models = self.miner_models[f"{task}_{sample_rate}HZ"]
-        blacklisted_miner_models = self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"]
-
-        # Create new list which we will gradually append to and eventually replace self.miner_models with
-        new_competition_miner_models = []
         
         # Initialize asyncio loop
         loop = asyncio.new_event_loop()
@@ -1201,6 +1195,14 @@ class SubnetValidator(Base.BaseNeuron):
                         severity="INFO",
                         message=f"Judging for competition: {task}_{sample_rate}HZ"
                     )
+                    
+                    # Obtain existing list of miner model data for this competition
+                    competition_miner_models = self.miner_models[f"{task}_{sample_rate}HZ"]
+                    blacklisted_miner_models = self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"]
+
+                    # Create new list which we will gradually append to and eventually replace self.miner_models with
+                    new_competition_miner_models = []
+                    
                     # Iterate through UIDs to query
                     for uid_to_query in self.get_uids_to_query():
 
@@ -1296,29 +1298,28 @@ class SubnetValidator(Base.BaseNeuron):
                                     # Append to daily cache
                                     self.models_evaluated_today[f"{task}_{sample_rate}HZ"].append(miner_model_data)
             
+                    # In the case that multiple models have the same hash, we only want to include the model with the earliest block when the metadata was uploaded to the chain
+                    hash_filtered_new_competition_miner_models, same_hash_blacklist = Benchmarking.filter_models_with_same_hash(
+                        new_competition_miner_models=new_competition_miner_models
+                    )
+                    
+                    # In the case that multiple models have the same metadata, we only want to include the model with the earliest block when the metadata was uploaded to the chain
+                    hash_metadata_filtered_new_competition_miner_models, same_metadata_blacklist = Benchmarking.filter_models_with_same_metadata(
+                        new_competition_miner_models=hash_filtered_new_competition_miner_models
+                    )
+                    
+                    self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"].extend(same_hash_blacklist)
+                    self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"].extend(same_metadata_blacklist)
+                    self.miner_models[f"{task}_{sample_rate}HZ"] = hash_metadata_filtered_new_competition_miner_models
+
+                    competition = f"{task}_{sample_rate}HZ"
+                    self.neuron_logger(
+                        severity="DEBUG",
+                        message=f"Models for competition: {competition}: {self.miner_models[competition]}"
+                    )
         finally:
             loop.close()
                     
-        # In the case that multiple models have the same hash, we only want to include the model with the earliest block when the metadata was uploaded to the chain
-        hash_filtered_new_competition_miner_models, same_hash_blacklist = Benchmarking.filter_models_with_same_hash(
-            new_competition_miner_models=new_competition_miner_models
-        )
-        
-        # In the case that multiple models have the same metadata, we only want to include the model with the earliest block when the metadata was uploaded to the chain
-        hash_metadata_filtered_new_competition_miner_models, same_metadata_blacklist = Benchmarking.filter_models_with_same_metadata(
-            new_competition_miner_models=hash_filtered_new_competition_miner_models
-        )
-        
-        self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"].extend(same_hash_blacklist)
-        self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"].extend(same_metadata_blacklist)
-        self.miner_models[f"{task}_{sample_rate}HZ"] = hash_metadata_filtered_new_competition_miner_models
-
-        competition = f"{task}_{sample_rate}HZ"
-        self.neuron_logger(
-            severity="DEBUG",
-            message=f"Models for competition: {competition}: {self.miner_models[competition]}"
-        )
-
     def run(self) -> None:
         """
         Main validator loop. 
