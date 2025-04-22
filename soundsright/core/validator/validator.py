@@ -1172,7 +1172,7 @@ class SubnetValidator(Base.BaseNeuron):
         )
         return response
 
-    def run_competition(self, sample_rates, tasks) -> None:
+    def run_competitions(self, sample_rates, tasks) -> None:
         """
         Runs a competition (a competition is a unique combination of sample rate and task).
         
