@@ -1249,7 +1249,7 @@ class SubnetValidator(Base.BaseNeuron):
                                     continue
                                     
                                 # If the model in the synapse is validly formatted, has not been evaluated today and is not blacklisted:
-                                if (miner_model_data not in blacklisted_miner_models) and valid_model and (response.data not in self.models_evaluated_today[f"{task}_{sample_rate}HZ"]):
+                                if (response.data not in blacklisted_miner_models) and valid_model and (response.data not in self.models_evaluated_today[f"{task}_{sample_rate}HZ"]):
                                     
                                     # Append it to cache of models to evaluate
                                     self.model_cache[f"{task}_{sample_rate}HZ"].append(
