@@ -1195,6 +1195,7 @@ class SubnetValidator(Base.BaseNeuron):
                 # Send synapse
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
+                response=None
                 try:
                     response = loop.run_until_complete(self.get_miner_response(
                         uid_to_query=uid_to_query,
