@@ -96,6 +96,10 @@ class SubnetValidator(Base.BaseNeuron):
             "DENOISING_16000HZ":[],
             "DEREVERBERATION_16000HZ":[],
         }
+        self.model_cache = {
+            "DENOISING_16000HZ":[],
+            "DEREVERBERATION_16000HZ":[],
+        }
 
         self.remote_logging_interval = 3600
         self.last_remote_logging_timestamp = 0
@@ -1172,7 +1176,7 @@ class SubnetValidator(Base.BaseNeuron):
         )
         return response
 
-    def run_competitions(self, sample_rates, tasks) -> None:
+    def query_competitions(self, sample_rates, tasks) -> None:
         """
         Runs a competition (a competition is a unique combination of sample rate and task).
         
@@ -1180,12 +1184,17 @@ class SubnetValidator(Base.BaseNeuron):
         2. If miner submits a new model, benchmarks it with SubnetValidator.benchmark_model 
         3. Updates knowledge of miner model benchmarking results.
         """
+        self.model_cache = {
+            "DENOISING_16000HZ":[],
+            "DEREVERBERATION_16000HZ":[],
+        }
         
         # Initialize asyncio loop
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
         try:
+            
             # Iterate through sample rates
             for sample_rate in sample_rates:
                 # Iterate through tasks
@@ -1193,15 +1202,12 @@ class SubnetValidator(Base.BaseNeuron):
                     
                     self.neuron_logger(
                         severity="INFO",
-                        message=f"Judging for competition: {task}_{sample_rate}HZ"
+                        message=f"Obtaining models for competition: {task}_{sample_rate}HZ"
                     )
                     
                     # Obtain existing list of miner model data for this competition
                     competition_miner_models = self.miner_models[f"{task}_{sample_rate}HZ"]
                     blacklisted_miner_models = self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"]
-
-                    # Create new list which we will gradually append to and eventually replace self.miner_models with
-                    new_competition_miner_models = []
                     
                     # Iterate through UIDs to query
                     for uid_to_query in self.get_uids_to_query():
@@ -1231,7 +1237,7 @@ class SubnetValidator(Base.BaseNeuron):
                                 
                                 # Check that the synapse response is validly formatted
                                 valid_model=False
-                                if isinstance(response.data, dict) and 'hf_model_namespace' in response.data and 'hf_model_name' in response.data and 'hf_model_revision' in response.data and response.data['hf_model_namespace'] != "synapsecai":
+                                if isinstance(response.data, dict) and 'hf_model_namespace' in response.data and 'hf_model_name' in response.data and 'hf_model_revision' in response.data and response.data['hf_model_namespace'] != "temp":
                                     valid_model=True
                                 
                                 # In case that synapse response is not formatted correctly and no known historical data:
@@ -1244,20 +1250,14 @@ class SubnetValidator(Base.BaseNeuron):
                                     
                                 # If the model in the synapse is validly formatted, has not been evaluated today and is not blacklisted:
                                 if (miner_model_data not in blacklisted_miner_models) and valid_model and (response.data not in self.models_evaluated_today[f"{task}_{sample_rate}HZ"]):
-
-                                    # Create a dictionary logging miner model metadata & benchmark values
-                                    model_data = self.benchmark_model(
-                                        model_metadata = response.data,
-                                        sample_rate = sample_rate,
-                                        task = task,
-                                        hotkey = self.hotkeys[uid_to_query],
-                                    )
-
-                                    # Append to the list
-                                    new_competition_miner_models.append(model_data)
                                     
-                                    # Append to daily cache
-                                    self.models_evaluated_today[f"{task}_{sample_rate}HZ"].append(response.data)
+                                    # Append it to cache of models to evaluate
+                                    self.model_cache[f"{task}_{sample_rate}HZ"].append(
+                                        {
+                                            "uid":uid_to_query,
+                                            "response_data":response.data,
+                                        }
+                                    )
 
                             # In the case of empty rersponse:
                             else: 
@@ -1282,43 +1282,77 @@ class SubnetValidator(Base.BaseNeuron):
                                         miner_model_data[k] = miner_model_all_data[k]
                                     
                                 # If the model in the synapse is validly formatted and not blacklisted:
-                                if (miner_model_data not in blacklisted_miner_models) and (miner_model_data in self.models_evaluated_today[f"{task}_{sample_rate}HZ"]):
-
-                                    # Create a dictionary logging miner model metadata & benchmark values
-                                    model_data = self.benchmark_model(
-                                        model_metadata = response.data,
-                                        sample_rate = sample_rate,
-                                        task = task,
-                                        hotkey = self.hotkeys[uid_to_query],
-                                    )
-
-                                    # Append to the list
-                                    new_competition_miner_models.append(model_data)
+                                if (miner_model_data not in blacklisted_miner_models) and (miner_model_data not in self.models_evaluated_today[f"{task}_{sample_rate}HZ"]):
                                     
-                                    # Append to daily cache
-                                    self.models_evaluated_today[f"{task}_{sample_rate}HZ"].append(miner_model_data)
+                                    # Append it to cache of models to evaluate
+                                    self.model_cache[f"{task}_{sample_rate}HZ"].append(
+                                        {
+                                            "uid":uid_to_query,
+                                            "response_data":miner_model_data,
+                                        }
+                                    )
             
-                    # In the case that multiple models have the same hash, we only want to include the model with the earliest block when the metadata was uploaded to the chain
-                    hash_filtered_new_competition_miner_models, same_hash_blacklist = Benchmarking.filter_models_with_same_hash(
-                        new_competition_miner_models=new_competition_miner_models
-                    )
-                    
-                    # In the case that multiple models have the same metadata, we only want to include the model with the earliest block when the metadata was uploaded to the chain
-                    hash_metadata_filtered_new_competition_miner_models, same_metadata_blacklist = Benchmarking.filter_models_with_same_metadata(
-                        new_competition_miner_models=hash_filtered_new_competition_miner_models
-                    )
-                    
-                    self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"].extend(same_hash_blacklist)
-                    self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"].extend(same_metadata_blacklist)
-                    self.miner_models[f"{task}_{sample_rate}HZ"] = hash_metadata_filtered_new_competition_miner_models
-
-                    competition = f"{task}_{sample_rate}HZ"
-                    self.neuron_logger(
-                        severity="DEBUG",
-                        message=f"Models for competition: {competition}: {self.miner_models[competition]}"
-                    )
         finally:
             loop.close()
+            
+    def run_competitions(self, sample_rates, tasks) -> None:
+            
+        # Iterate through sample rates
+        for sample_rate in sample_rates:
+            # Iterate through tasks
+            for task in tasks:
+                
+                self.neuron_logger(
+                    severity="INFO",
+                    message=f"Evaluating for competition: {task}_{sample_rate}HZ"
+                )
+
+                # Create new list which we will gradually append to and eventually replace self.miner_models with
+                new_competition_miner_models = []
+                
+                # Obtain competition models
+                models_to_evaluate = self.model_cache[f"{task}_{sample_rate}HZ"]
+                
+                # Iterate through models to evaluate
+                for model_to_evaluate in models_to_evaluate:
+                    
+                    # Obtain uid and response data
+                    uid, response_data = model_to_evaluate['uid'], model_to_evaluate['response_data']
+                    
+                    # Create a dictionary logging miner model metadata & benchmark values
+                    model_data = self.benchmark_model(
+                        model_metadata = response_data,
+                        sample_rate = sample_rate,
+                        task = task,
+                        hotkey = self.hotkeys[uid],
+                    )
+
+                    # Append to the list
+                    new_competition_miner_models.append(model_data)
+                    
+                    # Append to daily cache
+                    self.models_evaluated_today[f"{task}_{sample_rate}HZ"].append(response_data)
+                
+                # In the case that multiple models have the same hash, we only want to include the model with the earliest block when the metadata was uploaded to the chain
+                hash_filtered_new_competition_miner_models, same_hash_blacklist = Benchmarking.filter_models_with_same_hash(
+                    new_competition_miner_models=new_competition_miner_models
+                )
+                
+                # In the case that multiple models have the same metadata, we only want to include the model with the earliest block when the metadata was uploaded to the chain
+                hash_metadata_filtered_new_competition_miner_models, same_metadata_blacklist = Benchmarking.filter_models_with_same_metadata(
+                    new_competition_miner_models=hash_filtered_new_competition_miner_models
+                )
+                
+                self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"].extend(same_hash_blacklist)
+                self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"].extend(same_metadata_blacklist)
+                self.miner_models[f"{task}_{sample_rate}HZ"] = hash_metadata_filtered_new_competition_miner_models
+
+                competition = f"{task}_{sample_rate}HZ"
+                self.neuron_logger(
+                    severity="DEBUG",
+                    message=f"Models for competition: {competition}: {self.miner_models[competition]}"
+                )
+                    
                     
     def run(self) -> None:
         """
@@ -1349,6 +1383,10 @@ class SubnetValidator(Base.BaseNeuron):
                 # Save validator state
                 self.save_state()
                 
+                # Query miners 
+                self.query_competitions(sample_rates=self.sample_rates, tasks=self.tasks)
+                
+                # Benchmark models
                 self.run_competitions(sample_rates=self.sample_rates, tasks=self.tasks)
 
                 # Check if it's time for a new competition 
