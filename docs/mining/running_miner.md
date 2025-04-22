@@ -39,14 +39,14 @@ For installing the Docker Engine for Ubuntu, follow the official instructions: [
 #### 2.2 Validate installation
 After installation is done, validate the docker engine has been installed correctly:
 ```
-$ docker run hello-world
+docker run hello-world
 ```
 
 #### 2.3 Install the mandatory packages
 
 Run the following command:
 ```
-$ apt-get install python3.12-venv
+apt-get install python3.12-venv
 ```
 
 ### 3. Preparation
@@ -54,11 +54,11 @@ $ apt-get install python3.12-venv
 #### 3.1 Setup the GitHub repository and python virtualenv
 To clone the repository and setup the Python virtualenv, execute the following commands:
 ```
-$ git clone https://github.com/synapsec-ai/soundsright-subnet.git
-$ cd soundsright-subnet
-$ python3 -m venv .venv
-$ source .venv/bin/activate
-(.venv) $ pip install bittensor-cli==9.3.0
+git clone https://github.com/synapsec-ai/soundsright-subnet.git
+cd soundsright-subnet
+python3 -m venv .venv
+source .venv/bin/activate
+pip install bittensor-cli==9.3.0
 ```
 
 #### 3.2 Regenerate the miner wallet
@@ -67,8 +67,8 @@ The private portion of the coldkey is not needed to run the subnet miner. **Neve
 
 To regenerate the keys on the host, execute the following commands:
 ```
-(.venv) $ btcli wallet regen_coldkeypub
-(.venv) $ btcli wallet regen_hotkey
+btcli wallet regen_coldkeypub
+btcli wallet regen_hotkey
 ```
 
 #### 3.3 Setup .env 
@@ -105,12 +105,12 @@ For example, if we want to submit the `main` branch of the HuggingFace model `sy
 Run the miner with this command:
 
 ```
-$ docker compose up soundsright-miner -d
+docker compose up soundsright-miner -d
 ```
 To see the logs, execute the following command: 
 
 ```
-$ docker compose logs soundsright-miner -f
+docker compose logs soundsright-miner -f
 ``` 
 
 ### 5. Updating the Miner
@@ -118,8 +118,8 @@ $ docker compose logs soundsright-miner -f
 Updating the miner is done by re-launching the docker compose with the `--force-recreate` flag enabled after the git repository has been updated. This will re-create the containers.
 
 ```
-$ cd soundsright-subnet
-$ git pull
-$ docker compose up soundsright-miner -d --force-recreate
+cd soundsright-subnet
+git pull
+docker compose up soundsright-miner -d --force-recreate
 ```
 

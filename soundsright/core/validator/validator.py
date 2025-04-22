@@ -1163,6 +1163,14 @@ class SubnetValidator(Base.BaseNeuron):
         )
         
         return model_benchmark
+    
+    async def get_miner_response(self, uid_to_query, sample_rate, task):
+        response = await self.send_competition_synapse(
+            uid_to_query=uid_to_query,
+            sample_rate=sample_rate, 
+            task=task
+        )
+        return response
 
     def run_competition(self, sample_rate, task) -> None:
         """
@@ -1185,17 +1193,22 @@ class SubnetValidator(Base.BaseNeuron):
             if Utils.validate_uid(uid_to_query):
 
                 # Send synapse
-                response = asyncio.run(self.send_competition_synapse(
-                    uid_to_query=uid_to_query,
-                    sample_rate=sample_rate, 
-                    task=task
-                ))
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    response = loop.run_until_complete(self.get_miner_response(
+                        uid_to_query=uid_to_query,
+                        sample_rate=sample_rate,
+                        task=task,
+                    ))
+                finally:
+                    loop.close()
 
                 # Add this data to the HealthCheck API
                 self.healthcheck_api.append_metric(metric_name="axons.total_queried_axons", value=1)
 
                 # Check that the miner has responded with a model for this competition. If not, skip it 
-                if response.data:
+                if response and response.data:
                     
                     self.neuron_logger(
                         severity="TRACE",
