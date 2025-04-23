@@ -49,7 +49,7 @@ class SubnetValidator(Base.BaseNeuron):
         self.query = None
         self.debug_mode = True
         self.no_sgmse = False
-        self.dataset_size = 2000
+        self.dataset_size = 3
         self.weights_objects = []
         self.sample_rates = [16000]
         self.tasks = ['DENOISING','DEREVERBERATION']
