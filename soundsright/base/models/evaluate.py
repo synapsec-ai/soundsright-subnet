@@ -121,11 +121,11 @@ class ModelEvaluationHandler:
                 
                 return True       
             
-        except:   
+        except Exception as e:   
             
             Utils.subnet_logger(
                 severity="ERROR",
-                message=f"Could not obtain model metadata from chain for hotkey: {self.miner_hotkey}",
+                message=f"Could not obtain model metadata from chain for hotkey: {self.miner_hotkey} because: {e}",
                 log_level=self.log_level
             )
                 
