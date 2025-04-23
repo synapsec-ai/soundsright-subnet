@@ -47,7 +47,7 @@ class SubnetValidator(Base.BaseNeuron):
         self.hotkeys = None
         self.load_validator_state = None
         self.query = None
-        self.debug_mode = True
+        self.debug_mode = False
         self.skip_sgmse = False
         self.dataset_size = 3
         self.weights_objects = []
@@ -327,7 +327,8 @@ class SubnetValidator(Base.BaseNeuron):
             message=f"Bittensor objects initialized:\nMetagraph: {self.metagraph}\nSubtensor: {self.subtensor}\nWallet: {self.wallet}"
         )
 
-        if not args.debug_mode:
+        self.debug_mode = args.debug_mode
+        if not self.debug_mode:
             # Validate that the validator has registered to the metagraph correctly
             if not self.validator_validation(self.metagraph, self.wallet, self.subtensor):
                 raise IndexError("Unable to find validator key from metagraph")
@@ -338,9 +339,6 @@ class SubnetValidator(Base.BaseNeuron):
                 severity="INFO",
                 message=f"Validator is running with UID: {validator_uid}"
             )
-
-            # Disable debug mode
-            self.debug_mode = False
             
         self.skip_sgmse = args.skip_sgmse
             
