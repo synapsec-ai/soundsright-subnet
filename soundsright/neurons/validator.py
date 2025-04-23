@@ -39,7 +39,7 @@ if __name__ == "__main__":
     )
     
     parser.add_argument(
-        "--debug_mode",
+        "--no_sgmse",
         action="store_false",
         help="Doesn't benchmark SGMSE+ at the beginning of competitions. Not to be used in production.",
     )
