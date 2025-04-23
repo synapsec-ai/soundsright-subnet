@@ -39,9 +39,10 @@ if __name__ == "__main__":
     )
     
     parser.add_argument(
-        "--no_sgmse",
-        action="store_false",
-        help="Doesn't benchmark SGMSE+ at the beginning of competitions. Not to be used in production.",
+        "--skip_sgmse",
+        action="store_true",
+        default=False,
+        help="If passed, enables skipping of SGMSE+ benchmarking. Not to be used in production.",
     )
     
     parser.add_argument(

@@ -48,7 +48,7 @@ class SubnetValidator(Base.BaseNeuron):
         self.load_validator_state = None
         self.query = None
         self.debug_mode = True
-        self.no_sgmse = False
+        self.skip_sgmse = False
         self.dataset_size = 3
         self.weights_objects = []
         self.sample_rates = [16000]
@@ -342,8 +342,7 @@ class SubnetValidator(Base.BaseNeuron):
             # Disable debug mode
             self.debug_mode = False
             
-        if args.no_sgmse:
-            self.no_sgmse = True
+        self.skip_sgmse = args.skip_sgmse
             
         self.dataset_size = args.dataset_size
             
@@ -1033,7 +1032,7 @@ class SubnetValidator(Base.BaseNeuron):
             sample_rate (int): Sample rate
             task (str): DENOISING/DEREVERBERATION
         """
-        if self.no_sgmse:
+        if self.skip_sgmse:
             return
         
         competition = f"{task}_{sample_rate}HZ"
