@@ -53,14 +53,29 @@ class ModelMetadataHandler:
         try:
             
             metadata = bt.core.extrinsics.serving.get_metadata(
-                self=self.subtensor,
+                subtensor=self.subtensor,
                 netuid=self.subnet_netuid,
                 hotkey=hotkey
             )
             
+            print("metadata", metadata)
             commitment = metadata["info"]["fields"][0]
-            hex_data = commitment[list(commitment.keys())[0]][2:]
-            self.metadata = bytes.fromhex(hex_data).decode()
+            print("\ncommitment", commitment)
+            # Unwrap the outer tuple
+            raw64_dict = commitment[0]
+
+            # Get the tuple of ASCII codes
+            raw_data_tuple = raw64_dict['Raw64'][0]
+
+            # Convert to bytes
+            raw_bytes = bytes(raw_data_tuple)
+
+            # Decode to string
+            decoded_metadata = raw_bytes.decode()
+
+            # Store it
+            self.metadata = decoded_metadata
+
             
             self.metadata_block = metadata['block']
             

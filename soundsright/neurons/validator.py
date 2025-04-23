@@ -39,6 +39,12 @@ if __name__ == "__main__":
     )
     
     parser.add_argument(
+        "--debug_mode",
+        action="store_false",
+        help="Doesn't benchmark SGMSE+ at the beginning of competitions. Not to be used in production.",
+    )
+    
+    parser.add_argument(
         "--dataset_size",
         default=2000,
         type=int,

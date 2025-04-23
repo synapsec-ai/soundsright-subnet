@@ -177,6 +177,10 @@ generate_pm2_launch_file() {
         launch_args+=" --debug_mode"
     fi
 
+    if [[ -v args['no_sgmse'] ]]; then
+        launch_args+=" --no_sgmse"
+    fi
+
     echo "Launch arguments: $launch_args"
 
     cat <<EOF > ${name}.config.js
