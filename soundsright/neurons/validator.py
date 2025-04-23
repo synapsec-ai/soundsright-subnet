@@ -35,6 +35,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--debug_mode",
         action="store_true",
+        default=False,
         help="Running the validator in debug mode ignores selected validity checks. Not to be used in production.",
     )
     
