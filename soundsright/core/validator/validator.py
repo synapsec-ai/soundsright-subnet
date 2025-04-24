@@ -1389,6 +1389,9 @@ class SubnetValidator(Base.BaseNeuron):
                 # Query miners 
                 self.query_competitions(sample_rates=self.sample_rates, tasks=self.tasks)
                 
+                # Reset dendrite 
+                self.dendrite = bt.dendrite(self.wallet)
+                
                 # Benchmark models
                 self.run_competitions(sample_rates=self.sample_rates, tasks=self.tasks)
 
