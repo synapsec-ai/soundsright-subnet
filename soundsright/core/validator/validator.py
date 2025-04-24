@@ -1310,8 +1310,8 @@ class SubnetValidator(Base.BaseNeuron):
                     message=f"Evaluating for competition: {task}_{sample_rate}HZ"
                 )
 
-                # Create new list which we will gradually append to and eventually replace self.miner_models with
-                new_competition_miner_models = []
+                # Initialize the list of models with the ones already evaluated today
+                new_competition_miner_models = self.models_evaluated_today[f"{task}_{sample_rate}HZ"]
                 
                 # Obtain competition models
                 models_to_evaluate = self.model_cache[f"{task}_{sample_rate}HZ"]
@@ -1349,7 +1349,7 @@ class SubnetValidator(Base.BaseNeuron):
                 self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"].extend(same_hash_blacklist)
                 self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"].extend(same_metadata_blacklist)
                 self.miner_models[f"{task}_{sample_rate}HZ"] = hash_metadata_filtered_new_competition_miner_models
-
+                
                 competition = f"{task}_{sample_rate}HZ"
                 self.neuron_logger(
                     severity="DEBUG",
