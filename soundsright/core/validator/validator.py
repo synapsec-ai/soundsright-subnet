@@ -1296,7 +1296,7 @@ class SubnetValidator(Base.BaseNeuron):
                                     )
             
         finally:
-            loop.close()
+            self.dendrite.close_session(using_new_loop=True)
             
     def run_competitions(self, sample_rates, tasks) -> None:
             
@@ -1388,9 +1388,6 @@ class SubnetValidator(Base.BaseNeuron):
                 
                 # Query miners 
                 self.query_competitions(sample_rates=self.sample_rates, tasks=self.tasks)
-                
-                # Reset dendrite 
-                self.dendrite = bt.dendrite(self.wallet)
                 
                 # Benchmark models
                 self.run_competitions(sample_rates=self.sample_rates, tasks=self.tasks)
