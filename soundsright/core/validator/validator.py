@@ -1218,11 +1218,18 @@ class SubnetValidator(Base.BaseNeuron):
                         if Utils.validate_uid(uid_to_query):
 
                             # Send synapse
-                            response = loop.run_until_complete(self.get_miner_response(
-                                uid_to_query=uid_to_query,
-                                sample_rate=sample_rate,
-                                task=task,
-                            ))
+                            try:
+                                response = loop.run_until_complete(self.get_miner_response(
+                                    uid_to_query=uid_to_query,
+                                    sample_rate=sample_rate,
+                                    task=task,
+                                ))
+                            except Exception as e:
+                                self.neuron_logger(
+                                    severity="ERROR",
+                                    message=f"Error obtaining response from miner: {uid_to_query}: {e}"
+                                )
+                                continue
 
                             # Add this data to the HealthCheck API
                             self.healthcheck_api.append_metric(metric_name="axons.total_queried_axons", value=1)
