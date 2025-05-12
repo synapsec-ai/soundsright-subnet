@@ -1,7 +1,7 @@
 # Validating in the SoundsRight Subnet 
 
 ## Summary
-Running a validator the in Subnet requires **1,000 staked TAO**. 
+Running a validator the in Subnet requires **a subnet stake-weight of at least 1,000**, and that **you are one of the top 64 validators in the subnet, ranked by stake weight**. Please reference the [official Bittensor docs](https://docs.bittensor.com/validators/) for more information.
 
 **We also implore validators to run:**
 1. **In a separate environment dedicated to validating for only the SoundsRight subnet.**
@@ -10,7 +10,7 @@ Running a validator the in Subnet requires **1,000 staked TAO**.
 ## Validator deployment 
 
 ### 1. Virtual machine deployment
-The subnet requires **Ubuntu 24.04** and **Python 3.12** with at least the following hardware configuration:
+The subnet requires **Ubuntu 24.04**, **Python 3.12** and **CUDA 12.6** with at least the following hardware configuration:
 
 - 16 GB VRAM
 - 23 GB RAM

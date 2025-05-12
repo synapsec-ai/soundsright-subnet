@@ -19,7 +19,7 @@ Also, **each miner can only submit models for one specific task and sample rate*
 
 ### 1. Machine Specifications
 
-As the miner's only function is to upload model metadata to the Bittensor chain and send model information to validators, it is quite lightweight and should work on most configurations.
+As the miner's only function is to upload model metadata to the Bittensor chain and send model information to validators, it is quite lightweight and should work on most hardware configurations.
 
 We have been testing miners on machines running on both **Ubuntu 24.04** and **Python 3.12** with the following hardware configurations:
 
