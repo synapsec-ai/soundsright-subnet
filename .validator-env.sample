@@ -1,4 +1,4 @@
-NETUID=DO THIS ONCE WE REGISTER
+NETUID=105
 SUBTENSOR_CHAIN_ENDPOINT=wss://entrypoint-finney.opentensor.ai:443
 WALLET=coldkey_name
 HOTKEY=hotkey_name

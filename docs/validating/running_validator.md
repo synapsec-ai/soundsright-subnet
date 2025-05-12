@@ -100,7 +100,7 @@ The contents of the `.env` file must be adjusted according to the validator conf
 
 | Variable | Meaning |
 | :------: | :-----: |
-| NETUID | The subnet's netuid. For mainnet this value is , and for testnet this value is 271. |
+| NETUID | The subnet's netuid. For mainnet this value is 105, and for testnet this value is 271. |
 | SUBTENSOR_CHAIN_ENDPOINT | The Bittensor chain endpoint. Please make sure to always use your own endpoint. For mainnnet, the default endpoint is: wss://finney.opentensor.ai:443, and for testnet the default endpoint is: wss://test.finney.opentensor.ai:443. |
 | WALLET | The name of your coldkey. |
 | HOTKEY | The name of your hotkey. |
@@ -109,7 +109,7 @@ The contents of the `.env` file must be adjusted according to the validator conf
 
 .env example:
 ```
-NETUID=
+NETUID=105
 SUBTENSOR_CHAIN_ENDPOINT=wss://entrypoint-finney.opentensor.ai:443
 WALLET=my_coldkey
 HOTKEY=my_hotkey

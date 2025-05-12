@@ -83,7 +83,7 @@ The contents of the .env file must then be adjusted. The following variables app
 
 | Variable | Meaning |
 | :------: | :-----: |
-| NETUID | The subnet's netuid. For mainnet this value is , and for testnet this value is 271. |
+| NETUID | The subnet's netuid. For mainnet this value is 105, and for testnet this value is 271. |
 | SUBTENSOR_CHAIN_ENDPOINT | The Bittensor chain endpoint. Please make sure to always use your own endpoint. For mainnnet, the default endpoint is: wss://finney.opentensor.ai:443 and for testnet the default endpoint is: wss://test.finney.opentensor.ai:443 |
 | WALLET | The name of your coldkey. |
 | HOTKEY | The name of your hotkey. |
@@ -99,6 +99,38 @@ For example, if we want to submit the `main` branch of the HuggingFace model `sy
 | HF_MODEL_NAMESPACE | synapsecai |
 | HF_MODEL_NAME | my_speech_enhancement_model |
 | HF_MODEL_REVISION | main |
+
+.env example:
+```
+NETUID=105
+SUBTENSOR_CHAIN_ENDPOINT=wss://entrypoint-finney.opentensor.ai:443
+WALLET=coldkey_name
+HOTKEY=hotkey_name
+
+# Available: INFO, INFOX, DEBUG, DEBUGX, TRACE, TRACEX
+LOG_LEVEL=INFO
+
+# Necessary for dataset generation
+OPENAI_API_KEY=
+
+# Miner model specification by task and sample rate. 
+# If you have not fine-tuned a model for a specific task and sample rate, just leave it blank.
+# NOTE: EACH MINER CAN ONLY RESPOND FOR ONE TASK AND ONE SAMPLE RATE. 
+# PLEASE REGISTER ANOTHER MINER IF YOU HAVE ANOTHER MODEL FOR ANOTHER TASK OR SAMPLE RATE.
+# 16kHz Sample Rate, Denoising Task
+DENOISING_16000HZ_HF_MODEL_NAMESPACE=synapsecai
+DENOISING_16000HZ_HF_MODEL_NAME=mymodel
+DENOISING_16000HZ_HF_MODEL_REVISION=main
+
+# 16kHz Sample Rate, Dereverberation Task
+DEREVERBERATION_16000HZ_HF_MODEL_NAMESPACE=
+DEREVERBERATION_16000HZ_HF_MODEL_NAME=
+DEREVERBERATION_16000HZ_HF_MODEL_REVISION=
+
+# HealthCheck API
+HEALTHCHECK_API_HOST=0.0.0.0
+HEALTHCHECK_API_PORT=6000
+```
 
 ### 4. Running the Miner
 
