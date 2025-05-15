@@ -104,6 +104,7 @@ class SubnetValidator(Base.BaseNeuron):
 
         self.remote_logging_interval = 3600
         self.last_remote_logging_timestamp = 0
+        self.remote_logging_daily_tries=0
 
         self.apply_config(bt_classes=[bt.subtensor, bt.logging, bt.wallet])
         self.initialize_neuron()        
@@ -966,7 +967,7 @@ class SubnetValidator(Base.BaseNeuron):
         """
         current_timestamp = int(time.time())
         
-        if (self.last_remote_logging_timestamp + self.remote_logging_interval) <= current_timestamp and not self.debug_mode:
+        if (self.last_remote_logging_timestamp + self.remote_logging_interval) <= current_timestamp and not self.debug_mode and self.remote_logging_daily_tries<10:
            
             # Log models for current competition
             current_models_outcome = Benchmarking.miner_models_remote_logging(
@@ -983,6 +984,8 @@ class SubnetValidator(Base.BaseNeuron):
             
             if current_models_outcome and sgmse_outcome:
                 self.last_remote_logging_timestamp = int(time.time())
+            else:
+                self.remote_logging_daily_tries+=1
 
     def get_uids_to_query(self) -> List[int]:
         """This function determines valid axon to send the query to--
@@ -1455,6 +1458,9 @@ class SubnetValidator(Base.BaseNeuron):
                     
                     # Benchmark SGMSE+ for new dataset as a comparison for miner models
                     self.benchmark_sgmse_for_all_competitions()
+
+                    # Reset remote logging
+                    self.remote_logging_daily_tries=0
 
                 # Handle setting of weights
                 self.handle_weight_setting()
