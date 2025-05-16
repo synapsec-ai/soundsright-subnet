@@ -119,27 +119,27 @@ class HealthCheckAPI:
             response_model=HealthCheckDataResponse,
         )
         self.app.add_api_route(
-            "healthcheck/current_models",
+            "/healthcheck/current_models",
             self._healthcheck_current_models,
             response_model=HealthCheckDataResponse,
         )
         self.app.add_api_route(
-            "healthcheck/best_models",
+            "/healthcheck/best_models",
             self._healthcheck_best_models,
             response_model=HealthCheckDataResponse,
         )
         self.app.add_api_route(
-            "healthcheck/competitions",
+            "/healthcheck/competitions",
             self._healthcheck_competitions,
             response_model=HealthCheckDataResponse,
         )
         self.app.add_api_route(
-            "healthcheck/competition_scores",
+            "/healthcheck/competition_scores",
             self._healthcheck_competition_scores,
             response_model=HealthCheckDataResponse,
         )
         self.app.add_api_route(
-            "healthcheck/scores",
+            "/healthcheck/scores",
             self._healthcheck_scores,
             response_model=HealthCheckDataResponse,
         )
