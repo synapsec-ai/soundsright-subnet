@@ -16,6 +16,7 @@ from .scoring import (
     filter_models_with_same_hash,
     filter_models_with_same_metadata,
     filter_models_for_deregistered_miners,
+    remove_blacklist_duplicates
 )
 
 from .remote_logging import (

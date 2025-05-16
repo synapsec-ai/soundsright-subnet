@@ -70,10 +70,16 @@ def validate_miner_response(response):
         'hf_model_revision':str,
     }
     
+    if len(response.keys()) != 3: 
+        return False
+
     for k in response.keys():
-        if not isinstance(response[k], validation_dict[k]) or k not in validation_dict.keys():
+        if k not in validation_dict.keys() or not isinstance(response[k], validation_dict[k]) or response[k] == "":
             return False
         
+    if response["hf_model_namespace"] == "temp":
+        return False
+    
     return True
     
 def validate_model_benchmark(model_benchmark):

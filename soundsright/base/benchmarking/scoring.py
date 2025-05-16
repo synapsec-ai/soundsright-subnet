@@ -284,3 +284,13 @@ def filter_models_for_deregistered_miners(miner_models, hotkeys):
                 registered_models.append(model)
             
     return registered_models
+
+def remove_blacklist_duplicates(blacklist):
+    seen = set()
+    unique_dicts=[]
+    for d in blacklist:
+        dict_tuple=tuple(sorted(d.items()))
+        if dict_tuple not in seen:
+            seen.add(dict_tuple)
+            unique_dicts.append(dict_tuple)
+    return unique_dicts

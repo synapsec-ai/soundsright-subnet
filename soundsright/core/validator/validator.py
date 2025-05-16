@@ -1110,15 +1110,7 @@ class SubnetValidator(Base.BaseNeuron):
                 message=f"Miner with hotkey: {hotkey} has response that was not properly formatted, cannot benchmark: {model_metadata}"
             )
             
-            return {
-                'hotkey':hotkey,
-                'hf_model_name':'',
-                'hf_model_namespace':'',
-                'hf_model_revision':'',
-                'model_hash':'',
-                'block':10000000000000000,
-                'metrics':{}
-            }
+            return None
         
         # Initialize model evaluation handler
         eval_handler = Models.ModelEvaluationHandler(
@@ -1157,15 +1149,7 @@ class SubnetValidator(Base.BaseNeuron):
                 message=f"Model benchmark: {model_benchmark} for task: {task} and sample rate: {sample_rate} is invalidly formatted."
             )
             
-            return {
-                'hotkey':hotkey,
-                'hf_model_name':'',
-                'hf_model_namespace':'',
-                'hf_model_revision':'',
-                'model_hash':'',
-                'metrics':{},
-                'block':10000000000000000,
-            }
+            return None
         
         self.neuron_logger(
             severity="INFO",
@@ -1249,12 +1233,13 @@ class SubnetValidator(Base.BaseNeuron):
                                 self.healthcheck_api.append_metric(metric_name="responses.total_valid_responses", value=1)
                                 
                                 # Check that the synapse response is validly formatted
+                                
                                 valid_model=False
                                 if isinstance(response.data, dict) and 'hf_model_namespace' in response.data and 'hf_model_name' in response.data and 'hf_model_revision' in response.data and response.data['hf_model_namespace'] != "temp":
                                     valid_model=True
                                 
                                 # In case that synapse response is not formatted correctly and no known historical data:
-                                if not valid_model:
+                                if not Utils.validate_miner_response(response.data):
                                     self.neuron_logger(
                                         severity="DEBUG",
                                         message=f"Miner response is invalid: {response.data}"
@@ -1340,11 +1325,12 @@ class SubnetValidator(Base.BaseNeuron):
                         hotkey = self.hotkeys[uid],
                     )
 
-                    # Append to the list
-                    new_competition_miner_models.append(model_data)
-                    
-                    # Append to daily cache
-                    self.models_evaluated_today[f"{task}_{sample_rate}HZ"].append(response_data)
+                    if model_data:
+                        # Append to the list
+                        new_competition_miner_models.append(model_data)
+                        
+                        # Append to daily cache
+                        self.models_evaluated_today[f"{task}_{sample_rate}HZ"].append(response_data)
                 
                 # In the case that multiple models have the same hash, we only want to include the model with the earliest block when the metadata was uploaded to the chain
                 hash_filtered_new_competition_miner_models, same_hash_blacklist = Benchmarking.filter_models_with_same_hash(
@@ -1356,8 +1342,10 @@ class SubnetValidator(Base.BaseNeuron):
                     new_competition_miner_models=hash_filtered_new_competition_miner_models
                 )
                 
+                # Extend blacklist and remove duplicate entries
                 self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"].extend(same_hash_blacklist)
                 self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"].extend(same_metadata_blacklist)
+                self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"] = Benchmarking.remove_blacklist_duplicates(self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"])
                 self.miner_models[f"{task}_{sample_rate}HZ"] = hash_metadata_filtered_new_competition_miner_models
                 
                 competition = f"{task}_{sample_rate}HZ"
