@@ -366,7 +366,7 @@ class SubnetMiner(Base.BaseNeuron):
         # Allow all other entities
         self.neuron_logger(
             severity="INFO",
-            message=f"Accepted hotkey: {synapse.dendrite.hotkey} (UID: {uid} - Stake: {stake})"
+            message=f"Accepted hotkey: {synapse.dendrite.hotkey} (UID: {uid}"
         )
         return (False, f"Accepted hotkey: {synapse.dendrite.hotkey}")
 
