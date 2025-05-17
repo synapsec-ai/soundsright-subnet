@@ -288,6 +288,11 @@ def filter_models_for_deregistered_miners(miner_models, hotkeys):
 def remove_blacklist_duplicates(blacklist):
     unique_dicts=[]
     for d in blacklist:
+        if isinstance(d,tuple):
+            try:
+                d=dict(d)
+            except Exception as e:
+                continue
         try:
             if d not in unique_dicts:
                 unique_dicts.append(d)
