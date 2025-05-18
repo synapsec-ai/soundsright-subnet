@@ -30,6 +30,31 @@ def new_model_surpasses_historical_model(new_model_metric, new_model_block, old_
     # Othewrwise, return False
     return False
     
+def get_best_current_model_from_list(models_data: List[dict], metric_name: str, sgmse_value:float) -> dict:
+    """Gets the best model submitted during today's competition for a specific metric
+
+    Args:
+        current_models_data (List[dict]): List of model performance logs 
+        metric_name (str): The metric we want to find the best model for
+           
+    Returns:
+        dict: The dictionary representing the model with the highest average value for the specified metric.
+    """
+    best_model = None
+    highest_average = float('-inf')
+
+    for model in models_data:
+        metrics = model.get('metrics', {})
+        metric_data = metrics.get(metric_name, {})
+
+        # Ensure the metric_data contains 'average' and it is a number and that it is not identical to the SGMSE value
+        if 'average' in metric_data and isinstance(metric_data['average'], (int, float)) and metric_data['average'] != sgmse_value:
+            if metric_data['average'] > highest_average:
+                highest_average = metric_data['average']
+                best_model = model
+
+    return best_model
+
 def get_best_model_from_list(models_data: List[dict], metric_name: str) -> dict:
     """Gets the best model submitted during today's competition for a specific metric
 
@@ -72,6 +97,7 @@ def determine_competition_scores(
     competition_scores: dict, 
     competition_max_scores: dict,
     metric_proportions: dict,
+    sgmse_benchmarks:dict,
     best_miner_models: dict,
     miner_models: dict,
     metagraph: bt.metagraph,
@@ -88,13 +114,19 @@ def determine_competition_scores(
         
         # Iterate through metrics in each competition
         for metric_name in metric_proportions[competition].keys():
+
+            # Determine SGMSE benchmark value
+            try:
+                sgmse_value = sgmse_benchmarks[competition][metric_name]["average"]
+            except:
+                sgmse_value=0
             
             # Determine the score to assign to the best miner
             competition_metric_score = competition_max_scores[competition] * metric_proportions[competition][metric_name]
             
             # Find best current model 
             current_models = miner_models[competition]
-            best_current_model = get_best_model_from_list(models_data=current_models, metric_name=metric_name)
+            best_current_model = get_best_current_model_from_list(models_data=current_models, metric_name=metric_name, sgmse_value=sgmse_value)
             
             Utils.subnet_logger(
                 severity="TRACE",

@@ -350,7 +350,7 @@ class SubnetValidator(Base.BaseNeuron):
             message=f"Debug mode: {self.debug_mode}"
         )
         
-        self.next_competition_timestamp = self.get_next_competition_timestamp()
+        self.next_competition_timestamp = 0
         
         if args.load_state == "False":
             self.load_validator_state = False
@@ -1452,6 +1452,7 @@ class SubnetValidator(Base.BaseNeuron):
                         competition_scores = self.competition_scores,
                         competition_max_scores = self.competition_max_scores,
                         metric_proportions = self.metric_proportions,
+                        sgmse_benchmarks=self.sgmse_benchmarks,
                         best_miner_models = self.best_miner_models,
                         miner_models = self.miner_models,
                         metagraph = self.metagraph,
