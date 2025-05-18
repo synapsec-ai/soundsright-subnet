@@ -55,6 +55,19 @@ def get_best_model_from_list(models_data: List[dict], metric_name: str) -> dict:
 
     return best_model
 
+def find_best_model_current_benchmark(best_historical_model, current_models) -> dict:
+    """
+    Finds the data for the best historical model benchmarked on the current dataset.
+    """
+    try:
+        hotkey = best_historical_model["hotkey"]
+        for model in current_models:
+            if model["hotkey"] == hotkey:
+                return model 
+    except:
+        return None
+    return None
+
 def determine_competition_scores(
     competition_scores: dict, 
     competition_max_scores: dict,
@@ -83,10 +96,6 @@ def determine_competition_scores(
             current_models = miner_models[competition]
             best_current_model = get_best_model_from_list(models_data=current_models, metric_name=metric_name)
             
-            # Continue to next iteration in loop in the case that no miner models have been submitted
-            if not best_current_model:
-                continue
-            
             Utils.subnet_logger(
                 severity="TRACE",
                 message=f"Best model for metric: {metric_name} in current competition: {competition} is: {best_current_model}",
@@ -95,10 +104,33 @@ def determine_competition_scores(
             
             # Obtain best historical model 
             best_models = best_miner_models[competition]
-            best_historical_model = get_best_model_from_list(models_data=best_models, metric_name=metric_name)
+            best_historical_model_on_previous_benchmark = get_best_model_from_list(models_data=best_models, metric_name=metric_name)
+            best_historical_model = find_best_model_current_benchmark(best_historical_model=best_historical_model_on_previous_benchmark, current_models=current_models)
+
+            # Continue to next iteration in loop in the case that no miner models have been submitted
+            if not best_current_model and best_historical_model:
+                uid = metagraph.hotkeys.index(best_historical_model['hotkey'])
+                competition_scores[competition][uid] += competition_metric_score
+                
+                # Append to new best performing model knowledge
+                new_best_miner_models[competition].append(best_historical_model)
+
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"Only best historical model exists for competition: {competition}: {best_historical_model}"
+                )
+                continue
+
+            if not best_current_model and not best_historical_model:
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"No current or historical models for competition: {competition}",
+                    log_level=log_level
+                )
+                continue
             
             # Assign score to the best current model if best historical model does not exist
-            if not best_historical_model:
+            if not best_historical_model and best_current_model:
                 
                 uid = metagraph.hotkeys.index(best_current_model['hotkey'])
                 competition_scores[competition][uid] += competition_metric_score
@@ -109,7 +141,6 @@ def determine_competition_scores(
                     message=f"Competition winner for metric: {metric_name} in current competition: {competition} is: {best_current_model}. Assigning score: {competition_metric_score}",
                     log_level=log_level,
                 )
-
                 continue
             
             Utils.subnet_logger(
