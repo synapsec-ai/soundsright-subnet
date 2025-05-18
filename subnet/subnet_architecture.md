@@ -9,7 +9,7 @@ layout: page
 There are two main entities in the subnet:
 
 1. **Miners** upload fine-tuned speech enhancement models to HuggingFace.
-2. **Validators** benchmark models and reward miners whose models perform the best.
+2. **Validators** benchmark models and determine the miners whose models perform the best.
 
 Here is a diagram of the overarching process:
 
@@ -33,5 +33,4 @@ sequenceDiagram
     Validator->>Subnet Website: Reports benchmarking results
     Subnet Website->>Subnet Website: Constructs competition leaderboards
     Validator->>Bittensor Chain: Sets weights for miners
-    Bittensor Chain->>Miner: Assigns incentives 
 ```

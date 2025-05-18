@@ -37,7 +37,6 @@ The task of denoising involves isolating speech from any background noise presen
 
 The task of dereverberation involves removing any reverberation from speech (an echo from a large room, etc.). The subnet convolves text-to-speech outputs with room impulse responses from the [Arni dataset](https://zenodo.org/records/6985104) to generate reverberant speech.
 
-
 ## Evaluation Metrics
 
 There are a multitude of metrics to assess the quality of audio. Below are the metrics used in the subnet's competitions:

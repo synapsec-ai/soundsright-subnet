@@ -25,11 +25,9 @@ sequenceDiagram
     HuggingFace->>Validator: Download model
     Validator->>Validator: Obtain hash of model directory
     Validator->>Validator: Confirm model ownership by miner<br>using chain metadata and model hash
-    Validator->>Validator: Confirms model container is safe to run
     Validator->>Validator: Runs model container<br>and benchmarks model
     Validator->>Validator: Iterates through all miners<br>and assigns scores per competition
     Validator->>Subnet Website: Submits miner model<br>benchmarking results
     Validator->>Bittensor Chain: Sets weights for miners
-    Bittensor Chain->>Miner: Assigns incentives 
     Subnet Website->>Subnet Website: Generates leaderboard and<br>results of miner benchmarks<br>against standard (SGMSE+)
 ```
