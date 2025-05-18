@@ -1,5 +1,5 @@
 <h1 align="center">SoundsRight (SN 105)</h1>
-<h2 align="center">| <a href="https://soundsright.ai">Website & Leaderboard</a> | <a href="https://bittensor.com/">Bittensor</a> |</h2>
+<h2 align="center">| <a href="https://soundsright.ai">Website & Leaderboard</a> | <a href="https://docs.soundsright.ai">Docs</a> | <a href="https://bittensor.com/">Bittensor</a> |</h2>
 
 <h1 align="center">Bittensor's Speech Enhancement Subnet</h1>
 
