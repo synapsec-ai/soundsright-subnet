@@ -350,7 +350,7 @@ class SubnetValidator(Base.BaseNeuron):
             message=f"Debug mode: {self.debug_mode}"
         )
         
-        self.next_competition_timestamp = 0
+        self.next_competition_timestamp = self.get_next_competition_timestamp()
         
         if args.load_state == "False":
             self.load_validator_state = False
@@ -1392,7 +1392,7 @@ class SubnetValidator(Base.BaseNeuron):
 
                 self.neuron_logger(
                     severity="TRACE",
-                    message=f"Blacklist for competition: {competition}: {self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"]}"
+                    message=f"Blacklist for competition: {competition}: {self.blacklisted_miner_models[competition]}"
                 )
                     
     def run(self) -> None:
