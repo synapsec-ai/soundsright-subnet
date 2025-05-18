@@ -1,5 +1,5 @@
 ---
-title: Validator Architecture Overview
+title: Validator Architecture
 parent: Validating
 nav_order: 2
 layout: page

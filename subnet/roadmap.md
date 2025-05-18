@@ -1,5 +1,5 @@
 ---
-title: Subnet Roadmap
+title: Roadmap
 parent: Subnet
 nav_order: 3
 layout: page
