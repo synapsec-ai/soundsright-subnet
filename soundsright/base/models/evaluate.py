@@ -182,9 +182,8 @@ class ModelEvaluationHandler:
             log_level=self.log_level
         )
 
-        if False:
-            if self.model_hash in self.forbidden_model_hashes:
-                return False 
+        if self.model_hash in self.forbidden_model_hashes:
+            return False 
 
         # Make sure model hash is unique 
         if self.model_hash in [model_data['model_hash'] for model_data in self.miner_models]:

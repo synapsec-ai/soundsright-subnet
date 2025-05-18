@@ -78,7 +78,7 @@ def validate_miner_response(response):
         if k not in validation_dict.keys() or not isinstance(response[k], validation_dict[k]) or response[k] == "":
             return False
         
-    if response["hf_model_namespace"] == "temp":
+    if response["hf_model_namespace"] == "synapsecai":
         return False
     
     return True
