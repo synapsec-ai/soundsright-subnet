@@ -70,6 +70,9 @@ def validate_miner_response(response):
         'hf_model_name':str,
         'hf_model_revision':str,
     }
+
+    if not isinstance(response,dict):
+        return False
     
     if len(response.keys()) != 3: 
         return False
@@ -94,6 +97,9 @@ def validate_model_benchmark(model_benchmark):
         'block':int,
         'metrics':dict,
     }
+
+    if not isinstance(model_benchmark, dict):
+        return False
     
     for k in model_benchmark.keys():
         if k not in validation_dict.keys() or not isinstance(model_benchmark[k], validation_dict[k]):
