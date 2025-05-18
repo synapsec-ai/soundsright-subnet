@@ -24,7 +24,7 @@ description: >- # this means to ignore newlines until "baseurl:"
   The SoundsRight subnet incentivizes the research and 
   development of speech enhancement models through daily fine-tuning competitions, 
   powered by the decentralized Bittensor ecosystem.
-baseurl: "" # the subpath of your site, e.g. /blog
+baseurl: "/soundsright-subnet/" # the subpath of your site, e.g. /blog
 url: "https://docs.soundsright.ai" # the base hostname & protocol for your site, e.g. http://example.com
 #twitter_username: jekyllrb
 #github_username:  jekyll
