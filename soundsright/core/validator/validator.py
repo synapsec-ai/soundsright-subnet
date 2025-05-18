@@ -721,17 +721,26 @@ class SubnetValidator(Base.BaseNeuron):
         self.metagraph.sync(subtensor=self.subtensor)
 
     def handle_metagraph_sync(self) -> None:
-        try:
-            asyncio.run(self.sync_metagraph())
-            self.neuron_logger(
-                severity="INFOX",
-                message=f"Metagraph synced: {self.metagraph}"
-            )
-        except TimeoutError as e:
-            self.neuron_logger(
-                severity="ERROR",
-                message=f"Metagraph sync timed out: {e}"
-            )   
+        tries=0
+        while tries < 5:
+            try:
+                asyncio.run(self.sync_metagraph())
+                self.neuron_logger(
+                    severity="INFOX",
+                    message=f"Metagraph synced: {self.metagraph}"
+                )
+                return
+            except TimeoutError as e:
+                self.neuron_logger(
+                    severity="ERROR",
+                    message=f"Metagraph sync timed out: {e}"
+                )   
+            except Exception as e:
+                self.neuron_logger(
+                    severity="ERROR",
+                    message=f"An error occured while syncing metagraph: {e}"
+                )
+            tries+=1
 
     def handle_weight_setting(self) -> None:
         """
@@ -1232,12 +1241,6 @@ class SubnetValidator(Base.BaseNeuron):
                                 # Add this data to HealthCheck API 
                                 self.healthcheck_api.append_metric(metric_name="responses.total_valid_responses", value=1)
                                 
-                                # Check that the synapse response is validly formatted
-                                
-                                valid_model=False
-                                if isinstance(response.data, dict) and 'hf_model_namespace' in response.data and 'hf_model_name' in response.data and 'hf_model_revision' in response.data and response.data['hf_model_namespace'] != "temp":
-                                    valid_model=True
-                                
                                 # In case that synapse response is not formatted correctly and no known historical data:
                                 if not Utils.validate_miner_response(response.data):
                                     self.neuron_logger(
@@ -1245,9 +1248,14 @@ class SubnetValidator(Base.BaseNeuron):
                                         message=f"Miner response is invalid: {response.data}"
                                     )
                                     continue
-                                    
+
+                                # Check if model has been evaluated today
+                                model_evaluated_today=Utils.dict_in_list(target_dict=response.data, list_of_dicts=self.models_evaluated_today[f"{task}_{sample_rate}HZ"])
+                                # Check if model is blacklisted
+                                model_in_blacklist=Utils.dict_in_list(target_dict=response.data, list_of_dicts=blacklisted_miner_models)    
+
                                 # If the model in the synapse is validly formatted, has not been evaluated today and is not blacklisted:
-                                if (response.data not in blacklisted_miner_models) and valid_model and (response.data not in self.models_evaluated_today[f"{task}_{sample_rate}HZ"]):
+                                if not model_in_blacklist and not model_evaluated_today:
                                     
                                     # Append it to cache of models to evaluate
                                     self.model_cache[f"{task}_{sample_rate}HZ"].append(
@@ -1274,13 +1282,19 @@ class SubnetValidator(Base.BaseNeuron):
                                     )
                                     continue
 
+                                # Construct dict with just the namespace, name and revision
                                 miner_model_data = {} 
                                 if miner_model_all_data and 'hf_model_namespace' in miner_model_all_data.keys() and 'hf_model_name' in miner_model_all_data.keys() and 'hf_model_revision' in miner_model_all_data.keys():
                                     for k in ['hf_model_namespace','hf_model_name','hf_model_revision']:
                                         miner_model_data[k] = miner_model_all_data[k]
+
+                                # Check if model has been evaluated today
+                                model_evaluated_today=Utils.dict_in_list(target_dict=miner_model_data, list_of_dicts=self.models_evaluated_today[f"{task}_{sample_rate}HZ"])
+                                # Check if modle is blacklisted
+                                model_in_blacklist=Utils.dict_in_list(target_dict=miner_model_data, list_of_dicts=blacklisted_miner_models)
                                     
                                 # If the model in the synapse is validly formatted and not blacklisted:
-                                if (miner_model_data not in blacklisted_miner_models) and (miner_model_data not in self.models_evaluated_today[f"{task}_{sample_rate}HZ"]):
+                                if not model_in_blacklist and not model_evaluated_today:
                                     
                                     # Append it to cache of models to evaluate
                                     self.model_cache[f"{task}_{sample_rate}HZ"].append(

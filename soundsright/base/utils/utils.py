@@ -1,5 +1,6 @@
 import asyncio
 import bittensor as bt 
+import json
 
 def timeout_decorator(timeout):
     """
@@ -122,3 +123,10 @@ def sign_data(hotkey: bt.Keypair, data: str) -> str:
     except AttributeError as e:
         bt.logging.error(f'Unable to sign data: {data} with wallet hotkey: {hotkey.ss58_address} due to error: {e}')
         raise AttributeError from e
+    
+def dict_in_list(target_dict, list_of_dicts) -> bool:
+    """
+    Returns True if the target_dict is within the list_of_dicts, regardless of the order of keys. Returns False otherwise.
+    """
+    target_str = json.dumps(target_dict, sort_keys=True)
+    return any(json.dumps(d, sort_keys=True) == target_str for d in list_of_dicts)
