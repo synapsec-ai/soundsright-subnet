@@ -1,6 +1,6 @@
 # Security Policy
 
-Security issues related to the subnet should be responsibly disclosed to the subnet development team via e-mail: contact@synapsec.ai.
+Security issues related to the subnet should be responsibly disclosed to the subnet development team via e-mail: contact@soundsright.ai.
 
 In your submission, please include the following:
 1) Brief summary of the vulnerability including the potential impact
