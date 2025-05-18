@@ -40,15 +40,3 @@ For more details about sample rates, tasks and metrics, please reference the [co
 To get started with mining or validating in the subnet, please reference the following documentation:
 
 Additionally, if you would like to start in testnet, SoundsRight is testnet 271.
-
-<h3 align="center">Subnet Documentation</h3>
- 
-<h4 align="center">| <a href="docs/subnet/subnet_architecture.md">Subnet Architecture</a> | <a href="docs/subnet/competitions.md">Competitions</a> | <a href="docs/subnet/roadmap.md">Roadmap</a> | <a href="docs/subnet/citations.md">Citations</a> |</h4>
- 
-<h3 align="center">Miner Documentation</h3>
- 
-<h4 align="center">| <a href="docs/mining/running_miner.md">Running a Miner</a> | <a href="docs/mining/generate_data.md">Generating a Fine-Tuning Dataset</a> | <a href="docs/mining/model_formatting.md">Model Formatting</a> |</h4>
- 
-<h3 align="center">Validator Documentation</h3>
- 
-<h4 align="center">| <a href="docs/validating/running_validator.md">Running a Validator</a> | <a href="docs/validating/validator_architecture.md">Validator Architecture</a> |</h4>
