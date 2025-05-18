@@ -1251,6 +1251,11 @@ class SubnetValidator(Base.BaseNeuron):
 
                                 # Check if model has been evaluated today
                                 competition_models_evaluated_today=Utils.extract_metadata(self.models_evaluated_today[f"{task}_{sample_rate}HZ"])
+                                self.neuron_logger(
+                                    severity="TRACE",
+                                    message=f"Competition models evaluated today for competition: {task}_{sample_rate}HZ: {competition_models_evaluated_today}",
+                                )
+
                                 model_evaluated_today=Utils.dict_in_list(target_dict=response.data, list_of_dicts=competition_models_evaluated_today)
                                 # Check if model is blacklisted
                                 model_in_blacklist=Utils.dict_in_list(target_dict=response.data, list_of_dicts=blacklisted_miner_models)    
@@ -1291,6 +1296,11 @@ class SubnetValidator(Base.BaseNeuron):
 
                                 # Check if model has been evaluated today
                                 competition_models_evaluated_today=Utils.extract_metadata(self.models_evaluated_today[f"{task}_{sample_rate}HZ"])
+                                self.neuron_logger(
+                                    severity="TRACE",
+                                    message=f"Competition models evaluated today for competition: {task}_{sample_rate}HZ: {competition_models_evaluated_today}",
+                                )
+                                
                                 model_evaluated_today=Utils.dict_in_list(target_dict=miner_model_data, list_of_dicts=competition_models_evaluated_today)
                                 # Check if modle is blacklisted
                                 model_in_blacklist=Utils.dict_in_list(target_dict=miner_model_data, list_of_dicts=blacklisted_miner_models)
@@ -1323,9 +1333,19 @@ class SubnetValidator(Base.BaseNeuron):
 
                 # Initialize the list of models with the ones already evaluated today
                 new_competition_miner_models = self.models_evaluated_today[f"{task}_{sample_rate}HZ"]
+
+                self.neuron_logger(
+                    severity="TRACE",
+                    message=f"Competition models already evaluated today for competition: {task}_{sample_rate}HZ: {new_competition_miner_models}"
+                )
                 
                 # Obtain competition models
                 models_to_evaluate = self.model_cache[f"{task}_{sample_rate}HZ"]
+
+                self.neuron_logger(
+                    severity="TRACE",
+                    message=f"Competition model evaluation cache for competition: {task}_{sample_rate}HZ: {models_to_evaluate}"
+                )
                 
                 # Iterate through models to evaluate
                 for model_to_evaluate in models_to_evaluate:
