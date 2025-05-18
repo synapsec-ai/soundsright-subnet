@@ -1250,7 +1250,8 @@ class SubnetValidator(Base.BaseNeuron):
                                     continue
 
                                 # Check if model has been evaluated today
-                                model_evaluated_today=Utils.dict_in_list(target_dict=response.data, list_of_dicts=self.models_evaluated_today[f"{task}_{sample_rate}HZ"])
+                                competition_models_evaluated_today=Utils.extract_metadata(self.models_evaluated_today[f"{task}_{sample_rate}HZ"])
+                                model_evaluated_today=Utils.dict_in_list(target_dict=response.data, list_of_dicts=competition_models_evaluated_today)
                                 # Check if model is blacklisted
                                 model_in_blacklist=Utils.dict_in_list(target_dict=response.data, list_of_dicts=blacklisted_miner_models)    
 
@@ -1289,7 +1290,8 @@ class SubnetValidator(Base.BaseNeuron):
                                         miner_model_data[k] = miner_model_all_data[k]
 
                                 # Check if model has been evaluated today
-                                model_evaluated_today=Utils.dict_in_list(target_dict=miner_model_data, list_of_dicts=self.models_evaluated_today[f"{task}_{sample_rate}HZ"])
+                                competition_models_evaluated_today=Utils.extract_metadata(self.models_evaluated_today[f"{task}_{sample_rate}HZ"])
+                                model_evaluated_today=Utils.dict_in_list(target_dict=miner_model_data, list_of_dicts=competition_models_evaluated_today)
                                 # Check if modle is blacklisted
                                 model_in_blacklist=Utils.dict_in_list(target_dict=miner_model_data, list_of_dicts=blacklisted_miner_models)
                                     
@@ -1344,7 +1346,7 @@ class SubnetValidator(Base.BaseNeuron):
                         new_competition_miner_models.append(model_data)
                         
                         # Append to daily cache
-                        self.models_evaluated_today[f"{task}_{sample_rate}HZ"].append(response_data)
+                        self.models_evaluated_today[f"{task}_{sample_rate}HZ"].append(model_data)
                 
                 # In the case that multiple models have the same hash, we only want to include the model with the earliest block when the metadata was uploaded to the chain
                 hash_filtered_new_competition_miner_models, same_hash_blacklist = Benchmarking.filter_models_with_same_hash(
@@ -1361,7 +1363,7 @@ class SubnetValidator(Base.BaseNeuron):
                 self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"].extend(same_metadata_blacklist)
                 self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"] = Benchmarking.remove_blacklist_duplicates(self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"])
                 self.miner_models[f"{task}_{sample_rate}HZ"] = hash_metadata_filtered_new_competition_miner_models
-                
+
                 competition = f"{task}_{sample_rate}HZ"
                 self.neuron_logger(
                     severity="DEBUG",
@@ -1372,7 +1374,6 @@ class SubnetValidator(Base.BaseNeuron):
                     severity="TRACE",
                     message=f"Blacklist for competition: {competition}: {self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"]}"
                 )
-                    
                     
     def run(self) -> None:
         """

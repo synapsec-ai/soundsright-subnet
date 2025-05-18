@@ -107,8 +107,8 @@ def determine_competition_scores(
             best_historical_model_on_previous_benchmark = get_best_model_from_list(models_data=best_models, metric_name=metric_name)
             best_historical_model = find_best_model_current_benchmark(best_historical_model=best_historical_model_on_previous_benchmark, current_models=current_models)
 
-            # Continue to next iteration in loop in the case that no miner models have been submitted
-            if not best_current_model and best_historical_model:
+            # Assign score to best historical model if best current model doesn't exist
+            if not best_current_model and best_historical_model_on_previous_benchmark:
                 uid = metagraph.hotkeys.index(best_historical_model['hotkey'])
                 competition_scores[competition][uid] += competition_metric_score
                 
@@ -121,6 +121,7 @@ def determine_competition_scores(
                 )
                 continue
 
+            # Assign no score if neither best current model or best historical model exist 
             if not best_current_model and not best_historical_model:
                 Utils.subnet_logger(
                     severity="TRACE",

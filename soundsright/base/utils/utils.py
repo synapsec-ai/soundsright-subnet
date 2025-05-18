@@ -130,3 +130,15 @@ def dict_in_list(target_dict, list_of_dicts) -> bool:
     """
     target_str = json.dumps(target_dict, sort_keys=True)
     return any(json.dumps(d, sort_keys=True) == target_str for d in list_of_dicts)
+
+def extract_metadata(list_of_dicts):
+    needed_keys=["hf_model_namespace", "hf_model_name", "hf_model_revision"]
+    output = []
+    for d in list_of_dicts:
+        # Only proceed if all needed keys are present
+        if not all(k in d for k in needed_keys):
+            continue
+
+        output_dict = {k: d[k] for k in needed_keys}
+        output.append(output_dict)
+    return output
