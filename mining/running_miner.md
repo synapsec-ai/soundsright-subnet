@@ -12,12 +12,12 @@ Generally, mining on the subnet looks like this:
 
 1. Miner fine-tunes a model. We recommend visiting the [website](https://www.soundsright.ai) and basing your model off of the best model from the previous competition, but ultimately it is up to you.
 2. Miner uploads the model to HuggingFace and makes it publicly available. 
-3. Miner ensures that their model is compatible with the validator script used to benchmark their model. See the [model tutorial doc](model_tutorial.md) for more details.
+3. Miner ensures that their model is compatible with the validator script used to benchmark their model. See the [model tutorial doc](model_formatting.html) for more details.
 4. Miner updates their .env file with the model's data and restarts their miner neuron. The miner will automatically trigger the process of communicating the model data with validators upon restarting.
 
 Note that there is **no fine-tuning script contained within the miner neuron itself**--all miners are responsible for fine-tuning their models externally. Miner neurons are only used to communicate model data to validators. 
 
-However this repository does contain scripts which can be used to generate fine-tuning datasets. Note that miners will need to have an OpenAI API key in order for this to work. Please reference the [dataset generation docs](generate_data.md) for more information.
+However this repository does contain scripts which can be used to generate fine-tuning datasets. Note that miners will need to have an OpenAI API key in order for this to work. Please reference the [dataset generation docs](generate_data.html) for more information.
 
 Also, **each miner can only submit models for one specific task and sample rate**. If you wish to provide models for multiple tasks and/or sample rates, you will need to register multiple miners.
 

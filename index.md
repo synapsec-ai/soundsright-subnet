@@ -33,7 +33,7 @@ The table below outlines the daily competitions currently being held by the subn
 | 16 kHz | Dereverberation | SI-SAR | 7.5 |
 | 16 kHz | Dereverberation | SI-SIR | 7.5 |
 
-For more details about sample rates, tasks and metrics, please reference the [competition docs](docs/subnet/competitions.md).
+For more details about sample rates, tasks and metrics, please reference the [competition docs](subnet/competitions.html).
 
 <h1 align="center">Getting Started</h1>
 
