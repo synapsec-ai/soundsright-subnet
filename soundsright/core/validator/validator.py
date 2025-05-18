@@ -47,8 +47,9 @@ class SubnetValidator(Base.BaseNeuron):
         self.hotkeys = None
         self.load_validator_state = None
         self.query = None
-        self.debug_mode = True
-        self.dataset_size = 1
+        self.debug_mode = False
+        self.skip_sgmse = False
+        self.dataset_size = 1000
         self.weights_objects = []
         self.sample_rates = [16000]
         self.tasks = ['DENOISING','DEREVERBERATION']
@@ -92,9 +93,18 @@ class SubnetValidator(Base.BaseNeuron):
             "DENOISING_16000HZ":None,
             "DEREVERBERATION_16000HZ":None,
         }
+        self.models_evaluated_today = {
+            "DENOISING_16000HZ":[],
+            "DEREVERBERATION_16000HZ":[],
+        }
+        self.model_cache = {
+            "DENOISING_16000HZ":[],
+            "DEREVERBERATION_16000HZ":[],
+        }
 
         self.remote_logging_interval = 3600
         self.last_remote_logging_timestamp = 0
+        self.remote_logging_daily_tries=0
 
         self.apply_config(bt_classes=[bt.subtensor, bt.logging, bt.wallet])
         self.initialize_neuron()        
@@ -318,7 +328,8 @@ class SubnetValidator(Base.BaseNeuron):
             message=f"Bittensor objects initialized:\nMetagraph: {self.metagraph}\nSubtensor: {self.subtensor}\nWallet: {self.wallet}"
         )
 
-        if not args.debug_mode:
+        self.debug_mode = args.debug_mode
+        if not self.debug_mode:
             # Validate that the validator has registered to the metagraph correctly
             if not self.validator_validation(self.metagraph, self.wallet, self.subtensor):
                 raise IndexError("Unable to find validator key from metagraph")
@@ -329,9 +340,8 @@ class SubnetValidator(Base.BaseNeuron):
                 severity="INFO",
                 message=f"Validator is running with UID: {validator_uid}"
             )
-
-            # Disable debug mode
-            self.debug_mode = False
+            
+        self.skip_sgmse = args.skip_sgmse
             
         self.dataset_size = args.dataset_size
             
@@ -711,17 +721,26 @@ class SubnetValidator(Base.BaseNeuron):
         self.metagraph.sync(subtensor=self.subtensor)
 
     def handle_metagraph_sync(self) -> None:
-        try:
-            asyncio.run(self.sync_metagraph())
-            self.neuron_logger(
-                severity="INFOX",
-                message=f"Metagraph synced: {self.metagraph}"
-            )
-        except TimeoutError as e:
-            self.neuron_logger(
-                severity="ERROR",
-                message=f"Metagraph sync timed out: {e}"
-            )   
+        tries=0
+        while tries < 5:
+            try:
+                asyncio.run(self.sync_metagraph())
+                self.neuron_logger(
+                    severity="INFOX",
+                    message=f"Metagraph synced: {self.metagraph}"
+                )
+                return
+            except TimeoutError as e:
+                self.neuron_logger(
+                    severity="ERROR",
+                    message=f"Metagraph sync timed out: {e}"
+                )   
+            except Exception as e:
+                self.neuron_logger(
+                    severity="ERROR",
+                    message=f"An error occured while syncing metagraph: {e}"
+                )
+            tries+=1
 
     def handle_weight_setting(self) -> None:
         """
@@ -957,7 +976,7 @@ class SubnetValidator(Base.BaseNeuron):
         """
         current_timestamp = int(time.time())
         
-        if (self.last_remote_logging_timestamp + self.remote_logging_interval) <= current_timestamp and not self.debug_mode:
+        if (self.last_remote_logging_timestamp + self.remote_logging_interval) <= current_timestamp and not self.debug_mode and self.remote_logging_daily_tries<10:
            
             # Log models for current competition
             current_models_outcome = Benchmarking.miner_models_remote_logging(
@@ -974,6 +993,8 @@ class SubnetValidator(Base.BaseNeuron):
             
             if current_models_outcome and sgmse_outcome:
                 self.last_remote_logging_timestamp = int(time.time())
+            else:
+                self.remote_logging_daily_tries+=1
 
     def get_uids_to_query(self) -> List[int]:
         """This function determines valid axon to send the query to--
@@ -1021,6 +1042,8 @@ class SubnetValidator(Base.BaseNeuron):
             sample_rate (int): Sample rate
             task (str): DENOISING/DEREVERBERATION
         """
+        if self.skip_sgmse:
+            return
         
         competition = f"{task}_{sample_rate}HZ"
         task_path = os.path.join(self.noise_path, str(sample_rate)) if task == "DENOISING" else os.path.join(self.reverb_path, str(sample_rate))
@@ -1096,15 +1119,7 @@ class SubnetValidator(Base.BaseNeuron):
                 message=f"Miner with hotkey: {hotkey} has response that was not properly formatted, cannot benchmark: {model_metadata}"
             )
             
-            return {
-                'hotkey':hotkey,
-                'hf_model_name':'',
-                'hf_model_namespace':'',
-                'hf_model_revision':'',
-                'model_hash':'',
-                'block':10000000000000000,
-                'metrics':{}
-            }
+            return None
         
         # Initialize model evaluation handler
         eval_handler = Models.ModelEvaluationHandler(
@@ -1143,15 +1158,7 @@ class SubnetValidator(Base.BaseNeuron):
                 message=f"Model benchmark: {model_benchmark} for task: {task} and sample rate: {sample_rate} is invalidly formatted."
             )
             
-            return {
-                'hotkey':hotkey,
-                'hf_model_name':'',
-                'hf_model_namespace':'',
-                'hf_model_revision':'',
-                'model_hash':'',
-                'metrics':{},
-                'block':10000000000000000,
-            }
+            return None
         
         self.neuron_logger(
             severity="INFO",
@@ -1159,8 +1166,16 @@ class SubnetValidator(Base.BaseNeuron):
         )
         
         return model_benchmark
+    
+    async def get_miner_response(self, uid_to_query, sample_rate, task):
+        response = await self.send_competition_synapse(
+            uid_to_query=uid_to_query,
+            sample_rate=sample_rate, 
+            task=task
+        )
+        return response
 
-    def run_competition(self, sample_rate, task) -> None:
+    def query_competitions(self, sample_rates, tasks) -> None:
         """
         Runs a competition (a competition is a unique combination of sample rate and task).
         
@@ -1168,131 +1183,218 @@ class SubnetValidator(Base.BaseNeuron):
         2. If miner submits a new model, benchmarks it with SubnetValidator.benchmark_model 
         3. Updates knowledge of miner model benchmarking results.
         """
-        # Obtain existing list of miner model data for this competition
-        competition_miner_models = self.miner_models[f"{task}_{sample_rate}HZ"]
-        blacklisted_miner_models = self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"]
+        self.model_cache = {
+            "DENOISING_16000HZ":[],
+            "DEREVERBERATION_16000HZ":[],
+        }
+        
+        # Initialize asyncio loop
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
 
-        # Create new list which we will gradually append to and eventually replace self.miner_models with
-        new_competition_miner_models = []
-
-        # Iterate through UIDs to query
-        for uid_to_query in self.get_uids_to_query():
-
-            if Utils.validate_uid(uid_to_query):
-
-                # Send synapse
-                response = asyncio.run(self.send_competition_synapse(
-                    uid_to_query=uid_to_query,
-                    sample_rate=sample_rate, 
-                    task=task
-                ))
-
-                # Add this data to the HealthCheck API
-                self.healthcheck_api.append_metric(metric_name="axons.total_queried_axons", value=1)
-
-                # Check that the miner has responded with a model for this competition. If not, skip it 
-                if response.data:
+        try:
+            
+            # Iterate through sample rates
+            for sample_rate in sample_rates:
+                # Iterate through tasks
+                for task in tasks:
                     
                     self.neuron_logger(
-                        severity="TRACE",
-                        message=f"Recieved response from miner with UID: {uid_to_query}: {response.data}"
+                        severity="INFO",
+                        message=f"Obtaining models for competition: {task}_{sample_rate}HZ"
                     )
                     
-                    # Add this data to HealthCheck API 
-                    self.healthcheck_api.append_metric(metric_name="responses.total_valid_responses", value=1)
-
-                    # Find existing information on miner model 
-                    miner_model_all_data = copy.deepcopy(self.find_dict_by_hotkey(competition_miner_models, self.hotkeys[uid_to_query]))
+                    # Obtain existing list of miner model data for this competition
+                    competition_miner_models = self.miner_models[f"{task}_{sample_rate}HZ"]
+                    blacklisted_miner_models = self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"]
                     
-                    # Construct a dict that has only the keys needed from previously known model data
-                    miner_model_data = {} 
-                    if miner_model_all_data and 'hf_model_namespace' in miner_model_all_data.keys() and 'hf_model_name' in miner_model_all_data.keys() and 'hf_model_revision' in miner_model_all_data.keys():
-                        for k in ['hf_model_namespace','hf_model_name','hf_model_revision']:
-                            miner_model_data[k] = miner_model_all_data[k]
-                    
-                    # Check that the synapse response is validly formatted
-                    valid_model=False
-                    if isinstance(response.data, dict) and 'hf_model_namespace' in response.data and 'hf_model_name' in response.data and 'hf_model_revision' in response.data and response.data['hf_model_namespace'] != "synapsecai":
-                        valid_model=True
-                    
-                    # In case that synapse response is not formatted correctly:
-                    if not valid_model:
-                        # Continue to next miner if there is no known historical data
-                        if not miner_model_all_data:
-                            self.neuron_logger(
-                                severity="DEBUG",
-                                message=f"Miner response is invalid: {response.data}"
-                            )
-                            continue
-                        # Keep using historical data if it exists before continuing to next miner
-                        else:
-                            self.neuron_logger(
-                                severity="DEBUG",
-                                message=f"Miner response is invalid: {response.data}. Keeping old miner model data: {miner_model_all_data}"
-                            )
-                            new_competition_miner_models.append(miner_model_all_data)
-                            continue 
-                        
-                    # If the model in the synapse has never been evaluated by the validator:
-                    if (not miner_model_data or response.data != miner_model_data) and (miner_model_data not in blacklisted_miner_models) and valid_model:
+                    # Iterate through UIDs to query
+                    for uid_to_query in self.get_uids_to_query():
 
-                        # Create a dictionary logging miner model metadata & benchmark values
-                        model_data = self.benchmark_model(
-                            model_metadata = response.data,
-                            sample_rate = sample_rate,
-                            task = task,
-                            hotkey = self.hotkeys[uid_to_query],
-                        )
+                        if Utils.validate_uid(uid_to_query):
 
+                            # Send synapse
+                            try:
+                                response = loop.run_until_complete(self.get_miner_response(
+                                    uid_to_query=uid_to_query,
+                                    sample_rate=sample_rate,
+                                    task=task,
+                                ))
+                            except Exception as e:
+                                self.neuron_logger(
+                                    severity="ERROR",
+                                    message=f"Error obtaining response from miner: {uid_to_query}: {e}"
+                                )
+                                continue
+
+                            # Add this data to the HealthCheck API
+                            self.healthcheck_api.append_metric(metric_name="axons.total_queried_axons", value=1)
+
+                            # Check that the miner has responded with a model for this competition. If not, skip it 
+                            if response and response.data:
+                                
+                                self.neuron_logger(
+                                    severity="TRACE",
+                                    message=f"Recieved response from miner with UID: {uid_to_query}: {response.data}"
+                                )
+                                
+                                # Add this data to HealthCheck API 
+                                self.healthcheck_api.append_metric(metric_name="responses.total_valid_responses", value=1)
+                                
+                                # In case that synapse response is not formatted correctly and no known historical data:
+                                if not Utils.validate_miner_response(response.data):
+                                    self.neuron_logger(
+                                        severity="DEBUG",
+                                        message=f"Miner response is invalid: {response.data}"
+                                    )
+                                    continue
+
+                                # Check if model has been evaluated today
+                                competition_models_evaluated_today=Utils.extract_metadata(self.models_evaluated_today[f"{task}_{sample_rate}HZ"])
+                                self.neuron_logger(
+                                    severity="TRACE",
+                                    message=f"Competition models evaluated today for competition: {task}_{sample_rate}HZ: {competition_models_evaluated_today}",
+                                )
+
+                                model_evaluated_today=Utils.dict_in_list(target_dict=response.data, list_of_dicts=competition_models_evaluated_today)
+                                # Check if model is blacklisted
+                                model_in_blacklist=Utils.dict_in_list(target_dict=response.data, list_of_dicts=blacklisted_miner_models)    
+
+                                # If the model in the synapse is validly formatted, has not been evaluated today and is not blacklisted:
+                                if not model_in_blacklist and not model_evaluated_today:
+                                    
+                                    # Append it to cache of models to evaluate
+                                    self.model_cache[f"{task}_{sample_rate}HZ"].append(
+                                        {
+                                            "uid":uid_to_query,
+                                            "response_data":response.data,
+                                        }
+                                    )
+
+                            # In the case of empty rersponse:
+                            else: 
+
+                                # Add this data to the HealthCheck API 
+                                self.healthcheck_api.append_metric(metric_name="responses.total_invalid_responses", value=1)
+
+                                # Find miner model data
+                                miner_model_all_data = self.find_dict_by_hotkey(competition_miner_models, self.hotkeys[uid_to_query])
+                                
+                                # In case of no known historical data:
+                                if not miner_model_all_data:
+                                    self.neuron_logger(
+                                        severity="DEBUG",
+                                        message=f"Miner model data is invalid."
+                                    )
+                                    continue
+
+                                # Construct dict with just the namespace, name and revision
+                                miner_model_data = {} 
+                                if miner_model_all_data and 'hf_model_namespace' in miner_model_all_data.keys() and 'hf_model_name' in miner_model_all_data.keys() and 'hf_model_revision' in miner_model_all_data.keys():
+                                    for k in ['hf_model_namespace','hf_model_name','hf_model_revision']:
+                                        miner_model_data[k] = miner_model_all_data[k]
+
+                                # Check if model has been evaluated today
+                                competition_models_evaluated_today=Utils.extract_metadata(self.models_evaluated_today[f"{task}_{sample_rate}HZ"])
+                                self.neuron_logger(
+                                    severity="TRACE",
+                                    message=f"Competition models evaluated today for competition: {task}_{sample_rate}HZ: {competition_models_evaluated_today}",
+                                )
+                                
+                                model_evaluated_today=Utils.dict_in_list(target_dict=miner_model_data, list_of_dicts=competition_models_evaluated_today)
+                                # Check if modle is blacklisted
+                                model_in_blacklist=Utils.dict_in_list(target_dict=miner_model_data, list_of_dicts=blacklisted_miner_models)
+                                    
+                                # If the model in the synapse is validly formatted and not blacklisted:
+                                if not model_in_blacklist and not model_evaluated_today:
+                                    
+                                    # Append it to cache of models to evaluate
+                                    self.model_cache[f"{task}_{sample_rate}HZ"].append(
+                                        {
+                                            "uid":uid_to_query,
+                                            "response_data":miner_model_data,
+                                        }
+                                    )
+            
+        finally:
+            self.dendrite.close_session(using_new_loop=True)
+            
+    def run_competitions(self, sample_rates, tasks) -> None:
+            
+        # Iterate through sample rates
+        for sample_rate in sample_rates:
+            # Iterate through tasks
+            for task in tasks:
+                
+                self.neuron_logger(
+                    severity="INFO",
+                    message=f"Evaluating for competition: {task}_{sample_rate}HZ"
+                )
+
+                # Initialize the list of models with the ones already evaluated today
+                new_competition_miner_models = copy.deepcopy(self.models_evaluated_today[f"{task}_{sample_rate}HZ"])
+
+                self.neuron_logger(
+                    severity="TRACE",
+                    message=f"Competition models already evaluated today for competition: {task}_{sample_rate}HZ: {new_competition_miner_models}"
+                )
+                
+                # Obtain competition models
+                models_to_evaluate = self.model_cache[f"{task}_{sample_rate}HZ"]
+
+                self.neuron_logger(
+                    severity="TRACE",
+                    message=f"Competition model evaluation cache for competition: {task}_{sample_rate}HZ: {models_to_evaluate}"
+                )
+                
+                # Iterate through models to evaluate
+                for model_to_evaluate in models_to_evaluate:
+                    
+                    # Obtain uid and response data
+                    uid, response_data = model_to_evaluate['uid'], model_to_evaluate['response_data']
+                    
+                    # Create a dictionary logging miner model metadata & benchmark values
+                    model_data = self.benchmark_model(
+                        model_metadata = response_data,
+                        sample_rate = sample_rate,
+                        task = task,
+                        hotkey = self.hotkeys[uid],
+                    )
+
+                    if model_data:
                         # Append to the list
                         new_competition_miner_models.append(model_data)
-
-                    # If the model in the synapse has already been evaluated by the validator:
-                    else:
                         
-                        self.neuron_logger(
-                            severity="DEBUG",
-                            message=f"Model has already been evaluated: {miner_model_all_data}"
-                        )
+                        # Append to daily cache
+                        self.models_evaluated_today[f"{task}_{sample_rate}HZ"].append(model_data)
+                
+                # In the case that multiple models have the same hash, we only want to include the model with the earliest block when the metadata was uploaded to the chain
+                hash_filtered_new_competition_miner_models, same_hash_blacklist = Benchmarking.filter_models_with_same_hash(
+                    new_competition_miner_models=new_competition_miner_models
+                )
+                
+                # In the case that multiple models have the same metadata, we only want to include the model with the earliest block when the metadata was uploaded to the chain
+                hash_metadata_filtered_new_competition_miner_models, same_metadata_blacklist = Benchmarking.filter_models_with_same_metadata(
+                    new_competition_miner_models=hash_filtered_new_competition_miner_models
+                )
+                
+                # Extend blacklist and remove duplicate entries
+                self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"].extend(same_hash_blacklist)
+                self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"].extend(same_metadata_blacklist)
+                self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"] = Benchmarking.remove_blacklist_duplicates(self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"])
+                self.miner_models[f"{task}_{sample_rate}HZ"] = hash_metadata_filtered_new_competition_miner_models
 
-                        # Append existing data the list
-                        new_competition_miner_models.append(miner_model_all_data)
+                competition = f"{task}_{sample_rate}HZ"
+                self.neuron_logger(
+                    severity="DEBUG",
+                    message=f"Models for competition: {competition}: {self.miner_models[competition]}"
+                )
 
-                # In the case of empty rersponse:
-                else: 
-
-                    # Add this data to the HealthCheck API 
-                    self.healthcheck_api.append_metric(metric_name="responses.total_invalid_responses", value=1)
-
-                    # Find miner model data
-                    miner_model_data = self.find_dict_by_hotkey(competition_miner_models, self.hotkeys[uid_to_query])
-
-                    # If any existing model exists for the hotkey:
-                    if miner_model_data:
-
-                        # Append existing model data to list
-                        new_competition_miner_models.append(miner_model_data)
+                self.neuron_logger(
+                    severity="TRACE",
+                    message=f"Blacklist for competition: {competition}: {self.blacklisted_miner_models[competition]}"
+                )
                     
-        # In the case that multiple models have the same hash, we only want to include the model with the earliest block when the metadata was uploaded to the chain
-        hash_filtered_new_competition_miner_models, same_hash_blacklist = Benchmarking.filter_models_with_same_hash(
-            new_competition_miner_models=new_competition_miner_models
-        )
-        
-        # In the case that multiple models have the same metadata, we only want to include the model with the earliest block when the metadata was uploaded to the chain
-        hash_metadata_filtered_new_competition_miner_models, same_metadata_blacklist = Benchmarking.filter_models_with_same_metadata(
-            new_competition_miner_models=hash_filtered_new_competition_miner_models
-        )
-        
-        self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"].extend(same_hash_blacklist)
-        self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"].extend(same_metadata_blacklist)
-        self.miner_models[f"{task}_{sample_rate}HZ"] = hash_metadata_filtered_new_competition_miner_models
-
-        competition = f"{task}_{sample_rate}HZ"
-        self.neuron_logger(
-            severity="DEBUG",
-            message=f"Models for competition: {competition}: {self.miner_models[competition]}"
-        )
-
     def run(self) -> None:
         """
         Main validator loop. 
@@ -1321,20 +1423,12 @@ class SubnetValidator(Base.BaseNeuron):
 
                 # Save validator state
                 self.save_state()
-
-                # Iterate through sample rates 
-                for sample_rate in self.sample_rates:
-
-                    # Iterate through tasks
-                    for task in self.tasks:
-
-                        self.neuron_logger(
-                            severity="INFO",
-                            message=f"Judging for competition: {task}_{sample_rate}HZ"
-                        )
-
-                        # Query and evaluate models for this competition, generate the data necessary to run the scoring algorithm
-                        self.run_competition(sample_rate=sample_rate, task=task)
+                
+                # Query miners 
+                self.query_competitions(sample_rates=self.sample_rates, tasks=self.tasks)
+                
+                # Benchmark models
+                self.run_competitions(sample_rates=self.sample_rates, tasks=self.tasks)
 
                 # Check if it's time for a new competition 
                 if int(time.time()) >= self.next_competition_timestamp or self.debug_mode:
@@ -1358,6 +1452,7 @@ class SubnetValidator(Base.BaseNeuron):
                         competition_scores = self.competition_scores,
                         competition_max_scores = self.competition_max_scores,
                         metric_proportions = self.metric_proportions,
+                        sgmse_benchmarks=self.sgmse_benchmarks,
                         best_miner_models = self.best_miner_models,
                         miner_models = self.miner_models,
                         metagraph = self.metagraph,
@@ -1379,6 +1474,10 @@ class SubnetValidator(Base.BaseNeuron):
                     # Update HealthCheck API
                     self.healthcheck_api.update_competition_scores(self.competition_scores)
                     self.healthcheck_api.update_scores(self.scores)
+                    
+                    # Reset evaluated model cache
+                    for comp in self.models_evaluated_today.keys():
+                        self.models_evaluated_today[comp] = []
 
                     # Update timestamp to next day's 9AM (GMT)
                     self.update_next_competition_timestamp()
@@ -1388,6 +1487,9 @@ class SubnetValidator(Base.BaseNeuron):
                     
                     # Benchmark SGMSE+ for new dataset as a comparison for miner models
                     self.benchmark_sgmse_for_all_competitions()
+
+                    # Reset remote logging
+                    self.remote_logging_daily_tries=0
 
                 # Handle setting of weights
                 self.handle_weight_setting()

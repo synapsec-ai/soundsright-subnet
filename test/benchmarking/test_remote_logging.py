@@ -12,7 +12,7 @@ def get_hk():
     ck_name = os.getenv("WALLET")
     hk_name = os.getenv("HOTKEY")
     wallet = bt.wallet(name=ck_name, hotkey=hk_name)
-    return wallet.hotkey.ss58_address
+    return wallet.hotkey
 
 def test_miner_models_remote_logging():
     
@@ -20,7 +20,7 @@ def test_miner_models_remote_logging():
     
     miner_models = {
         "category": "current",
-        "validator":hk,
+        "validator":hk.ss58_address,
         "timestamp":int(time.time()*1000),
         "models": {
             "DENOISING_16000HZ":[
@@ -114,7 +114,7 @@ def test_sgmse_remote_logging():
      
     sgmse_benchmark = {
         "category": "sgmse",
-        "validator":hk,
+        "validator":hk.ss58_address,
         "timestamp":int(time.time()*1000),
         "models": {
             "DENOISING_16000HZ":{

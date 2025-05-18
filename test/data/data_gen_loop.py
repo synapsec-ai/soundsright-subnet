@@ -4,11 +4,11 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 from soundsright.base.data import create_noise_and_reverb_data_for_all_sampling_rates, TTSHandler, reset_all_data_directories, dataset_download
 
 base_path = os.path.join(os.path.expanduser("~"), ".SoundsRight")
-tts_base_path = os.path.join(base_path,'data/tts')
-noise_base_path = os.path.join(base_path,'data/noise')
-reverb_base_path = os.path.join(base_path,'data/reverb')
-arni_path = os.path.join(base_path,'data/rir_data')
-wham_path = os.path.join(base_path,'data/noise_data')
+tts_base_path = os.path.join(base_path,'test_data/tts')
+noise_base_path = os.path.join(base_path,'test_data/noise')
+reverb_base_path = os.path.join(base_path,'test_data/reverb')
+arni_path = os.path.join(base_path,'test_data/arni')
+wham_path = os.path.join(base_path,'test_data/wham')
 sample_rates = [16000]
 
 for directory in [tts_base_path, noise_base_path, reverb_base_path, arni_path, wham_path]:
@@ -27,7 +27,7 @@ print("TTSHandler initialized")
 for sr in sample_rates:
     print("Creating TTS dataset")
     tts_handler.create_openai_tts_dataset_for_all_sample_rates(
-        n=3
+        n=10
     )
 
 create_noise_and_reverb_data_for_all_sampling_rates(
@@ -36,7 +36,8 @@ create_noise_and_reverb_data_for_all_sampling_rates(
     reverb_base_path=reverb_base_path,
     wham_dir_path=wham_path,
     noise_base_path=noise_base_path,
-    tasks=['denoising', 'dereverberation']
+    tasks=['DENOISING', 'DEREVERBERATION'],
+    log_level="TRACE",
 )
 
 remove=input("remove all files? y/n")

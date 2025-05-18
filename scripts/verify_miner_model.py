@@ -164,6 +164,7 @@ def verify_miner_model(model_namespace, model_name, model_revision):
     
     if not initialize_run_and_benchmark_model(model_namespace=model_namespace, model_name=model_name, model_revision=model_revision):
         logging.critical(f"MODEL VERIFICATION FAILED.")
+        return
 
     logging.info("\n\nMODEL VERIFICATION SUCCESSFUL.")
 

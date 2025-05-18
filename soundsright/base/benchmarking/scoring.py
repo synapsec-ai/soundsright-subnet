@@ -30,6 +30,31 @@ def new_model_surpasses_historical_model(new_model_metric, new_model_block, old_
     # Othewrwise, return False
     return False
     
+def get_best_current_model_from_list(models_data: List[dict], metric_name: str, sgmse_value:float) -> dict:
+    """Gets the best model submitted during today's competition for a specific metric
+
+    Args:
+        current_models_data (List[dict]): List of model performance logs 
+        metric_name (str): The metric we want to find the best model for
+           
+    Returns:
+        dict: The dictionary representing the model with the highest average value for the specified metric.
+    """
+    best_model = None
+    highest_average = float('-inf')
+
+    for model in models_data:
+        metrics = model.get('metrics', {})
+        metric_data = metrics.get(metric_name, {})
+
+        # Ensure the metric_data contains 'average' and it is a number and that it is not identical to the SGMSE value
+        if 'average' in metric_data and isinstance(metric_data['average'], (int, float)) and metric_data['average'] != sgmse_value:
+            if metric_data['average'] > highest_average:
+                highest_average = metric_data['average']
+                best_model = model
+
+    return best_model
+
 def get_best_model_from_list(models_data: List[dict], metric_name: str) -> dict:
     """Gets the best model submitted during today's competition for a specific metric
 
@@ -55,10 +80,24 @@ def get_best_model_from_list(models_data: List[dict], metric_name: str) -> dict:
 
     return best_model
 
+def find_best_model_current_benchmark(best_historical_model, current_models) -> dict:
+    """
+    Finds the data for the best historical model benchmarked on the current dataset.
+    """
+    try:
+        hotkey = best_historical_model["hotkey"]
+        for model in current_models:
+            if model["hotkey"] == hotkey:
+                return model 
+    except:
+        return None
+    return None
+
 def determine_competition_scores(
     competition_scores: dict, 
     competition_max_scores: dict,
     metric_proportions: dict,
+    sgmse_benchmarks:dict,
     best_miner_models: dict,
     miner_models: dict,
     metagraph: bt.metagraph,
@@ -75,17 +114,19 @@ def determine_competition_scores(
         
         # Iterate through metrics in each competition
         for metric_name in metric_proportions[competition].keys():
+
+            # Determine SGMSE benchmark value
+            try:
+                sgmse_value = sgmse_benchmarks[competition][metric_name]["average"]
+            except:
+                sgmse_value=0
             
             # Determine the score to assign to the best miner
             competition_metric_score = competition_max_scores[competition] * metric_proportions[competition][metric_name]
             
             # Find best current model 
             current_models = miner_models[competition]
-            best_current_model = get_best_model_from_list(models_data=current_models, metric_name=metric_name)
-            
-            # Continue to next iteration in loop in the case that no miner models have been submitted
-            if not best_current_model:
-                continue
+            best_current_model = get_best_current_model_from_list(models_data=current_models, metric_name=metric_name, sgmse_value=sgmse_value)
             
             Utils.subnet_logger(
                 severity="TRACE",
@@ -95,10 +136,34 @@ def determine_competition_scores(
             
             # Obtain best historical model 
             best_models = best_miner_models[competition]
-            best_historical_model = get_best_model_from_list(models_data=best_models, metric_name=metric_name)
+            best_historical_model_on_previous_benchmark = get_best_model_from_list(models_data=best_models, metric_name=metric_name)
+            best_historical_model = find_best_model_current_benchmark(best_historical_model=best_historical_model_on_previous_benchmark, current_models=current_models)
+
+            # Assign score to best historical model if best current model doesn't exist
+            if not best_current_model and best_historical_model_on_previous_benchmark:
+                uid = metagraph.hotkeys.index(best_historical_model['hotkey'])
+                competition_scores[competition][uid] += competition_metric_score
+                
+                # Append to new best performing model knowledge
+                new_best_miner_models[competition].append(best_historical_model)
+
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"Only best historical model exists for competition: {competition}: {best_historical_model}"
+                )
+                continue
+
+            # Assign no score if neither best current model or best historical model exist 
+            if not best_current_model and not best_historical_model:
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"No current or historical models for competition: {competition}",
+                    log_level=log_level
+                )
+                continue
             
             # Assign score to the best current model if best historical model does not exist
-            if not best_historical_model:
+            if not best_historical_model and best_current_model:
                 
                 uid = metagraph.hotkeys.index(best_current_model['hotkey'])
                 competition_scores[competition][uid] += competition_metric_score
@@ -109,7 +174,6 @@ def determine_competition_scores(
                     message=f"Competition winner for metric: {metric_name} in current competition: {competition} is: {best_current_model}. Assigning score: {competition_metric_score}",
                     log_level=log_level,
                 )
-
                 continue
             
             Utils.subnet_logger(
@@ -284,3 +348,18 @@ def filter_models_for_deregistered_miners(miner_models, hotkeys):
                 registered_models.append(model)
             
     return registered_models
+
+def remove_blacklist_duplicates(blacklist):
+    unique_dicts=[]
+    for d in blacklist:
+        if isinstance(d,tuple):
+            try:
+                d=dict(d)
+            except Exception as e:
+                continue
+        try:
+            if d not in unique_dicts:
+                unique_dicts.append(d)
+        except:
+            continue
+    return unique_dicts

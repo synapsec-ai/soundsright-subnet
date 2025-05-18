@@ -15,13 +15,10 @@ if __name__ == "__main__":
     # Parse command line arguments
     parser = ArgumentParser()
     
-    ###########################################
-    # THIS MUST BE ADJUSTED UPON REGISTRATION #
-    ###########################################
     parser.add_argument(
         "--netuid", 
         type=int, 
-        default=0, 
+        default=105, 
         help="The chain subnet uid."
     )
 
@@ -35,12 +32,20 @@ if __name__ == "__main__":
     parser.add_argument(
         "--debug_mode",
         action="store_true",
+        default=False,
         help="Running the validator in debug mode ignores selected validity checks. Not to be used in production.",
     )
     
     parser.add_argument(
+        "--skip_sgmse",
+        action="store_true",
+        default=False,
+        help="If passed, enables skipping of SGMSE+ benchmarking. Not to be used in production.",
+    )
+    
+    parser.add_argument(
         "--dataset_size",
-        default=2000,
+        default=1000,
         type=int,
         help="Size of evaluation dataset."
     )

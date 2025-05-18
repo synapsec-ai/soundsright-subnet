@@ -153,7 +153,7 @@ generate_pm2_launch_file() {
     local launch_args="--netuid $netuid --wallet.name $wallet_name --wallet.hotkey $wallet_hotkey"
 
     if [[ -n "$subtensor_chain_endpoint" ]]; then
-        launch_args+=" --subtensor.chain_endpoint $subtensor_chain_endpoint"
+        launch_args+=" --subtensor.network $subtensor_chain_endpoint"
     fi
 
     if [[ -n "$logging_value" ]]; then
@@ -175,6 +175,10 @@ generate_pm2_launch_file() {
 
     if [[ -v args['debug_mode'] ]]; then
         launch_args+=" --debug_mode"
+    fi
+
+    if [[ -v args['skip_sgmse'] ]]; then
+        launch_args+=" --skip_sgmse"
     fi
 
     echo "Launch arguments: $launch_args"

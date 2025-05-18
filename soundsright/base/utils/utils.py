@@ -1,5 +1,6 @@
 import asyncio
 import bittensor as bt 
+import json
 
 def timeout_decorator(timeout):
     """
@@ -69,11 +70,20 @@ def validate_miner_response(response):
         'hf_model_name':str,
         'hf_model_revision':str,
     }
+
+    if not isinstance(response,dict):
+        return False
     
+    if len(response.keys()) != 3: 
+        return False
+
     for k in response.keys():
-        if not isinstance(response[k], validation_dict[k]) or k not in validation_dict.keys():
+        if k not in validation_dict.keys() or not isinstance(response[k], validation_dict[k]) or response[k] == "":
             return False
         
+    if response["hf_model_namespace"] == "synapsecai":
+        return False
+    
     return True
     
 def validate_model_benchmark(model_benchmark):
@@ -87,6 +97,9 @@ def validate_model_benchmark(model_benchmark):
         'block':int,
         'metrics':dict,
     }
+
+    if not isinstance(model_benchmark, dict):
+        return False
     
     for k in model_benchmark.keys():
         if k not in validation_dict.keys() or not isinstance(model_benchmark[k], validation_dict[k]):
@@ -116,3 +129,22 @@ def sign_data(hotkey: bt.Keypair, data: str) -> str:
     except AttributeError as e:
         bt.logging.error(f'Unable to sign data: {data} with wallet hotkey: {hotkey.ss58_address} due to error: {e}')
         raise AttributeError from e
+    
+def dict_in_list(target_dict, list_of_dicts) -> bool:
+    """
+    Returns True if the target_dict is within the list_of_dicts, regardless of the order of keys. Returns False otherwise.
+    """
+    target_str = json.dumps(target_dict, sort_keys=True)
+    return any(json.dumps(d, sort_keys=True) == target_str for d in list_of_dicts)
+
+def extract_metadata(list_of_dicts):
+    needed_keys=["hf_model_namespace", "hf_model_name", "hf_model_revision"]
+    output = []
+    for d in list_of_dicts:
+        # Only proceed if all needed keys are present
+        if not all(k in d for k in needed_keys):
+            continue
+
+        output_dict = {k: d[k] for k in needed_keys}
+        output.append(output_dict)
+    return output

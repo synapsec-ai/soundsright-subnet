@@ -11,15 +11,12 @@ if __name__ == "__main__":
     # Parse command line arguments
     parser = ArgumentParser()
     
-    ###########################################
-    # THIS MUST BE ADJUSTED UPON REGISTRATION #
-    ###########################################
     parser.add_argument(
         "--netuid", 
         type=int,
-        default=0, 
+        default=105, 
         help="The chain subnet uid"
-        )
+    )
     
     parser.add_argument(
         "--logging.logging_dir",

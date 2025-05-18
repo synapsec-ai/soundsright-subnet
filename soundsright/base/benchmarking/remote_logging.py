@@ -67,7 +67,6 @@ def miner_models_remote_logging(hotkey: bt.Keypair, current_miner_models: dict, 
         "X-Signature": signature,
         "X-Nonce": nonce,
         "X-Timestamp": timestamp,
-        "X-API-Key":hotkey.ss58_address
     }
     
     Utils.subnet_logger(
@@ -119,7 +118,6 @@ def sgmse_remote_logging(hotkey: bt.Keypair, sgmse_benchmarks: dict, log_level: 
         "X-Signature": signature,
         "X-Nonce": nonce,
         "X-Timestamp": timestamp,
-        "X-API-Key":hotkey.ss58_address
     }
     
     Utils.subnet_logger(

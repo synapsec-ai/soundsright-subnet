@@ -121,11 +121,11 @@ class ModelEvaluationHandler:
                 
                 return True       
             
-        except:   
+        except Exception as e:   
             
             Utils.subnet_logger(
                 severity="ERROR",
-                message=f"Could not obtain model metadata from chain for hotkey: {self.miner_hotkey}",
+                message=f"Could not obtain model metadata from chain for hotkey: {self.miner_hotkey} because: {e}",
                 log_level=self.log_level
             )
                 
@@ -182,8 +182,11 @@ class ModelEvaluationHandler:
             log_level=self.log_level
         )
 
+        if self.model_hash in self.forbidden_model_hashes:
+            return False 
+
         # Make sure model hash is unique 
-        if self.model_hash in [model_data['model_hash'] for model_data in self.miner_models] and self.model_hash not in self.forbidden_model_hashes:
+        if self.model_hash in [model_data['model_hash'] for model_data in self.miner_models]:
             
             # Find block that metadata was uploaded to chain for all models with identical directory hash
             model_blocks_with_same_hash = []

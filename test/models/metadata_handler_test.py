@@ -12,7 +12,7 @@ load_dotenv()
 
 import soundsright.base.models as Models
 
-def init_metadata_handler(subnet_netuid = 38):
+def init_metadata_handler(subnet_netuid = 271):
     parser = argparse.ArgumentParser()
     parser.add_argument("--netuid", type=int, default=subnet_netuid)
     parser.add_argument("--subtensor.network", type=str, default="test")
@@ -43,6 +43,7 @@ def init_metadata_handler(subnet_netuid = 38):
 ])
 
 def test_get_competition_name_from_competition_id(competition_id, expected):
+    time.sleep(5)
     metadata_handler, _ = init_metadata_handler()
     assert metadata_handler.get_competition_name_from_competition_id(competition_id) == expected
     

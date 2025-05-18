@@ -11,7 +11,9 @@ from .utils import (
     validate_uid,
     validate_miner_response,
     validate_model_benchmark,
-    sign_data
+    sign_data,
+    dict_in_list,
+    extract_metadata
 )
 
 from .container import (
