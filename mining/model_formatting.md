@@ -2,6 +2,7 @@
 title: Model Formatting
 parent: Mining
 nav_order: 2
+layout: page
 ---
 # Model Formatting
 

@@ -1,6 +1,7 @@
 ---
 title: Home
 nav_order: 1
+layout: page
 ---
 <h1 align="center">SoundsRight (SN)</h1>
 <h2 align="center">| <a href="https://soundsright.ai">Website & Leaderboard</a> | <a href="https://bittensor.com/">Bittensor</a> |</h2>

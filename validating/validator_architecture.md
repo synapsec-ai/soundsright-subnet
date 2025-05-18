@@ -2,6 +2,7 @@
 title: Validator Architecture Overview
 parent: Validating
 nav_order: 2
+layout: page
 ---
 # Validator Architecture Overview
 

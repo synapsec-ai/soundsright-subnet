@@ -2,6 +2,7 @@
 title: Mining in the SoundsRight Subnet
 parent: Mining
 nav_order: 3
+layout: page
 ---
 # Mining in the SoundsRight Subnet
 

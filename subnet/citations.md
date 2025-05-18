@@ -2,6 +2,7 @@
 title: Citations
 parent: Subnet
 nav_order: 4
+layout: page
 ---
 # Citations
 

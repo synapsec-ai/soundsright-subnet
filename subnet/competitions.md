@@ -2,6 +2,7 @@
 title: SoundsRight Competitions
 parent: Subnet
 nav_order: 1
+layout: page
 ---
 # SoundsRight Competitions
 

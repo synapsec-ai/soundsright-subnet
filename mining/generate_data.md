@@ -2,6 +2,7 @@
 title: Fine-Tuning Dataset Generation 
 parent: Mining
 nav_order: 1
+layout: page
 ---
 # Fine-Tuning Dataset Generation 
 

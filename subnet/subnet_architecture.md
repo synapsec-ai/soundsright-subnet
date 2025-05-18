@@ -2,6 +2,7 @@
 title: Subnet Architecture
 parent: Subnet
 nav_order: 2
+layout: page
 ---
 # Subnet Architecture
 

@@ -2,6 +2,7 @@
 title: Validating in the SoundsRight Subnet 
 parent: Validating
 nav_order: 1
+layout: page
 ---
 # Validating in the SoundsRight Subnet 
 

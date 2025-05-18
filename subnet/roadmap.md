@@ -2,6 +2,7 @@
 title: Subnet Roadmap
 parent: Subnet
 nav_order: 3
+layout: page
 ---
 # Subnet Roadmap
 
