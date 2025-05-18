@@ -1332,7 +1332,7 @@ class SubnetValidator(Base.BaseNeuron):
                 )
 
                 # Initialize the list of models with the ones already evaluated today
-                new_competition_miner_models = self.models_evaluated_today[f"{task}_{sample_rate}HZ"]
+                new_competition_miner_models = copy.deepcopy(self.models_evaluated_today[f"{task}_{sample_rate}HZ"])
 
                 self.neuron_logger(
                     severity="TRACE",
