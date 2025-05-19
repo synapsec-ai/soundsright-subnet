@@ -16,13 +16,15 @@ Running a validator the in Subnet requires **a subnet stake-weight of at least 1
 ## Validator deployment 
 
 ### 1. Virtual machine deployment
-The subnet requires **Ubuntu 24.04**, **Python 3.12** and **CUDA 12.6** with at least the following hardware configuration:
+The subnet requires **Ubuntu 24.04**, **Python 3.12** with at least the following hardware configuration:
 
 - 16 GB VRAM
 - 23 GB RAM
 - 512 GB storage (1000 IOPS)
 - 5 gbit/s network bandwidth
 - 6 vCPU 
+
+**CUDA 12.6** is also highly recommended.
 
 When running the subnet validator, we are highly recommending that you run the subnet validator with DataCrunch.io using the **1x Tesla V100** instance type with **Ubuntu 24.04** and **CUDA 12.6**. 
 
@@ -112,6 +114,7 @@ The contents of the `.env` file must be adjusted according to the validator conf
 | HOTKEY | The name of your hotkey. |
 | LOG_LEVEL | Specifies the level of logging you will see on the validator. Choose between INFO, INFOX, DEBUG. DEBUGX, TRACE, and TRACEX. |
 | OPENAI_API_KEY | Your OpenAI API key. |
+| CUDA_DIRECTORY | Path that points to the CUDA directory. |
 
 .env example:
 ```
@@ -120,6 +123,7 @@ SUBTENSOR_CHAIN_ENDPOINT=wss://entrypoint-finney.opentensor.ai:443
 WALLET=my_coldkey
 HOTKEY=my_hotkey
 OPENAI_API_KEY=THIS-IS-AN-OPENAI-API-KEY-wfhwe78r78frfg7e8ghrveh78ehrg
+CUDA_DIRECTORY=/usr/local/cuda-12.6
 
 # Available: INFO, INFOX, DEBUG, DEBUGX, TRACE, TRACEX
 LOG_LEVEL=TRACE
