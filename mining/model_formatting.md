@@ -46,10 +46,6 @@ Run the following commands:
 ```
 apt update 
 apt-get install python3.12-venv
-apt install jq 
-apt install npm 
-npm install pm2 -g 
-pm2 update 
 apt install -y python3.12-dev build-essential gcc g++
 ```
 
@@ -77,6 +73,9 @@ git clone https://github.com/synapsec-ai/soundsright-subnet.git
 cd soundsright-subnet
 python3 -m venv .venv
 source .venv/bin/activate
+pip install --use-pep517 pesq==0.0.4
+pip install -e .[validator]
+pip install httpx==0.27.2
 ```
 
 Once the installation is complete, run your script with the following command:
@@ -86,4 +85,4 @@ Once the installation is complete, run your script with the following command:
 
 If `MODEL VERIFICATION SUCCESSFUL.` appears in the logs, then your model is ready to be submitted to validators! 
 
-Note that this may take a while depending on the machine you run the script with (especially if you do not have a GPU). Please reference the documentation on running a validator if you wish to mirror the hardware exactly.
+Note that this may take a while depending on the machine you run the script with. Please reference the documentation on running a validator if you wish to mirror the hardware exactly.
