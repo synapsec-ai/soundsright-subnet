@@ -146,8 +146,8 @@ generate_pm2_launch_file() {
     local healthcheck_api_port="$HEALTHCHECK_API_PORT"
 
     # Construct argument list for the neuron
-    if [[ -z "$netuid" || -z "$wallet_name" || -z "$wallet_hotkey" || -z "$name" || -z  "$max_memory_restart" ]]; then
-        echo "name, max_memory_restart, netuid, wallet.name, and wallet.hotkey are mandatory arguments."
+    if [[ -z "$netuid" || -z "$wallet_name" || -z "$wallet_hotkey" || -z "$name" || -z  "$max_memory_restart" || -z "$cuda_dir" ]]; then
+        echo "name, cuda_directory, max_memory_restart, netuid, wallet.name, and wallet.hotkey are mandatory arguments."
         exit 1
     fi
 
