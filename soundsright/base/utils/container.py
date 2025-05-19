@@ -175,7 +175,7 @@ def validate_container_config(directory) -> bool:
         
     return True    
         
-def start_container(directory, log_level) -> bool:
+def start_container(directory, log_level, cuda_directory) -> bool:
     """Runs the container with docker compose
 
     Args:
@@ -207,7 +207,8 @@ def start_container(directory, log_level) -> bool:
         result0 = subprocess.run(["podman", "build", "-t", "modelapi", "--file", dockerfile_path], check=True)
         if result0.returncode != 0:
             return False
-        result1 = subprocess.run(["podman", "run", "-d", "--device", "nvidia.com/gpu=all", "--volume", "/usr/local/cuda-12.6:/usr/local/cuda-12.6", "--user", "10002:10002", "--name", "modelapi", "-p", "6500:6500", "modelapi"], check=True)
+        cuda_insert = f"{cuda_directory}:{cuda_directory}"
+        result1 = subprocess.run(["podman", "run", "-d", "--device", "nvidia.com/gpu=all", "--volume", cuda_insert, "--user", "10002:10002", "--name", "modelapi", "-p", "6500:6500", "modelapi"], check=True)
         if result1.returncode != 0:
             return False
         return True

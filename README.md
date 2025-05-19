@@ -13,6 +13,6 @@ Miners in the subnet will upload their fine-tuned models to HuggingFace, and the
 
 <h1 align="center">Getting Started</h1>
 
-To get started with mining or validating in the subnet, please reference the [subnet documentation]("https://docs.soundsright.ai").
+To get started with mining or validating in the subnet, please reference the [subnet documentation](https://docs.soundsright.ai).
 
 Additionally, if you would like to start in testnet, SoundsRight is testnet 271.

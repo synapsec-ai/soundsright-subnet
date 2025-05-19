@@ -23,6 +23,12 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
+        "--cuda_directory",
+        type=str,
+        help="Path to CUDA directory."
+    )
+
+    parser.add_argument(
         "--load_state",
         type=str,
         default="True",

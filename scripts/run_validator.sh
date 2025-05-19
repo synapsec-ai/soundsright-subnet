@@ -137,6 +137,7 @@ generate_pm2_launch_file() {
     local max_memory_restart="${args['max_memory_restart']}"
     # Script arguments
     local netuid="${NETUID}"
+    local cuda_dir="${CUDA_DIRECTORY}"
     local subtensor_chain_endpoint="${SUBTENSOR_CHAIN_ENDPOINT}"
     local wallet_name="${WALLET}"
     local wallet_hotkey="${HOTKEY}"
@@ -150,7 +151,7 @@ generate_pm2_launch_file() {
         exit 1
     fi
 
-    local launch_args="--netuid $netuid --wallet.name $wallet_name --wallet.hotkey $wallet_hotkey"
+    local launch_args="--netuid $netuid --wallet.name $wallet_name --wallet.hotkey $wallet_hotkey --cuda_directory $cuda_dir"
 
     if [[ -n "$subtensor_chain_endpoint" ]]; then
         launch_args+=" --subtensor.network $subtensor_chain_endpoint"
