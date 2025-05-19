@@ -25,7 +25,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--cuda_directory",
         type=str,
-        help="Path to CUDA directory."
+        help="Path to CUDA directory.",
+        default="/usr/local/cuda-12.6"
     )
 
     parser.add_argument(
