@@ -31,6 +31,7 @@ class ModelEvaluationHandler:
         subnet_netuid: int,
         miner_hotkey: str,
         miner_models: List[dict],
+        cuda_directory: str,
     ):
         """Initializes ModelEvaluationHandler
 
@@ -57,6 +58,7 @@ class ModelEvaluationHandler:
         self.reverb_path = os.path.join(reverb_base_path, str(sample_rate))
         self.model_output_path = model_output_path
         self.model_path = model_path 
+        self.cuda_directory = cuda_directory
         # Competition
         self.sample_rate = sample_rate
         self.task = task 
@@ -247,7 +249,7 @@ class ModelEvaluationHandler:
         Utils.delete_container(log_level=self.log_level)
         
         # Start container
-        if not Utils.start_container(directory=self.model_path, log_level=self.log_level):
+        if not Utils.start_container(directory=self.model_path, log_level=self.log_level, cuda_directory=self.cuda_directory):
             Utils.subnet_logger(
                 severity="TRACE",
                 message="Container could not be started",

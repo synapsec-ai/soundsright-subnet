@@ -137,6 +137,7 @@ generate_pm2_launch_file() {
     local max_memory_restart="${args['max_memory_restart']}"
     # Script arguments
     local netuid="${NETUID}"
+    local cuda_dir="${CUDA_DIRECTORY}"
     local subtensor_chain_endpoint="${SUBTENSOR_CHAIN_ENDPOINT}"
     local wallet_name="${WALLET}"
     local wallet_hotkey="${HOTKEY}"
@@ -145,12 +146,12 @@ generate_pm2_launch_file() {
     local healthcheck_api_port="$HEALTHCHECK_API_PORT"
 
     # Construct argument list for the neuron
-    if [[ -z "$netuid" || -z "$wallet_name" || -z "$wallet_hotkey" || -z "$name" || -z  "$max_memory_restart" ]]; then
-        echo "name, max_memory_restart, netuid, wallet.name, and wallet.hotkey are mandatory arguments."
+    if [[ -z "$netuid" || -z "$wallet_name" || -z "$wallet_hotkey" || -z "$name" || -z  "$max_memory_restart" || -z "$cuda_dir" ]]; then
+        echo "name, cuda_directory, max_memory_restart, netuid, wallet.name, and wallet.hotkey are mandatory arguments."
         exit 1
     fi
 
-    local launch_args="--netuid $netuid --wallet.name $wallet_name --wallet.hotkey $wallet_hotkey"
+    local launch_args="--netuid $netuid --wallet.name $wallet_name --wallet.hotkey $wallet_hotkey --cuda_directory $cuda_dir"
 
     if [[ -n "$subtensor_chain_endpoint" ]]; then
         launch_args+=" --subtensor.network $subtensor_chain_endpoint"

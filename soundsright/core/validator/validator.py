@@ -39,6 +39,7 @@ class SubnetValidator(Base.BaseNeuron):
         
         self.version = Utils.config["module_version"]
         self.neuron_config = None
+        self.cuda_directory = ""
         self.wallet = None
         self.subtensor = None
         self.dendrite = None
@@ -301,6 +302,7 @@ class SubnetValidator(Base.BaseNeuron):
         # Read command line arguments and perform actions based on them
         args = self._parse_args(parser=self.parser)
         self.log_level = args.log_level
+        self.cuda_directory = args.cuda_directory
 
         # Setup logging
         bt.logging(config=self.neuron_config, logging_dir=self.neuron_config.full_path)
@@ -747,7 +749,7 @@ class SubnetValidator(Base.BaseNeuron):
         Checks if setting/committing/revealing weights is appropriate, triggers the process if so.
         """
         # Check if it's time to set/commit new weights
-        if self.subtensor.get_current_block() >= self.last_updated_block + 100 and not self.debug_mode: 
+        if self.subtensor.get_current_block() >= self.last_updated_block + 350 and not self.debug_mode: 
 
             # Try set/commit weights
             try:
@@ -1055,6 +1057,7 @@ class SubnetValidator(Base.BaseNeuron):
             sgmse_path = self.sgmse_path,
             sgmse_output_path = self.sgmse_output_path,
             log_level=self.log_level,
+            cuda_directory=self.cuda_directory,
         )
         
         sgmse_benchmarking_outcome = sgmse_handler.download_start_and_enhance()
@@ -1137,7 +1140,8 @@ class SubnetValidator(Base.BaseNeuron):
             subtensor=self.subtensor,
             subnet_netuid=self.neuron_config.netuid,
             miner_hotkey=hotkey,
-            miner_models=self.miner_models[f'{task}_{sample_rate}HZ']
+            miner_models=self.miner_models[f'{task}_{sample_rate}HZ'],
+            cuda_directory=self.cuda_directory,
         )
         
         metrics_dict, model_hash, model_block = eval_handler.download_run_and_evaluate()

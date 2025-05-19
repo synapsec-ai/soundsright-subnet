@@ -10,7 +10,7 @@ import soundsright.base.utils as Utils
 
 class SGMSEHandler:
     
-    def __init__(self, task: str, sample_rate: int, task_path: str, sgmse_path: str, sgmse_output_path: str, log_level: str) -> None:
+    def __init__(self, task: str, sample_rate: int, task_path: str, sgmse_path: str, sgmse_output_path: str, log_level: str, cuda_directory: str) -> None:
         
         self.hf_model_url = "https://huggingface.co/synapsecai/SoundsRightModelTemplate"
         self.task = task
@@ -19,6 +19,7 @@ class SGMSEHandler:
         self.task_path = task_path
         self.sgmse_path = sgmse_path 
         self.sgmse_output_path = sgmse_output_path
+        self.cuda_directory = cuda_directory
         self.log_level = log_level
         
     def download_model_container(self) -> bool:
@@ -74,7 +75,7 @@ class SGMSEHandler:
         Utils.delete_container(log_level=self.log_level)
         
         # Start container
-        if not Utils.start_container(directory=self.sgmse_path, log_level=self.log_level):
+        if not Utils.start_container(directory=self.sgmse_path, log_level=self.log_level, cuda_directory=self.cuda_directory):
             Utils.subnet_logger(
                 severity="ERROR",
                 message="SGMSE+ container could not be started. Please contact subnet owners if issue persists.",
