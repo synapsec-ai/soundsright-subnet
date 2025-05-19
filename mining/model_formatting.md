@@ -25,25 +25,58 @@ If you are looking for an existing model to fine-tune, here are a few suggestion
 
 A script has been provided to test that your model is compatible with the validator architecture. 
 
-To run the script, first make sure you have completed the following installations:
+To run the script, first make sure you have configured your environment:
 
-1. Podman 
+### 1. Virtual machine deployment
+The model verficiation requires **Ubuntu 24.04**, **Python 3.12** and **CUDA 12.6**.
+
+### 2. Installation of mandatory packages
+
+#### 2.1 Install Podman for Ubuntu 
+
+For installing Podman for Ubuntu, run the following command:
+```
+apt-get update
+apt-get -y install podman
+```
+
+#### 2.2 Install the mandatory packages
+
+Run the following commands:
+```
+apt update 
+apt-get install python3.12-venv
+apt install jq 
+apt install npm 
+npm install pm2 -g 
+pm2 update 
+apt install -y python3.12-dev build-essential gcc g++
+```
+
+#### 2.3 Configure NVIDIA Container Toolkit and CDI
+
+Follow the instructions to download the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) with Apt.
+
+Next, follow the instructions for [generating a CDI specification](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/cdi-support.html).
+
+Verify that the CDI specification was done correctly with:
+```
+nvidia-ctk cdi list
+```
+You should see this in your output:
+```
+nvidia.com/gpu=all
+nvidia.com/gpu=0
+```
+
+#### 3 Setup the GitHub repository and python virtualenv
+To clone the repository and setup the Python virtualenv, execute the following commands:
 
 ```
-$ apt-get update
-$ apt-get -y install podman
-```
-
-2. Python venv
-```
-$ cd soundsright-subnet
-$ python3 -m venv .venv
-$ source .venv/bin/activate
-```
-
-3. Python dependencies
-```
-(.venv) $ pip install --use-pep517 pesq==0.0.4 && pip install -e .[validator] && pip install httpx==0.27.2
+git clone https://github.com/synapsec-ai/soundsright-subnet.git
+cd soundsright-subnet
+python3 -m venv .venv
+source .venv/bin/activate
 ```
 
 Once the installation is complete, run your script with the following command:
