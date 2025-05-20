@@ -17,6 +17,8 @@ from .utils import (
 )
 
 from .container import (
+    check_dockerfile_for_root_user,
+    check_dockerfile_for_sensitive_config,
     validate_container_config,
     update_dockerfile_cuda_home,
     start_container,
