@@ -4,6 +4,7 @@ import base64
 import shutil
 import subprocess
 from git import Repo
+from huggingface_hub import snapshot_download
 
 import soundsright.base.utils as Utils
 
@@ -83,7 +84,7 @@ def get_model_content_hash(
     repo_url = f"https://huggingface.co/{model_id}"
     
     # Download the model files for the specified revision
-    Repo.clone_from(repo_url, local_dir, branch=revision)
+    snapshot_download(repo_id=model_id, local_dir=local_dir, revision=revision)
 
     # Compute the hash of the model's contents
     return get_directory_content_hash(directory=local_dir)

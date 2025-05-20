@@ -5,6 +5,7 @@ import shutil
 from typing import List
 import subprocess
 from git import Repo
+from huggingface_hub import snapshot_download
 
 import soundsright.base.utils as Utils
 
@@ -25,7 +26,7 @@ class SGMSEHandler:
         
     def download_model_container(self) -> bool:
         try:
-            Repo.clone_from(self.hf_model_url, self.sgmse_path, branch=self.competition)
+            snapshot_download(repo_id="synapsecai/SoundsRightModelTemplate", local_dir=self.sgmse_path, branch=self.competition)
             return True
         except:
             return False
