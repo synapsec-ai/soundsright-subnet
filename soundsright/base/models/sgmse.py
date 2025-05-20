@@ -26,8 +26,6 @@ class SGMSEHandler:
     def download_model_container(self) -> bool:
         try:
             Repo.clone_from(self.hf_model_url, self.sgmse_path, branch=self.competition)
-            subprocess.run(["git", "lfs", "install"], cwd=self.sgmse_path, check=True)
-            subprocess.run(["git", "lfs", "pull"], cwd=self.sgmse_path, check=True)
             return True
         except:
             return False
