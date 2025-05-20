@@ -28,7 +28,12 @@ class SGMSEHandler:
         try:
             snapshot_download(repo_id="synapsecai/SoundsRightModelTemplate", local_dir=self.sgmse_path, branch=self.competition)
             return True
-        except:
+        except Exception as e:
+            Utils.subnet_logger(
+                severity="ERROR",
+                message=f"Could not download SGMSE because: {e}",
+                log_level=self.log_level
+            )
             return False
     
     def _reset_dir(self, directory):
