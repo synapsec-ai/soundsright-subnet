@@ -68,7 +68,7 @@ def initialize_run_and_benchmark_model(model_namespace, model_name, model_revisi
     Utils.delete_container(log_level="TRACE")
 
     logging.info("Starting container:")    
-    if not Utils.start_container(directory=model_dir, log_level="TRACE"):
+    if not Utils.start_container(directory=model_dir, log_level="TRACE", cuda_directory=cuda_directory):
         logging.error("Container could not be started.")
         Utils.delete_container(log_level="TRACE")
         shutil.rmtree(model_dir)
