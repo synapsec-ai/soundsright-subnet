@@ -94,14 +94,12 @@ def check_dockerfile_for_sensitive_config(dockerfile_path):
         FileNotFoundError: If no Dockerfile is found in the specified directory or its subdirectories.
     """
     sensitive_directories = [
-        "docker.sock", 
         "var",
         "etc",
         "proc",
         "sys",
         "dev",
         "root",
-        "home",
         "boot",
         "lib",
         "lib64",
@@ -236,9 +234,6 @@ def validate_container_config(directory) -> bool:
 
     if not dockerfile_path:
         return False 
-    
-    if check_dockerfile_for_root_user(dockerfile_path):
-        return False
     
     if check_dockerfile_for_sensitive_config(dockerfile_path):
         return False 
