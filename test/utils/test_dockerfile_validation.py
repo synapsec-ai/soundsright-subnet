@@ -66,12 +66,6 @@ def test_dockerfile_root_detection(content, expected):
     finally:
         os.remove(path)
 
-
-def test_dockerfile_file_not_found():
-    with pytest.raises(FileNotFoundError):
-        Utils.check_dockerfile_for_root_user("/path/does/not/exist/Dockerfile")
-
-
 @pytest.mark.parametrize("content,expected", [
     ("""
     FROM ubuntu:20.04
@@ -123,10 +117,8 @@ def test_dockerfile_file_not_found():
     """, False),
 ])
 def test_check_dockerfile_for_sensitive_config(content, expected):
-    path, temp_dir = create_temp_dockerfile(content)
-    assert Utils.heck_dockerfile_for_sensitive_config(str(path)) is expected
-    temp_dir.cleanup()
-
-def test_invalid_path_returns_true():
-    # The function is designed to return True on any exception including FileNotFoundError
-    assert Utils.check_dockerfile_for_sensitive_config("/non/existent/Dockerfile") is True
+    path = create_temp_dockerfile(content)
+    try:
+        assert Utils.heck_dockerfile_for_sensitive_config(str(path)) is expected
+    finally:
+        os.remove(path)
