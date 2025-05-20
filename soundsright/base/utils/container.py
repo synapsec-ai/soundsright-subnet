@@ -94,19 +94,6 @@ def check_dockerfile_for_sensitive_config(dockerfile_path):
         FileNotFoundError: If no Dockerfile is found in the specified directory or its subdirectories.
     """
     sensitive_directories = [
-        "var",
-        "etc",
-        "proc",
-        "sys",
-        "dev",
-        "root",
-        "boot",
-        "lib",
-        "lib64",
-        "opt",
-        "mnt",
-        "media",
-        "proc",
         ".bittensor",
         "bittensor"
     ]
