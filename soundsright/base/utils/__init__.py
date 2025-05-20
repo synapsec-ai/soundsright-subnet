@@ -18,6 +18,7 @@ from .utils import (
 
 from .container import (
     validate_container_config,
+    update_dockerfile_cuda_home,
     start_container,
     check_container_status,
     prepare,

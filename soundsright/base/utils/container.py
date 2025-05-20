@@ -5,6 +5,8 @@ import requests
 import zipfile
 import time 
 import glob
+import sys
+import re
 
 import soundsright.base.utils as Utils
 
@@ -106,6 +108,69 @@ def check_dockerfile_for_sensitive_config(dockerfile_path, sensitive_directories
 
     # If no VOLUME directive mentions .bittensor, return False
     return False
+
+def update_dockerfile_cuda_home(directory, cuda_directory, log_level):
+    pattern = re.compile(r'^(ENV\s+CUDA_HOME=).*$', re.MULTILINE)
+    replacement_line = f'ENV CUDA_HOME={cuda_directory}'
+
+    # Find dockerfile path
+    dockerfile_path = None
+
+    # Search for the Dockerfile in the directory and subdirectories
+    for root, _, files in os.walk(directory):
+        for file in files:
+            if file == "Dockerfile":
+                dockerfile_path = os.path.join(root, file)
+                break
+        if dockerfile_path:
+            break
+
+    if not dockerfile_path:
+        return False 
+
+    try:
+        with open(dockerfile_path, 'r') as file:
+            content = file.read()
+
+        if pattern.search(content):
+            content = pattern.sub(replacement_line, content)
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Updated existing CUDA_HOME line to: {replacement_line}",
+                log_level=log_level
+            )
+        else:
+            Utils.subnet_logger(
+                severity="TRACE",
+                message="No CUDA_HOME line found. No changes made.",
+                log_level=log_level
+            )
+            return True
+
+        with open(dockerfile_path, 'w') as file:
+            file.write(content)
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Successfully updated CUDA_HOME in {dockerfile_path}",
+                log_level=log_level
+            )
+            return True
+
+    except FileNotFoundError:
+        Utils.subnet_logger(
+            severity="ERROR",
+            message=f"Error: File '{dockerfile_path}' not found.",
+            log_level=log_level
+        )
+        return False
+    except Exception as e:
+        Utils.subnet_logger(
+            severity="ERROR",
+            message=f"An error occurred while updating the Dockerfile CUDA_HOME: {e}",
+            log_level=log_level
+        )
+        print(f"An error occurred: {e}")
+        return False
 
 def validate_container_config(directory) -> bool:
     """

@@ -211,6 +211,16 @@ class SGMSEHandler:
             self.reset_model_dirs()
             return False
         
+        # Replace CUDA_HOME in Dockerfile 
+        if not Utils.update_dockerfile_cuda_home(directory=self.sgmse_path, cuda_directory=self.cuda_directory, log_level=self.log_level):
+            Utils.subnet_logger(
+                severity="TRACE",
+                message="Dockerfile CUDA_HOME could not be updated successfully.",
+                log_level=self.log_level
+            )
+            self.reset_model_dirs()
+            return False
+        
         # Initialize and run model
         if not self.initialize_and_run_model():
             Utils.subnet_logger(

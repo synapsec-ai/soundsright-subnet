@@ -221,6 +221,21 @@ class ModelEvaluationHandler:
         Returns:
             bool: 
         """
+
+        if not Utils.update_dockerfile_cuda_home(directory=self.model_path, cuda_directory=self.cuda_directory, log_level=self.log_level):
+            Utils.subnet_logger(
+                severity="TRACE",
+                message="Dockerfile CUDA_HOME could not be updated successfully.",
+                log_level=self.log_level
+            )
+            
+            return False
+        
+        Utils.subnet_logger(
+            severity="TRACE",
+            message="Dockerfile CUDA_HOME updated successfully.",
+            log_level=self.log_level
+        )
         
         Utils.subnet_logger(
             severity="TRACE",
