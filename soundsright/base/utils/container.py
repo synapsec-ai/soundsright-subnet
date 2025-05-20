@@ -5,6 +5,8 @@ import requests
 import zipfile
 import time 
 import glob
+import sys
+import re
 
 import soundsright.base.utils as Utils
 
@@ -55,31 +57,29 @@ def check_dockerfile_for_root_user(dockerfile_path):
                     
                     # Resolve ARG references in the USER directive
                     if user.startswith("$"):
-                        user = arg_definitions.get(user[1:], "0")
-                        if user == "root" or str(user) == "0" or user.startswith("$"):
-                            return True
-                        user = env_definitions.get(user[1:], "0")
-                        if user == "root" or str(user) == "0" or user.startswith("$"):
-                            return True
+                        user = arg_definitions.get(user[1:], None)
+                        if user:
+                            if user == "root" or str(user) == "0" or user.startswith("$"):
+                                return True
+                        user = env_definitions.get(user[1:], None)
+                        if user:
+                            if user == "root" or str(user) == "0" or user.startswith("$"):
+                                return True
                     
                     # Check if the resolved user is root
                     if user == "root" or str(user) == "0":
                         return True
-                
-                # Check for conflicts with specific UID (e.g., validator UID)
-                elif "10001" in line:
-                    return True
-        
+                        
         # If no USER directive is found, the default is root
         if not user_line_exists:
             return True
 
     except Exception as e:
         return True  # Default to True if an error occurs to err on the side of caution
-
+    
     return False  # Returns False if no root configuration is detected
 
-def check_dockerfile_for_sensitive_config(dockerfile_path, sensitive_directories):
+def check_dockerfile_for_sensitive_config(dockerfile_path):
     """
     Finds a Dockerfile in the specified directory or its subdirectories and checks
     if the `.bittensor` directory is mounted as a volume.
@@ -93,6 +93,11 @@ def check_dockerfile_for_sensitive_config(dockerfile_path, sensitive_directories
     Raises:
         FileNotFoundError: If no Dockerfile is found in the specified directory or its subdirectories.
     """
+    sensitive_directories = [
+        ".bittensor",
+        "bittensor"
+    ]
+
     try:
         with open(dockerfile_path, "r") as f:
             lines = f.readlines()
@@ -106,6 +111,92 @@ def check_dockerfile_for_sensitive_config(dockerfile_path, sensitive_directories
 
     # If no VOLUME directive mentions .bittensor, return False
     return False
+
+def update_dockerfile_cuda_home(directory, cuda_directory, log_level):
+    pattern = re.compile(r'^(ENV\s+CUDA_HOME=).*$', re.MULTILINE)
+    from_pattern = re.compile(r'^(FROM\s+.+)$', re.MULTILINE)
+    replacement_line = f'ENV CUDA_HOME={cuda_directory}'
+
+    # Find dockerfile path
+    dockerfile_path = None
+
+    # Search for the Dockerfile in the directory and subdirectories
+    for root, _, files in os.walk(directory):
+        for file in files:
+            if file == "Dockerfile":
+                dockerfile_path = os.path.join(root, file)
+                break
+        if dockerfile_path:
+            break
+
+    if not dockerfile_path:
+        return False 
+
+    try:
+        with open(dockerfile_path, 'r') as file:
+            content = file.read()
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Old Dockerfile: {content}",
+                log_level=log_level
+            )
+
+        if pattern.search(content):
+            content = pattern.sub(replacement_line, content)
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Updated existing CUDA_HOME line to: {replacement_line}",
+                log_level=log_level
+            )
+        else:
+            # Insert CUDA_HOME after first FROM
+            match = from_pattern.search(content)
+            if match:
+                insert_pos = match.end()
+                # Insert with newline handling
+                content = content[:insert_pos] + f'\n{replacement_line}' + content[insert_pos:]
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"Inserted CUDA_HOME line after FROM: {replacement_line}",
+                    log_level=log_level
+                )
+            else:
+                Utils.subnet_logger(
+                    severity="ERROR",
+                    message="No FROM line found. Cannot insert CUDA_HOME.",
+                    log_level=log_level
+                )
+                return False
+
+        with open(dockerfile_path, 'w') as file:
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"New Dockerfile: {content}",
+                log_level=log_level
+            )
+            file.write(content)
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Successfully updated CUDA_HOME in {dockerfile_path}",
+                log_level=log_level
+            )
+            return True
+
+    except FileNotFoundError:
+        Utils.subnet_logger(
+            severity="ERROR",
+            message=f"Error: File '{dockerfile_path}' not found.",
+            log_level=log_level
+        )
+        return False
+    except Exception as e:
+        Utils.subnet_logger(
+            severity="ERROR",
+            message=f"An error occurred while updating the Dockerfile CUDA_HOME: {e}",
+            log_level=log_level
+        )
+        print(f"An error occurred: {e}")
+        return False
 
 def validate_container_config(directory) -> bool:
     """
@@ -131,46 +222,7 @@ def validate_container_config(directory) -> bool:
     if not dockerfile_path:
         return False 
     
-    # Find docker-compose.yml path
-    dockerfile_path = None
-
-    # Search for docker-compose.yml in the directory and its subdirectories
-    for root, _, files in os.walk(directory):
-        for file in files:
-            if file in ["docker-compose.yml", "docker-compose.yaml"]:
-                dockerfile_path = os.path.join(root, file)
-                break
-        if dockerfile_path:
-            break
-
-    if not dockerfile_path:
-        return True
-    
-    # Define sensitive host directories to look for
-    sensitive_directories = [
-        "docker.sock", 
-        "var",
-        "etc",
-        "proc",
-        "sys",
-        "dev",
-        "root",
-        "home",
-        "boot",
-        "lib",
-        "lib64",
-        "opt",
-        "mnt",
-        "media",
-        "proc",
-        ".bittensor",
-        "bittensor"
-    ]
-    
-    if check_dockerfile_for_root_user(dockerfile_path):
-        return False
-    
-    if check_dockerfile_for_sensitive_config(dockerfile_path, sensitive_directories):
+    if check_dockerfile_for_sensitive_config(dockerfile_path):
         return False 
         
     return True    

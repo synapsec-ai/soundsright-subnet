@@ -50,7 +50,7 @@ class SubnetValidator(Base.BaseNeuron):
         self.query = None
         self.debug_mode = False
         self.skip_sgmse = False
-        self.dataset_size = 1000
+        self.dataset_size = 100
         self.weights_objects = []
         self.sample_rates = [16000]
         self.tasks = ['DENOISING','DEREVERBERATION']
@@ -157,7 +157,7 @@ class SubnetValidator(Base.BaseNeuron):
             )
 
             # Generate new TTS data
-            self.TTSHandler.create_openai_tts_dataset_for_all_sample_rates(n=(3 if self.debug_mode else self.dataset_size))
+            self.TTSHandler.create_openai_tts_dataset_for_all_sample_rates(n=self.dataset_size)
             
             tts_16000 = os.path.join(self.tts_path, "16000")
             tts_files_16000 = [f for f in os.listdir(tts_16000)]
@@ -1044,6 +1044,9 @@ class SubnetValidator(Base.BaseNeuron):
             sample_rate (int): Sample rate
             task (str): DENOISING/DEREVERBERATION
         """
+        # Check if we need to set weights during this process
+        self.handle_weight_setting()
+
         if self.skip_sgmse:
             return
         
@@ -1114,62 +1117,70 @@ class SubnetValidator(Base.BaseNeuron):
         Returns:
             dict: model benchmarking results. If model benchmarking could not be performed, returns an empty (no-response) dict
         """
-        # Validate that miner data is formatted correctly
-        if not Utils.validate_miner_response(model_metadata):
+        # Check if we need to set weights during this process
+        self.handle_weight_setting()
+
+        try:
+
+            # Validate that miner data is formatted correctly
+            if not Utils.validate_miner_response(model_metadata):
+                
+                self.neuron_logger(
+                    severity="INFO",
+                    message=f"Miner with hotkey: {hotkey} has response that was not properly formatted, cannot benchmark: {model_metadata}"
+                )
+                
+                return None
+            
+            # Initialize model evaluation handler
+            eval_handler = Models.ModelEvaluationHandler(
+                tts_base_path=self.tts_path,
+                noise_base_path=self.noise_path,
+                reverb_base_path=self.reverb_path,
+                model_output_path=self.model_output_path,
+                model_path=self.model_path,
+                sample_rate=sample_rate,
+                task=task,
+                hf_model_namespace=model_metadata['hf_model_namespace'],
+                hf_model_name=model_metadata['hf_model_name'],
+                hf_model_revision=model_metadata['hf_model_revision'],
+                log_level=self.log_level,
+                subtensor=self.subtensor,
+                subnet_netuid=self.neuron_config.netuid,
+                miner_hotkey=hotkey,
+                miner_models=self.miner_models[f'{task}_{sample_rate}HZ'],
+                cuda_directory=self.cuda_directory,
+            )
+            
+            metrics_dict, model_hash, model_block = eval_handler.download_run_and_evaluate()
+            
+            model_benchmark = {
+                'hotkey':hotkey,
+                'hf_model_name':model_metadata['hf_model_name'],
+                'hf_model_namespace':model_metadata['hf_model_namespace'],
+                'hf_model_revision':model_metadata['hf_model_revision'],
+                'model_hash':model_hash,
+                'block':model_block,
+                'metrics':metrics_dict,
+            }
+            
+            if not Utils.validate_model_benchmark(model_benchmark):
+                self.neuron_logger(
+                    severity="INFO",
+                    message=f"Model benchmark: {model_benchmark} for task: {task} and sample rate: {sample_rate} is invalidly formatted."
+                )
+                
+                return None
             
             self.neuron_logger(
                 severity="INFO",
-                message=f"Miner with hotkey: {hotkey} has response that was not properly formatted, cannot benchmark: {model_metadata}"
+                message=f"Model benchmark for task: {task} and sample rate: {sample_rate}: {model_benchmark}"
             )
             
+            return model_benchmark
+        
+        except:
             return None
-        
-        # Initialize model evaluation handler
-        eval_handler = Models.ModelEvaluationHandler(
-            tts_base_path=self.tts_path,
-            noise_base_path=self.noise_path,
-            reverb_base_path=self.reverb_path,
-            model_output_path=self.model_output_path,
-            model_path=self.model_path,
-            sample_rate=sample_rate,
-            task=task,
-            hf_model_namespace=model_metadata['hf_model_namespace'],
-            hf_model_name=model_metadata['hf_model_name'],
-            hf_model_revision=model_metadata['hf_model_revision'],
-            log_level=self.log_level,
-            subtensor=self.subtensor,
-            subnet_netuid=self.neuron_config.netuid,
-            miner_hotkey=hotkey,
-            miner_models=self.miner_models[f'{task}_{sample_rate}HZ'],
-            cuda_directory=self.cuda_directory,
-        )
-        
-        metrics_dict, model_hash, model_block = eval_handler.download_run_and_evaluate()
-        
-        model_benchmark = {
-            'hotkey':hotkey,
-            'hf_model_name':model_metadata['hf_model_name'],
-            'hf_model_namespace':model_metadata['hf_model_namespace'],
-            'hf_model_revision':model_metadata['hf_model_revision'],
-            'model_hash':model_hash,
-            'block':model_block,
-            'metrics':metrics_dict,
-        }
-        
-        if not Utils.validate_model_benchmark(model_benchmark):
-            self.neuron_logger(
-                severity="INFO",
-                message=f"Model benchmark: {model_benchmark} for task: {task} and sample rate: {sample_rate} is invalidly formatted."
-            )
-            
-            return None
-        
-        self.neuron_logger(
-            severity="INFO",
-            message=f"Model benchmark for task: {task} and sample rate: {sample_rate}: {model_benchmark}"
-        )
-        
-        return model_benchmark
     
     async def get_miner_response(self, uid_to_query, sample_rate, task):
         response = await self.send_competition_synapse(

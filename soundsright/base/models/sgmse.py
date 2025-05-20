@@ -3,7 +3,9 @@ import yaml
 import glob
 import shutil
 from typing import List
+import subprocess
 from git import Repo
+from huggingface_hub import snapshot_download
 
 import soundsright.base.utils as Utils
 
@@ -24,9 +26,14 @@ class SGMSEHandler:
         
     def download_model_container(self) -> bool:
         try:
-            Repo.clone_from(self.hf_model_url, self.sgmse_path, branch=self.competition)
+            snapshot_download(repo_id="synapsecai/SoundsRightModelTemplate", local_dir=self.sgmse_path, revision=self.competition)
             return True
-        except:
+        except Exception as e:
+            Utils.subnet_logger(
+                severity="ERROR",
+                message=f"Could not download SGMSE because: {e}",
+                log_level=self.log_level
+            )
             return False
     
     def _reset_dir(self, directory):
@@ -206,6 +213,16 @@ class SGMSEHandler:
             Utils.subnet_logger(
                 severity="ERROR",
                 message=f"Could not download SGMSE container (branch: {self.competition}. Please contact subnet owners if issue persists.)",
+                log_level=self.log_level
+            )
+            self.reset_model_dirs()
+            return False
+        
+        # Replace CUDA_HOME in Dockerfile 
+        if not Utils.update_dockerfile_cuda_home(directory=self.sgmse_path, cuda_directory=self.cuda_directory, log_level=self.log_level):
+            Utils.subnet_logger(
+                severity="TRACE",
+                message="Dockerfile CUDA_HOME could not be updated successfully.",
                 log_level=self.log_level
             )
             self.reset_model_dirs()
