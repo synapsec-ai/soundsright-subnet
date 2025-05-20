@@ -81,10 +81,18 @@ def get_model_content_hash(
             log_level=log_level
         )
     
-    repo_url = f"https://huggingface.co/{model_id}"
-    
-    # Download the model files for the specified revision
-    snapshot_download(repo_id=model_id, local_dir=local_dir, revision=revision)
+    try:
+        
+        # Download the model files for the specified revision
+        snapshot_download(repo_id=model_id, local_dir=local_dir, revision=revision)
 
-    # Compute the hash of the model's contents
-    return get_directory_content_hash(directory=local_dir)
+        # Compute the hash of the model's contents
+        return get_directory_content_hash(directory=local_dir)
+    
+    except Exception as e:
+        Utils.subnet_logger(
+            severity="ERROR",
+            message=f"Model {model_id} could not be downloaded because : {e}",
+            log_level=log_level
+        )
+        return None, None
