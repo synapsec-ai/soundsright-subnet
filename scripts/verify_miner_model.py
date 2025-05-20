@@ -22,7 +22,7 @@ def validate_all_reverb_files_are_enhanced(reverb_dir, enhanced_dir):
     enhanced_files = sorted([os.path.basename(f) for f in glob.glob(os.path.join(enhanced_dir, '*.wav'))])
     return reverb_files == enhanced_files
 
-def initialize_run_and_benchmark_model(model_namespace, model_name, model_revision):
+def initialize_run_and_benchmark_model(model_namespace, model_name, model_revision, cuda_directory):
 
     clean_dir = os.path.join(os.getcwd(), "assets", "clean")
     reverb_dir = os.path.join(os.getcwd(), "assets", "reverb")
@@ -48,6 +48,13 @@ def initialize_run_and_benchmark_model(model_namespace, model_name, model_revisi
         print(model_hash)
     except Exception as e:
         logging.error(f"Model download failed because: {e}")
+        return False
+
+    logging.info("Updating CUDA_HOME in Dockerfile")
+    if not Utils.update_dockerfile_cuda_home(directory=model_dir, cuda_directory=cuda_directory, log_level="TRACE"):
+        logging.error("Could not update CUDA_HOME in Dockerfile.")
+        shutil.rmtree(model_dir)
+        return False
         
     logging.info("Validating container configuration:")
     if not Utils.validate_container_config(model_dir):
@@ -158,11 +165,11 @@ def initialize_run_and_benchmark_model(model_namespace, model_name, model_revisi
     
     return True 
 
-def verify_miner_model(model_namespace, model_name, model_revision): 
+def verify_miner_model(model_namespace, model_name, model_revision, cuda_directory): 
     
     logging.info(f"Starting verificaiton for model: huggingface.co/{model_namespace}/{model_name}/tree/{model_revision}")
     
-    if not initialize_run_and_benchmark_model(model_namespace=model_namespace, model_name=model_name, model_revision=model_revision):
+    if not initialize_run_and_benchmark_model(model_namespace=model_namespace, model_name=model_name, model_revision=model_revision, cuda_directory=cuda_directory):
         logging.critical(f"MODEL VERIFICATION FAILED.")
         return
 
@@ -190,6 +197,14 @@ if __name__ == "__main__":
         help="HuggingFace model revision (branch name).",
         required=True,
     )
+
+    parser.add_argument(
+        "--cuda_directory",
+        type=str,
+        help="The path to the CUDA directory",
+        required=True,
+        default="/usr/local/cuda-12.6"
+    )
     
     args = parser.parse_args()
     
@@ -197,4 +212,5 @@ if __name__ == "__main__":
         model_namespace=args.model_namespace,
         model_name=args.model_name,
         model_revision=args.model_revision,
+        cuda_directory=args.cuda_directory,
     )

@@ -111,6 +111,7 @@ def check_dockerfile_for_sensitive_config(dockerfile_path, sensitive_directories
 
 def update_dockerfile_cuda_home(directory, cuda_directory, log_level):
     pattern = re.compile(r'^(ENV\s+CUDA_HOME=).*$', re.MULTILINE)
+    from_pattern = re.compile(r'^(FROM\s+.+)$', re.MULTILINE)
     replacement_line = f'ENV CUDA_HOME={cuda_directory}'
 
     # Find dockerfile path
@@ -131,6 +132,11 @@ def update_dockerfile_cuda_home(directory, cuda_directory, log_level):
     try:
         with open(dockerfile_path, 'r') as file:
             content = file.read()
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Old Dockerfile: {content}",
+                log_level=log_level
+            )
 
         if pattern.search(content):
             content = pattern.sub(replacement_line, content)
@@ -140,14 +146,31 @@ def update_dockerfile_cuda_home(directory, cuda_directory, log_level):
                 log_level=log_level
             )
         else:
-            Utils.subnet_logger(
-                severity="TRACE",
-                message="No CUDA_HOME line found. No changes made.",
-                log_level=log_level
-            )
-            return True
+            # Insert CUDA_HOME after first FROM
+            match = from_pattern.search(content)
+            if match:
+                insert_pos = match.end()
+                # Insert with newline handling
+                content = content[:insert_pos] + f'\n{replacement_line}' + content[insert_pos:]
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"Inserted CUDA_HOME line after FROM: {replacement_line}",
+                    log_level=log_level
+                )
+            else:
+                Utils.subnet_logger(
+                    severity="ERROR",
+                    message="No FROM line found. Cannot insert CUDA_HOME.",
+                    log_level=log_level
+                )
+                return False
 
         with open(dockerfile_path, 'w') as file:
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"New Dockerfile: {content}",
+                log_level=log_level
+            )
             file.write(content)
             Utils.subnet_logger(
                 severity="TRACE",
