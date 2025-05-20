@@ -119,6 +119,6 @@ def test_dockerfile_root_detection(content, expected):
 def test_check_dockerfile_for_sensitive_config(content, expected):
     path = create_temp_dockerfile(content)
     try:
-        assert Utils.heck_dockerfile_for_sensitive_config(str(path)) is expected
+        assert Utils.check_dockerfile_for_sensitive_config(str(path)) is expected
     finally:
         os.remove(path)
