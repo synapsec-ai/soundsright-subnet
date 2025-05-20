@@ -72,12 +72,16 @@ def test_dockerfile_root_detection(content, expected):
     VOLUME [\"/root/.bittensor\"]
     """, True),
     ("""
+    FROM ubuntu:20.04
+    VOLUME [\"/root/bittensor\"]
+    """, True),
+    ("""
     FROM python:3.9
     COPY . /app
     """, False),
     ("""
     VOLUME [\"/etc/config\", \"/var/log\"]
-    """, True),
+    """, False),
     ("", False),
     ("""
     FROM python:3.10.14-bookworm
