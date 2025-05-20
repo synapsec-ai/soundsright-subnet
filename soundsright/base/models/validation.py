@@ -2,6 +2,7 @@ import hashlib
 import os
 import base64
 import shutil
+import subprocess
 from git import Repo
 
 import soundsright.base.utils as Utils
@@ -83,6 +84,10 @@ def get_model_content_hash(
     
     # Download the model files for the specified revision
     Repo.clone_from(repo_url, local_dir, branch=revision)
+
+    # In case of LFS
+    subprocess.run(["git", "lfs", "install"], cwd=local_dir, check=True)
+    subprocess.run(["git", "lfs", "pull"], cwd=local_dir, check=True)
 
     # Compute the hash of the model's contents
     return get_directory_content_hash(directory=local_dir)
