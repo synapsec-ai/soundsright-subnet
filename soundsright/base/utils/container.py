@@ -57,31 +57,29 @@ def check_dockerfile_for_root_user(dockerfile_path):
                     
                     # Resolve ARG references in the USER directive
                     if user.startswith("$"):
-                        user = arg_definitions.get(user[1:], "0")
-                        if user == "root" or str(user) == "0" or user.startswith("$"):
-                            return True
-                        user = env_definitions.get(user[1:], "0")
-                        if user == "root" or str(user) == "0" or user.startswith("$"):
-                            return True
+                        user = arg_definitions.get(user[1:], None)
+                        if user:
+                            if user == "root" or str(user) == "0" or user.startswith("$"):
+                                return True
+                        user = env_definitions.get(user[1:], None)
+                        if user:
+                            if user == "root" or str(user) == "0" or user.startswith("$"):
+                                return True
                     
                     # Check if the resolved user is root
                     if user == "root" or str(user) == "0":
                         return True
-                
-                # Check for conflicts with specific UID (e.g., validator UID)
-                elif "10001" in line:
-                    return True
-        
+                        
         # If no USER directive is found, the default is root
         if not user_line_exists:
             return True
 
     except Exception as e:
         return True  # Default to True if an error occurs to err on the side of caution
-
+    
     return False  # Returns False if no root configuration is detected
 
-def check_dockerfile_for_sensitive_config(dockerfile_path, sensitive_directories):
+def check_dockerfile_for_sensitive_config(dockerfile_path):
     """
     Finds a Dockerfile in the specified directory or its subdirectories and checks
     if the `.bittensor` directory is mounted as a volume.
@@ -95,6 +93,26 @@ def check_dockerfile_for_sensitive_config(dockerfile_path, sensitive_directories
     Raises:
         FileNotFoundError: If no Dockerfile is found in the specified directory or its subdirectories.
     """
+    sensitive_directories = [
+        "docker.sock", 
+        "var",
+        "etc",
+        "proc",
+        "sys",
+        "dev",
+        "root",
+        "home",
+        "boot",
+        "lib",
+        "lib64",
+        "opt",
+        "mnt",
+        "media",
+        "proc",
+        ".bittensor",
+        "bittensor"
+    ]
+
     try:
         with open(dockerfile_path, "r") as f:
             lines = f.readlines()
@@ -219,46 +237,10 @@ def validate_container_config(directory) -> bool:
     if not dockerfile_path:
         return False 
     
-    # Find docker-compose.yml path
-    dockerfile_path = None
-
-    # Search for docker-compose.yml in the directory and its subdirectories
-    for root, _, files in os.walk(directory):
-        for file in files:
-            if file in ["docker-compose.yml", "docker-compose.yaml"]:
-                dockerfile_path = os.path.join(root, file)
-                break
-        if dockerfile_path:
-            break
-
-    if not dockerfile_path:
-        return True
-    
-    # Define sensitive host directories to look for
-    sensitive_directories = [
-        "docker.sock", 
-        "var",
-        "etc",
-        "proc",
-        "sys",
-        "dev",
-        "root",
-        "home",
-        "boot",
-        "lib",
-        "lib64",
-        "opt",
-        "mnt",
-        "media",
-        "proc",
-        ".bittensor",
-        "bittensor"
-    ]
-    
     if check_dockerfile_for_root_user(dockerfile_path):
         return False
     
-    if check_dockerfile_for_sensitive_config(dockerfile_path, sensitive_directories):
+    if check_dockerfile_for_sensitive_config(dockerfile_path):
         return False 
         
     return True    
