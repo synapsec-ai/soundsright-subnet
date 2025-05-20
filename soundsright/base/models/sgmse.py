@@ -26,7 +26,7 @@ class SGMSEHandler:
         
     def download_model_container(self) -> bool:
         try:
-            snapshot_download(repo_id="synapsecai/SoundsRightModelTemplate", local_dir=self.sgmse_path, branch=self.competition)
+            snapshot_download(repo_id="synapsecai/SoundsRightModelTemplate", local_dir=self.sgmse_path, revision=self.competition)
             return True
         except Exception as e:
             Utils.subnet_logger(
