@@ -202,7 +202,6 @@ if __name__ == "__main__":
         "--cuda_directory",
         type=str,
         help="The path to the CUDA directory",
-        required=True,
         default="/usr/local/cuda-12.6"
     )
     
