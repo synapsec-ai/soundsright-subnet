@@ -256,11 +256,45 @@ def start_container(directory, log_level, cuda_directory) -> bool:
         return False
 
     try:
-        result0 = subprocess.run(["podman", "build", "-t", "modelapi", "--file", dockerfile_path], check=True)
+        result0 = subprocess.run(
+            ["podman", "build", "-t", "modelapi", "--file", dockerfile_path], 
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        Utils.subnet_logger(
+            severity="INFO",
+            message=f"podman build stdout:\n{result0.stdout}",
+            log_level=log_level,
+        )
+        if result0.stderr:
+            Utils.subnet_logger(
+                severity="ERROR",
+                message=f"podman build stderr:\n{result0.stderr}",
+                log_level=log_level,
+            )
         if result0.returncode != 0:
             return False
         cuda_insert = f"{cuda_directory}:{cuda_directory}"
-        result1 = subprocess.run(["podman", "run", "-d", "--device", "nvidia.com/gpu=all", "--volume", cuda_insert, "--user", "10002:10002", "--name", "modelapi", "-p", "6500:6500", "modelapi"], check=True)
+        result1 = subprocess.run(
+            ["podman", "run", "-d", "--device", "nvidia.com/gpu=all", "--volume", cuda_insert, "--user", "10002:10002", "--name", "modelapi", "-p", "6500:6500", "modelapi"], 
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        Utils.subnet_logger(
+            severity="INFO",
+            message=f"podman run stdout:\n{result0.stdout}",
+            log_level=log_level,
+        )
+        if result1.stderr:
+            Utils.subnet_logger(
+                severity="ERROR",
+                message=f"podman run stderr:\n{result0.stderr}",
+                log_level=log_level,
+            )
         if result1.returncode != 0:
             return False
         return True
