@@ -359,6 +359,12 @@ def upload_audio(noisy_dir, log_level, timeout=500,) -> bool:
                 for file in files
             ]
 
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Uploading the following files to the model: {file_payload}",
+                log_level=log_level
+            )
+
             response = session.post(url, files=file_payload, timeout=timeout)
 
             for _, file in file_payload:
