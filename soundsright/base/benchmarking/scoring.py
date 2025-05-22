@@ -19,14 +19,20 @@ def new_model_surpasses_historical_model(new_model_metric, new_model_block, old_
     A new model must have a performance metric that is higher than the current
     best performing model by an improvement factor.
     """
-    # Return False is new model underperforms old model
+    # Return False if new model underperforms old model
     if new_model_metric <= old_model_metric:
         return False 
+    
     # Otherwise, we want to calculate the improvement factor based on block differential
     improvement_factor = calculate_improvement_factor(new_model_block, old_model_block)
+
+    # Determine the target value for the new model 
+    target_value = old_model_metric + (abs(old_model_metric) * improvement_factor)
+
     # If the new model has performance better or equal to the improvement factor return True
-    if (new_model_metric / old_model_metric) >= (improvement_factor + 1):
+    if new_model_metric >= target_value:
         return True 
+    
     # Othewrwise, return False
     return False
     
