@@ -1265,6 +1265,11 @@ class SubnetValidator(Base.BaseNeuron):
                     severity="TRACE",
                     message=f"Blacklist for competition: {competition}: {self.blacklisted_miner_models[competition]}"
                 )
+
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Best miner models: {self.best_miner_models}"
+        )
                     
     def run(self) -> None:
         """
