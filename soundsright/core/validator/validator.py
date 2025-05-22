@@ -762,12 +762,6 @@ class SubnetValidator(Base.BaseNeuron):
                     message=f"Committing weights timed out: {e}"
                 )
 
-        # If commit reveal is enabled, reveal weights in queue
-        if self.subtensor.get_subnet_hyperparameters(netuid=self.neuron_config.netuid).commit_reveal_weights_enabled:
-
-            # Reveal weights stored in queue
-            self.reveal_weights_in_queue()
-
     @Utils.timeout_decorator(timeout=30)
     async def commit_weights(self) -> None:
         """Sets the weights for the subnet"""
@@ -777,7 +771,7 @@ class SubnetValidator(Base.BaseNeuron):
             if all(x==1 for x in weights):
                 return [(x/max_value) for x in weights]
             elif all(x==0 for x in weights):
-                return weights
+                return [1/max_value for x in weights]
             else:
                 return [(x/max(weights)) for x in weights]
             
@@ -793,181 +787,43 @@ class SubnetValidator(Base.BaseNeuron):
             message=f"Committing weights: {weights}"
         )
         if not self.debug_mode:
-            # Commit reveal if it is enabled
-            if self.subtensor.get_subnet_hyperparameters(netuid=self.neuron_config.netuid).commit_reveal_weights_enabled:
+        
+            self.neuron_logger(
+                severity="DEBUGX",
+                message=f"Setting weights with the following parameters: netuid={self.neuron_config.netuid}, wallet={self.wallet}, uids={self.metagraph.uids}, weights={weights}, version_key={self.subnet_version}"
+            )
 
+            weights = normalize_weights_list(weights)
+
+            # This is a crucial step that updates the incentive mechanism on the Bittensor blockchain.
+            # Miners with higher scores (or weights) receive a larger share of TAO rewards on this subnet.
+            result = self.subtensor.set_weights(
+                netuid=self.neuron_config.netuid,  # Subnet to set weights on.
+                wallet=self.wallet,  # Wallet to sign set weights using hotkey.
+                uids=self.metagraph.uids,  # Uids of the miners to set weights for.
+                weights=weights,  # Weights to set for the miners.
+                wait_for_inclusion=False,
+                version_key=self.subnet_version,
+            )
+            if result:
                 self.neuron_logger(
-                    severity="DEBUGX",
-                    message=f"Committing weights with the following parameters: netuid={self.neuron_config.netuid}, wallet={self.wallet}, uids={uids}, weights={weights}, version_key={self.subnet_version}"
+                    severity="SUCCESS",
+                    message=f"Successfully set weights: {weights}"
                 )
-                # This is a crucial step that updates the incentive mechanism on the Bittensor blockchain.
-                # Miners with higher scores (or weights) receive a larger share of TAO rewards on this subnet.
-                result, msg = self.subtensor.commit_weights(
-                    netuid=self.neuron_config.netuid,  # Subnet to set weights on.
-                    wallet=self.wallet,  # Wallet to sign set weights using hotkey.
-                    uids=uids,  # Uids of the miners to set weights for.
-                    weights=weights,  # Weights to set for the miners.
-                    salt=[salt],
-                    max_retries=5,
-                )
-                # For successful commits
-                if result:
+                
+                self.healthcheck_api.update_metric(metric_name='weights.last_set_timestamp', value=time.strftime("%H:%M:%S", time.localtime()))
+                self.healthcheck_api.append_metric(metric_name="weights.total_count_set", value=1)
 
-                    self.neuron_logger(
-                        severity="SUCCESS",
-                        message=f"Successfully committed weights: {weights}. Message: {msg}"
-                    )
-
-                    self.healthcheck_api.update_metric(metric_name='weights.last_committed_timestamp', value=time.strftime("%H:%M:%S", time.localtime()))
-                    self.healthcheck_api.append_metric(metric_name="weights.total_count_committed", value=1)
-
-                    self._store_weight_metadata(
-                        salt=salt,
-                        uids=uids,
-                        weights=weights,
-                        block=block
-                    )
-
-                # For unsuccessful commits
-                else:
-                    self.neuron_logger(
-                        severity="ERROR",
-                        message=f"Failed to commit weights: {weights}. Message: {msg}"
-                    )
             else:
                 self.neuron_logger(
-                    severity="DEBUGX",
-                    message=f"Setting weights with the following parameters: netuid={self.neuron_config.netuid}, wallet={self.wallet}, uids={self.metagraph.uids}, weights={weights}, version_key={self.subnet_version}"
+                    severity="ERROR",
+                    message=f"Failed to set weights: {weights}"
                 )
-
-                weights = normalize_weights_list(weights)
-
-                # This is a crucial step that updates the incentive mechanism on the Bittensor blockchain.
-                # Miners with higher scores (or weights) receive a larger share of TAO rewards on this subnet.
-                result = self.subtensor.set_weights(
-                    netuid=self.neuron_config.netuid,  # Subnet to set weights on.
-                    wallet=self.wallet,  # Wallet to sign set weights using hotkey.
-                    uids=self.metagraph.uids,  # Uids of the miners to set weights for.
-                    weights=weights,  # Weights to set for the miners.
-                    wait_for_inclusion=False,
-                    version_key=self.subnet_version,
-                )
-                if result:
-                    self.neuron_logger(
-                        severity="SUCCESS",
-                        message=f"Successfully set weights: {weights}"
-                    )
-                    
-                    self.healthcheck_api.update_metric(metric_name='weights.last_set_timestamp', value=time.strftime("%H:%M:%S", time.localtime()))
-                    self.healthcheck_api.append_metric(metric_name="weights.total_count_set", value=1)
-
-                else:
-                    self.neuron_logger(
-                        severity="ERROR",
-                        message=f"Failed to set weights: {weights}"
-                    )
         else:
             self.neuron_logger(
                 severity="INFO",
                 message=f"Skipped setting weights due to debug mode"
             )
-
-    def _store_weight_metadata(self, salt, uids, weights, block) -> None:
-        """Stores weight metadata as part of the SubnetValidator.weights_objects attribute
-
-        Args:
-            salt (int): Unique salt for weights.
-            uids (list): Uids to set weights for
-            weights (np.ndarray)): Weights array
-            block (int): What block weights were initially committed to chain
-        """
-        # Construct weight object
-        data = {
-            "salt": salt,
-            "uids": uids,
-            "weights": weights,
-            "block": block
-        }
-
-        # Store weight object
-        self.weights_objects.append(data)
-
-        self.neuron_logger(
-            severity='TRACE',
-            message=f'Weight data appended to weights_objects for future reveal: {data}'
-        )
-
-    @Utils.timeout_decorator(timeout=30)
-    async def reveal_weights(self, weight_object) -> bool:
-        """
-        Reveals weights (in the case that commit reveal is enabled for the subnet)
-        
-        Args: 
-            :param weight_object: (dict): Validator's local log of weights to be revealed
-            
-        Returns: 
-            bool: True if weights were revealed successfully, False otherwise
-        """
-        self.neuron_logger(
-            severity="INFO",
-            message=f"Revealing weights: {weight_object}"
-        )
-
-        status, msg = self.subtensor.reveal_weights(
-            wallet=self.wallet,
-            netuid=self.neuron_config.netuid,
-            uids=weight_object["uids"],
-            weights=weight_object["weights"],
-            salt=np.array([weight_object["salt"]]),
-            max_retries=5
-        )
-
-        if status: 
-            self.neuron_logger(
-                severity="SUCCESS",
-                message=f'Weight reveal succeeded for weights: {weight_object} Status message: {msg}'
-            )
-            self.healthcheck_api.update_metric(metric_name='weights.last_revealed_timestamp', value=time.strftime("%H:%M:%S", time.localtime()))
-            self.healthcheck_api.append_metric(metric_name="weights.total_count_revealed", value=1)
-
-        else:
-            self.neuron_logger(
-                severity="ERROR",
-                message=f'Weight reveal failed. Status message: {msg}'
-            )
-
-        return status
-
-    def reveal_weights_in_queue(self) -> None:
-        """
-        Looks through queue, sees if any weight objects are at/past the time to reveal them. Reveals them if this is the case
-        """
-        current_block = self.subtensor.get_current_block()
-        commit_reveal_weights_interval = self.subtensor.get_subnet_hyperparameters(netuid=self.neuron_config.netuid).commit_reveal_weights_interval
-        new_weights_objects = []
-
-        for weight_object in self.weights_objects:
-            if (current_block - weight_object['block']) >= commit_reveal_weights_interval:
-                try: 
-                    status = asyncio.run(self.reveal_weights(weight_object=weight_object))
-                    if not status: 
-                        new_weights_objects.append(weight_object)
-                except TimeoutError as e:
-                    self.neuron_logger(
-                        severity="ERROR", 
-                        message=f"Revealing weights timed out: {e}"
-                    )
-                    new_weights_objects.append(weight_object)
-
-            else:
-                new_weights_objects.append(weight_object)
-
-        self.weights_objects = new_weights_objects
-
-        self.neuron_logger(
-            severity="TRACE",
-            message=f"Weights objects in queue to be revealed: {self.weights_objects}"
-        )
 
     def handle_remote_logging(self) -> None:
         """
