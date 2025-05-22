@@ -205,165 +205,175 @@ def determine_competition_scores(
         # Iterate through metrics in each competition
         for metric_name in metric_proportions[competition].keys():
 
-            # Determine SGMSE benchmark value
             try:
-                sgmse_value = sgmse_benchmarks[competition][metric_name]["average"]
-            except:
-                sgmse_value=0
-            
-            # Determine the score to assign to the best miner
-            competition_metric_score = competition_max_scores[competition] * metric_proportions[competition][metric_name]
-            
-            # Find best current model 
-            current_models = miner_models[competition]
-            best_current_model = get_best_current_model_from_list(models_data=current_models, metric_name=metric_name, sgmse_value=sgmse_value)
-            best_current_model_is_valid = False
-            if best_current_model and validate_benchmark(benchmark=best_current_model, metric_name=metric_name, metagraph=metagraph):
-                best_current_model_is_valid = True
 
-            Utils.subnet_logger(
-                severity="TRACE",
-                message=f"Best model for metric: {metric_name} in current competition: {competition} is: {best_current_model}",
-                log_level=log_level,
-            )
-            
-            # Obtain best historical model 
-            best_models = best_miner_models[competition]
-            best_historical_model_on_previous_benchmark = get_best_model_from_list(models_data=best_models, metric_name=metric_name)
-            best_historical_model_on_previous_benchmark_is_valid = False
-            if best_historical_model_on_previous_benchmark and validate_historical_benchmark(benchmark=best_historical_model_on_previous_benchmark, metagraph=metagraph):
-                best_historical_model_on_previous_benchmark_is_valid = True 
-            
-            # Obtain best historical model on current benchmark
-            best_historical_model = find_best_model_current_benchmark(best_historical_model=best_historical_model_on_previous_benchmark, current_models=current_models)
-            best_historical_model_is_valid = False 
-            if best_historical_model and validate_benchmark(benchmark=best_historical_model, metric_name=metric_name, metagraph=metagraph):
-                best_historical_model_is_valid = True
-
-            # Assign score to best historical model if best current model doesn't exist
-            if not best_current_model_is_valid and best_historical_model_on_previous_benchmark_is_valid:
-                best_historical_model_on_previous_benchmark_hotkey = best_historical_model_on_previous_benchmark.get("hotkey", None)
-                if not best_historical_model_on_previous_benchmark_hotkey:
-                    continue
-                uid = metagraph.hotkeys.index(best_historical_model_on_previous_benchmark_hotkey)
-                competition_scores[competition][uid] += competition_metric_score
+                # Determine SGMSE benchmark value
+                try:
+                    sgmse_value = sgmse_benchmarks[competition][metric_name]["average"]
+                except:
+                    sgmse_value=0
                 
-                # Append to new best performing model knowledge
-                new_best_miner_models[competition].append(best_historical_model_on_previous_benchmark)
-
-                Utils.subnet_logger(
-                    severity="TRACE",
-                    message=f"Only best historical model exists for competition: {competition}: {best_historical_model}"
-                )
-                continue
-
-            # Assign no score if neither best current model or best historical model exist 
-            if not best_current_model_is_valid and not best_historical_model_is_valid:
-                Utils.subnet_logger(
-                    severity="TRACE",
-                    message=f"No current or historical models for competition: {competition}",
-                    log_level=log_level
-                )
-                continue
-
-            # Assign score to the best historical model if the best current model does not exist
-            if not best_current_model_is_valid and best_historical_model_is_valid:
-                best_historical_model_hotkey = best_historical_model.get("hotkey", None)
-                if not best_historical_model_hotkey:
-                    continue 
-                uid = metagraph.hotkeys.index(best_historical_model_hotkey)
-                competition_scores[competition][uid] += competition_metric_score
-                new_best_miner_models[competition].append(best_historical_model)
+                # Determine the score to assign to the best miner
+                competition_metric_score = competition_max_scores[competition] * metric_proportions[competition][metric_name]
                 
+                # Find best current model 
+                current_models = miner_models[competition]
+                best_current_model = get_best_current_model_from_list(models_data=current_models, metric_name=metric_name, sgmse_value=sgmse_value)
+                best_current_model_is_valid = False
+                if best_current_model and validate_benchmark(benchmark=best_current_model, metric_name=metric_name, metagraph=metagraph):
+                    best_current_model_is_valid = True
+
                 Utils.subnet_logger(
                     severity="TRACE",
-                    message=f"Competition winner for metric: {metric_name} in current competition: {competition} is: {best_historical_model}. Assigning score: {competition_metric_score}",
+                    message=f"Best model for metric: {metric_name} in current competition: {competition} is: {best_current_model}",
                     log_level=log_level,
                 )
-                continue
-            
-            # Assign score to the best current model if best historical model does not exist
-            if not best_historical_model_is_valid and best_current_model_is_valid:
+                
+                # Obtain best historical model 
+                best_models = best_miner_models[competition]
+                best_historical_model_on_previous_benchmark = get_best_model_from_list(models_data=best_models, metric_name=metric_name)
+                best_historical_model_on_previous_benchmark_is_valid = False
+                if best_historical_model_on_previous_benchmark and validate_historical_benchmark(benchmark=best_historical_model_on_previous_benchmark, metagraph=metagraph):
+                    best_historical_model_on_previous_benchmark_is_valid = True 
+                
+                # Obtain best historical model on current benchmark
+                best_historical_model = find_best_model_current_benchmark(best_historical_model=best_historical_model_on_previous_benchmark, current_models=current_models)
+                best_historical_model_is_valid = False 
+                if best_historical_model and validate_benchmark(benchmark=best_historical_model, metric_name=metric_name, metagraph=metagraph):
+                    best_historical_model_is_valid = True
+
+                # Assign score to best historical model if best current model doesn't exist
+                if not best_current_model_is_valid and best_historical_model_on_previous_benchmark_is_valid:
+                    best_historical_model_on_previous_benchmark_hotkey = best_historical_model_on_previous_benchmark.get("hotkey", None)
+                    if not best_historical_model_on_previous_benchmark_hotkey:
+                        continue
+                    uid = metagraph.hotkeys.index(best_historical_model_on_previous_benchmark_hotkey)
+                    competition_scores[competition][uid] += competition_metric_score
+                    
+                    # Append to new best performing model knowledge
+                    new_best_miner_models[competition].append(best_historical_model_on_previous_benchmark)
+
+                    Utils.subnet_logger(
+                        severity="TRACE",
+                        message=f"Only best historical model exists for competition: {competition}: {best_historical_model}"
+                    )
+                    continue
+
+                # Assign no score if neither best current model or best historical model exist 
+                if not best_current_model_is_valid and not best_historical_model_is_valid:
+                    Utils.subnet_logger(
+                        severity="TRACE",
+                        message=f"No current or historical models for competition: {competition}",
+                        log_level=log_level
+                    )
+                    continue
+
+                # Assign score to the best historical model if the best current model does not exist
+                if not best_current_model_is_valid and best_historical_model_is_valid:
+                    best_historical_model_hotkey = best_historical_model.get("hotkey", None)
+                    if not best_historical_model_hotkey:
+                        continue 
+                    uid = metagraph.hotkeys.index(best_historical_model_hotkey)
+                    competition_scores[competition][uid] += competition_metric_score
+                    new_best_miner_models[competition].append(best_historical_model)
+                    
+                    Utils.subnet_logger(
+                        severity="TRACE",
+                        message=f"Competition winner for metric: {metric_name} in current competition: {competition} is: {best_historical_model}. Assigning score: {competition_metric_score}",
+                        log_level=log_level,
+                    )
+                    continue
+                
+                # Assign score to the best current model if best historical model does not exist
+                if not best_historical_model_is_valid and best_current_model_is_valid:
+                    best_current_model_hotkey = best_current_model.get("hotkey", None)
+                    if not best_current_model_hotkey:
+                        continue
+                    uid = metagraph.hotkeys.index(best_current_model_hotkey)
+                    competition_scores[competition][uid] += competition_metric_score
+                    new_best_miner_models[competition].append(best_current_model)
+                    
+                    Utils.subnet_logger(
+                        severity="TRACE",
+                        message=f"Competition winner for metric: {metric_name} in current competition: {competition} is: {best_current_model}. Assigning score: {competition_metric_score}",
+                        log_level=log_level,
+                    )
+                    continue
+                
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"Best historical model for metric: {metric_name} in current competition: {competition} is: {best_historical_model}",
+                    log_level=log_level,
+                )
+
                 best_current_model_hotkey = best_current_model.get("hotkey", None)
-                if not best_current_model_hotkey:
+                best_historical_model_hotkey = best_historical_model.get("hotkey", None)
+
+                # If the best current model is the best historical model 
+                if best_current_model_is_valid and best_historical_model_is_valid and best_current_model_hotkey and best_historical_model_hotkey and best_current_model_hotkey == best_historical_model_hotkey:
+                    uid = metagraph.hotkeys.index(best_current_model_hotkey)
+                    competition_scores[competition][uid] += competition_metric_score
+                    new_best_miner_models[competition].append(best_current_model)
+                    
+                    Utils.subnet_logger(
+                        severity="TRACE",
+                        message=f"Competition winner for metric: {metric_name} in current competition: {competition} is: {best_current_model}. Assigning score: {competition_metric_score}",
+                        log_level=log_level,
+                    )
                     continue
-                uid = metagraph.hotkeys.index(best_current_model_hotkey)
-                competition_scores[competition][uid] += competition_metric_score
-                new_best_miner_models[competition].append(best_current_model)
-                
-                Utils.subnet_logger(
-                    severity="TRACE",
-                    message=f"Competition winner for metric: {metric_name} in current competition: {competition} is: {best_current_model}. Assigning score: {competition_metric_score}",
-                    log_level=log_level,
-                )
-                continue
-            
-            Utils.subnet_logger(
-                severity="TRACE",
-                message=f"Best historical model for metric: {metric_name} in current competition: {competition} is: {best_historical_model}",
-                log_level=log_level,
-            )
 
-            best_current_model_hotkey = best_current_model.get("hotkey", None)
-            best_historical_model_hotkey = best_historical_model.get("hotkey", None)
-
-            # If the best current model is the best historical model 
-            if best_current_model_is_valid and best_historical_model_is_valid and best_current_model_hotkey and best_historical_model_hotkey and best_current_model_hotkey == best_historical_model_hotkey:
-                uid = metagraph.hotkeys.index(best_current_model_hotkey)
-                competition_scores[competition][uid] += competition_metric_score
-                new_best_miner_models[competition].append(best_current_model)
+                best_historical_model_hotkey = best_historical_model.get("hotkey", None)
                 
-                Utils.subnet_logger(
-                    severity="TRACE",
-                    message=f"Competition winner for metric: {metric_name} in current competition: {competition} is: {best_current_model}. Assigning score: {competition_metric_score}",
-                    log_level=log_level,
-                )
-                continue
-
-            best_historical_model_hotkey = best_historical_model.get("hotkey", None)
+                # Determine actual metric average values
+                best_current_model_metric_value = best_current_model['metrics'][metric_name]['average']
+                best_historical_model_metric_value = best_historical_model['metrics'][metric_name]['average']
+                
+                # Determine metadata upload block
+                best_current_model_block = best_current_model['block']
+                best_historical_model_block = best_historical_model['block']
             
-            # Determine actual metric average values
-            best_current_model_metric_value = best_current_model['metrics'][metric_name]['average']
-            best_historical_model_metric_value = best_historical_model['metrics'][metric_name]['average']
+                # Determine if new model beats historical model performance by signficiant margin
+                if new_model_surpasses_historical_model(
+                    new_model_metric = best_current_model_metric_value,
+                    new_model_block = best_current_model_block,
+                    old_model_metric = best_historical_model_metric_value,
+                    old_model_block = best_historical_model_block,
+                ):
+                    
+                    # If so, assign score to new model
+                    uid = metagraph.hotkeys.index(best_current_model_hotkey)
+                    competition_scores[competition][uid] += competition_metric_score
+                    
+                    # Append to new best performing model knowledge
+                    new_best_miner_models[competition].append(best_current_model)
+                    
+                    Utils.subnet_logger(
+                        severity="TRACE",
+                        message=f"Competition winner for metric: {metric_name} in current competition: {competition} is: {best_current_model}. Assigning score: {competition_metric_score}",
+                        log_level=log_level,
+                    )
             
-            # Determine metadata upload block
-            best_current_model_block = best_current_model['block']
-            best_historical_model_block = best_historical_model['block']
-        
-            # Determine if new model beats historical model performance by signficiant margin
-            if new_model_surpasses_historical_model(
-                new_model_metric = best_current_model_metric_value,
-                new_model_block = best_current_model_block,
-                old_model_metric = best_historical_model_metric_value,
-                old_model_block = best_historical_model_block,
-            ):
-                
-                # If so, assign score to new model
-                uid = metagraph.hotkeys.index(best_current_model_hotkey)
-                competition_scores[competition][uid] += competition_metric_score
-                
-                # Append to new best performing model knowledge
-                new_best_miner_models[competition].append(best_current_model)
-                
+                # Otherwise, assign score to old model
+                else: 
+                    
+                    uid = metagraph.hotkeys.index(best_historical_model_hotkey)
+                    competition_scores[competition][uid] += competition_metric_score
+                    
+                    # Append to new best performing model knowledge
+                    new_best_miner_models[competition].append(best_historical_model)
+                    
+                    Utils.subnet_logger(
+                        severity="TRACE",
+                        message=f"Competition winner for metric: {metric_name} in current competition: {competition} is: {best_historical_model}. Assigning score: {competition_metric_score}",
+                        log_level=log_level,
+                    )
+            
+            except Exception as e:
+
                 Utils.subnet_logger(
-                    severity="TRACE",
-                    message=f"Competition winner for metric: {metric_name} in current competition: {competition} is: {best_current_model}. Assigning score: {competition_metric_score}",
-                    log_level=log_level,
-                )
-        
-            # Otherwise, assign score to old model
-            else: 
-                
-                uid = metagraph.hotkeys.index(best_historical_model_hotkey)
-                competition_scores[competition][uid] += competition_metric_score
-                
-                # Append to new best performing model knowledge
-                new_best_miner_models[competition].append(best_historical_model)
-                
-                Utils.subnet_logger(
-                    severity="TRACE",
-                    message=f"Competition winner for metric: {metric_name} in current competition: {competition} is: {best_historical_model}. Assigning score: {competition_metric_score}",
-                    log_level=log_level,
+                    severity="ERROR",
+                    message=f"Error calculating scores for metric: {metric_name} in competition: {competition}: {e}",
+                    log_level=log_level
                 )
                 
     Utils.subnet_logger(
