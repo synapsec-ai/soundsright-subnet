@@ -1384,6 +1384,11 @@ class SubnetValidator(Base.BaseNeuron):
                     message=f"Competition scores: {self.competition_scores}. Scores: {self.scores}"
                 )
 
+                self.neuron_logger(
+                    severity="TRACE",
+                    message=f"Best miner models: {self.best_miner_models}"
+                )
+
                 # Sleep for a duration equivalent to 1/3 of the block time (i.e., time between successive blocks).
                 self.neuron_logger(
                     severity="DEBUG", 
