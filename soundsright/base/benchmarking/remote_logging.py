@@ -49,6 +49,22 @@ def requests_post(url, headers: dict, data: dict, log_level: str, timeout: int =
         )
         
     return {}
+
+def filter_miner_models(miner_models):
+    filtered_miner_models = {}
+    for competition in miner_models.keys():
+
+        competition_miner_models = miner_models.get(competition, [])
+        filtered_competition_miner_models = []
+
+        for model in competition_miner_models:
+            metrics = model.get("metrics", {})
+            if metrics:
+                filtered_competition_miner_models.append(model)
+
+        filtered_miner_models[competition] = filtered_competition_miner_models
+    
+    return filtered_miner_models
     
 def miner_models_remote_logging(hotkey: bt.Keypair, current_miner_models: dict, log_level: str) -> bool:
     """
@@ -57,46 +73,56 @@ def miner_models_remote_logging(hotkey: bt.Keypair, current_miner_models: dict, 
     Returns: 
         bool: True if logging was successful, False otherwise
     """
-    nonce = str(secrets.token_hex(24))
-    timestamp = str(int(time.time()))
+    try:
+        nonce = str(secrets.token_hex(24))
+        timestamp = str(int(time.time()))
 
-    signature = Utils.sign_data(hotkey=hotkey, data=f'{nonce}-{timestamp}')
+        signature = Utils.sign_data(hotkey=hotkey, data=f'{nonce}-{timestamp}')
 
-    headers = {
-        "X-Hotkey": hotkey.ss58_address,
-        "X-Signature": signature,
-        "X-Nonce": nonce,
-        "X-Timestamp": timestamp,
-    }
-    
-    Utils.subnet_logger(
-        severity="DEBUG",
-        message=f"Sending current models to remote logger. Model data: {current_miner_models}. Headers: {headers}",
-        log_level=log_level,
-    )
-
-    body = {
-        "models":current_miner_models,
-        "category":"current"
-    }
-
-    res = requests_post(url="https://logs.soundsright.ai/", headers=headers, data=body, log_level=log_level)
-
-    if res and res.status_code == 201:
+        headers = {
+            "X-Hotkey": hotkey.ss58_address,
+            "X-Signature": signature,
+            "X-Nonce": nonce,
+            "X-Timestamp": timestamp,
+        }
         
         Utils.subnet_logger(
             severity="DEBUG",
-            message="Current model remote logging successful.",
+            message=f"Sending current models to remote logger. Model data: {current_miner_models}. Headers: {headers}",
+            log_level=log_level,
+        )
+
+        body = {
+            "models":filter_miner_models(current_miner_models),
+            "category":"current"
+        }
+
+        res = requests_post(url="https://logs.soundsright.ai/", headers=headers, data=body, log_level=log_level)
+
+        if res and res.status_code == 201:
+            
+            Utils.subnet_logger(
+                severity="DEBUG",
+                message="Current model remote logging successful.",
+                log_level=log_level,
+            )
+            
+            return True
+        
+        Utils.subnet_logger(
+            severity="ERROR",
+            message="Current model remote logging unsuccessful. Please contact subnet owners if issue persists.",
             log_level=log_level,
         )
         
-        return True
+        return False
     
-    Utils.subnet_logger(
-        severity="ERROR",
-        message="Current model remote logging unsuccessful. Please contact subnet owners if issue persists.",
-        log_level=log_level,
-    )
+    except Exception as e:
+        Utils.subnet_logger(
+            severity="ERROR",
+            message=f"Error during miner model remote logging: {e}",
+            log_level=log_level
+        )
     
     return False
 
@@ -108,45 +134,55 @@ def sgmse_remote_logging(hotkey: bt.Keypair, sgmse_benchmarks: dict, log_level: 
     Returns: 
         bool: True if logging was successful, False otherwise
     """
-    nonce = str(secrets.token_hex(24))
-    timestamp = str(int(time.time()))
+    try:
+        nonce = str(secrets.token_hex(24))
+        timestamp = str(int(time.time()))
 
-    signature = Utils.sign_data(hotkey=hotkey, data=f'{nonce}-{timestamp}')
+        signature = Utils.sign_data(hotkey=hotkey, data=f'{nonce}-{timestamp}')
 
-    headers = {
-        "X-Hotkey": hotkey.ss58_address,
-        "X-Signature": signature,
-        "X-Nonce": nonce,
-        "X-Timestamp": timestamp,
-    }
-    
-    Utils.subnet_logger(
-        severity="DEBUG",
-        message=f"Sending SGMSE+ benchmarks for all competitions on new dataset to remote logger. Model data: {sgmse_benchmarks}. Headers: {headers}",
-        log_level=log_level,
-    )
-
-    body = {
-        "models":sgmse_benchmarks,
-        "category":"sgmse"
-    }
-
-    res = requests_post(url="https://logs.soundsright.ai/", headers=headers, data=body, log_level=log_level)
-
-    if res and res.status_code == 201:
+        headers = {
+            "X-Hotkey": hotkey.ss58_address,
+            "X-Signature": signature,
+            "X-Nonce": nonce,
+            "X-Timestamp": timestamp,
+        }
         
         Utils.subnet_logger(
             severity="DEBUG",
-            message="SGMSE+ benchmark remote logging successful.",
+            message=f"Sending SGMSE+ benchmarks for all competitions on new dataset to remote logger. Model data: {sgmse_benchmarks}. Headers: {headers}",
+            log_level=log_level,
+        )
+
+        body = {
+            "models":sgmse_benchmarks,
+            "category":"sgmse"
+        }
+
+        res = requests_post(url="https://logs.soundsright.ai/", headers=headers, data=body, log_level=log_level)
+
+        if res and res.status_code == 201:
+            
+            Utils.subnet_logger(
+                severity="DEBUG",
+                message="SGMSE+ benchmark remote logging successful.",
+                log_level=log_level,
+            )
+            
+            return True
+        
+        Utils.subnet_logger(
+            severity="ERROR",
+            message="SGMSE+ benchmark remote logging unsuccessful. Please contact subnet owners if issue persists.",
             log_level=log_level,
         )
         
-        return True
+        return False
     
-    Utils.subnet_logger(
-        severity="ERROR",
-        message="SGMSE+ benchmark remote logging unsuccessful. Please contact subnet owners if issue persists.",
-        log_level=log_level,
-    )
+    except Exception as e:
+        Utils.subnet_logger(
+            severity="ERROR",
+            message=f"Error during SGMSE benchmark remote logging: {e}",
+            log_level=log_level
+        )
     
     return False

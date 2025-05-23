@@ -24,10 +24,11 @@ def validate_all_reverb_files_are_enhanced(reverb_dir, enhanced_dir):
 
 def initialize_run_and_benchmark_model(model_namespace, model_name, model_revision, cuda_directory):
 
-    clean_dir = os.path.join(os.getcwd(), "assets", "clean")
-    reverb_dir = os.path.join(os.getcwd(), "assets", "reverb")
+    file_dir = os.path.dirname(os.path.abspath(__file__))
+    clean_dir = os.path.join(file_dir, "assets", "clean")
+    reverb_dir = os.path.join(file_dir, "assets", "reverb")
     
-    output_base_path = os.getcwd()
+    output_base_path = os.path.dirname(os.path.abspath(__file__))
     model_dir = os.path.join(output_base_path, "model")
     model_output_dir = os.path.join(output_base_path, "model_output")
     for d in [model_dir, model_output_dir]:
