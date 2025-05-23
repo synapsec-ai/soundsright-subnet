@@ -28,7 +28,7 @@ A script has been provided to test that your model is compatible with the valida
 To run the script, first make sure you have configured your environment:
 
 ### 1. Virtual machine deployment
-The model verficiation requires **Ubuntu 24.04**, **Python 3.12** and **CUDA 12.6**.
+The model verficiation requires **Ubuntu 24.04** and **Python 3.12**. **CUDA 12.6** is also recommended--if you are using another version, make sure to modify the `cuda_directory` flag when running the script.
 
 ### 2. Installation of mandatory packages
 
@@ -80,8 +80,10 @@ pip install httpx==0.27.2
 
 Once the installation is complete, run your script with the following command:
 ```
-(.venv) $ python3 scripts/verify_miner_model.py --model_namespace <your_namespace_here> --model_name <your_model_name_here> --model_revision <your_model_revision_here>
+(.venv) $ python3 scripts/verify_miner_model.py --model_namespace <your_namespace_here> --model_name <your_model_name_here> --model_revision <your_model_revision_here> --cuda_directory <cuda_directory_here>
 ```
+
+For the `cuda_directory` flag, the default is `/usr/local/cuda-12.6`. If you are running a different version of CUDA you will need to adjust this accordingly.
 
 If `MODEL VERIFICATION SUCCESSFUL.` appears in the logs, then your model is ready to be submitted to validators! 
 
