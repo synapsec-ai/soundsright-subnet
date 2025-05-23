@@ -759,7 +759,13 @@ class SubnetValidator(Base.BaseNeuron):
             except TimeoutError as e:
                 self.neuron_logger(
                     severity="ERROR", 
-                    message=f"Committing weights timed out: {e}"
+                    message=f"Set weights timed out: {e}"
+                )
+            
+            except Exception as e:
+                self.neuron_logger(
+                    severity="ERROR",
+                    message=f"Set weights failed due to error: {e}"
                 )
 
     @Utils.timeout_decorator(timeout=30)
