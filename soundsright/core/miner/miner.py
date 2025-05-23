@@ -420,11 +420,6 @@ class SubnetMiner(Base.BaseNeuron):
             severity="DEBUG",
             message=f"Synapse version: {synapse.subnet_version}, our version: {self.subnet_version}"
         )
-        if synapse.subnet_version > self.subnet_version:
-            self.neuron_logger(
-                severity="WARNING",
-                message=f"Received a synapse from a validator with higher subnet version ({synapse.subnet_version}) than yours ({self.subnet_version}). Please update the miner."
-            )
 
         # Set data output (None is returned if no model data is provided since it is a default in the init)
         synapse.data = self.miner_model_data[competition]
