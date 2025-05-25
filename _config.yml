@@ -21,7 +21,7 @@
 title: SoundsRight Docs
 email: contact@soundsright.ai
 description: >- # this means to ignore newlines until "baseurl:"
-  The SoundsRight subnet incentivizes the research and 
+  The SoundsRight subnet promotes the research and 
   development of speech enhancement models through daily fine-tuning competitions, 
   powered by the decentralized Bittensor ecosystem.
 baseurl: "/soundsright-subnet/" # the subpath of your site, e.g. /blog
