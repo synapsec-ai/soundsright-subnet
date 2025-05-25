@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "SoundsRight"
-version = "1.3.0"
+version = "1.4.0"
 description = "This project implements the SoundsRight Bittensor subnet."
 authors = [
     { name = "synapsec.ai", email = "contact@synapsec.ai" }
