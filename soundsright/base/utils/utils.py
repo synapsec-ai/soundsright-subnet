@@ -107,6 +107,26 @@ def validate_model_benchmark(model_benchmark):
         
     return True
 
+def validate_model_feedback(model_feedback):
+
+    validation_dict = {
+        "uid": int,
+        "competition": str,
+        "data": dict
+    }
+
+    if not isinstance(model_feedback, dict):
+        return False 
+    
+    for k in validation_dict:
+        if k not in model_feedback.keys():
+            return False 
+        
+        if not isinstance(model_feedback[k], validation_dict[k]):
+            return False 
+
+    return True
+
 def sign_data(hotkey: bt.Keypair, data: str) -> str:
     """Signs the given data with the wallet hotkey
     

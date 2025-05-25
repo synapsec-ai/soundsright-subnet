@@ -441,6 +441,9 @@ class SubnetValidator(Base.BaseNeuron):
                 self.competition_scores[competition] = np.concatenate((self.competition_scores[competition], additional_zeros))
 
     async def send_competition_synapse(self, uid_to_query: int, sample_rate: int, task: str, timeout: int = 5) -> List[bt.synapse]:
+        """
+        Sends synapses to obtain model metadata for DENOSIING_16000HZ and DEREVERBERATION_16000HZ competitions.
+        """
         # Broadcast query to valid Axons
         
         self.neuron_logger(
@@ -465,6 +468,106 @@ class SubnetValidator(Base.BaseNeuron):
                 timeout=timeout,
                 deserialize=True,
             )
+        
+    async def send_feedback_synapse(self, uid_to_query: int, competition: str, data: dict, timeout: int = 5) -> List[bt.Synapse]:
+        """
+        Sends FeedbackSynapse to miners 
+        """
+        self.neuron_logger(
+            severity="DEBUG",
+            message=f"Sent feedback synapse for competition: {competition} to UID: {uid_to_query} with data: {data}"
+        )
+        
+        axon_to_query = self.metagraph.axons[uid_to_query]
+        
+        return await self.dendrite.forward(
+            axon_to_query,
+            Base.FeedbackProtocol(
+                competition=competition,
+                data=data,
+                subnet_version=self.subnet_version
+            ),
+            timeout=timeout,
+            deserialize=True,
+        )
+    
+    def obtain_model_feedback(self):
+        """
+        Organizes self.miner_models to be sent as FeedbackSynapse objects to miners
+        """
+        # Init model feedback as empty list
+        aggregate_model_feedback = []
+
+        # Obtain uids to query
+        uids_to_query = self.get_uids_to_query()
+
+        # Iterate through each uid and find the associated model data 
+        for uid in uids_to_query:
+
+            try: 
+
+                # Initialize empty dict for model_feedback
+                model_feedback = {}
+
+                # Find the hotkey 
+                hotkey = self.hotkeys[uid]
+                model_feedback["uid"]
+                
+                # Iterate through competitions
+                for competition in self.miner_models.keys():
+
+                    # Iterate through models in the competition
+                    for model_data in self.miner_models[competition]:
+
+                        # If the hotkey matches
+                        if model_data["hotkey"] == hotkey:
+
+                            model_feedback["data"] = model_data
+                            model_feedback["competition"] = competition
+                
+                # Append data to aggregate
+                aggregate_model_feedback.append(model_feedback)
+                            
+            except:
+                continue
+
+        return aggregate_model_feedback
+    
+    def send_feedback_synapses(self):
+        """
+        Sends all feedback synapses to miners
+        """
+        # Obtain all model feedback organized by uid 
+        model_feedback = self.obtain_model_feedback()
+
+        # Initialize asyncio loop 
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        try:
+            # Iterate through item in model feedback
+            for item in model_feedback:
+                if Utils.validate_model_feedback(model_feedback):
+                    
+                    uid=model_feedback["uid"]
+                    competition=model_feedback["competition"]
+                    data=model_feedback["data"]
+
+                    try:
+                        response = loop.run_until_complete(self.send_feedback_synapse(
+                            uid_to_query=uid,
+                            competition=competition,
+                            data=data,
+                        ))
+                    
+                    except Exception as e:
+                        self.neuron_logger(
+                            severity="ERROR",
+                            message=f"Error sending feedback synapse to UID: {uid} for competition: {competition} with data: {data}"
+                        )
+
+        finally:
+            self.dendrite.close_session(using_new_loop=True)
 
     def save_state(self) -> None:
         """Saves the state of the validator to a file."""

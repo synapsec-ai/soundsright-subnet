@@ -40,3 +40,28 @@ class Dereverberation_16kHz_Protocol(bt.Synapse):
     def deserialize(self) -> bt.Synapse:
         """Deserialize the instance of the protocol"""
         return self
+    
+class FeedbackProtocol(bt.Synapse):
+    """
+    This class is used by validators to send benchmarking
+    results back to miners.
+    """
+    competition: str | None = pydantic.Field(
+        default=None,
+        description="Competition name."
+    )
+
+    data: dict | None = pydantic.Field(
+        default=None,
+        description = "Model benchmark results.",
+    )
+    
+    subnet_version: int = pydantic.Field(
+        ...,
+        description="Subnet version provides information about the subnet version the Synapse creator is running at",
+        allow_mutation=False,
+    )
+
+    def deserialize(self) -> bt.Synapse:
+        """Deserialize the instance of the protocol"""
+        return self

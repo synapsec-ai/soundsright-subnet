@@ -377,6 +377,10 @@ class SubnetMiner(Base.BaseNeuron):
     def blacklist_16kHz_dereverberation(self, synapse: Base.Dereverberation_16kHz_Protocol) -> Tuple[bool, str]:
         """Wrapper for the blacklist function to avoid repetition in code"""
         return self.blacklist_fn(synapse=synapse)
+    
+    def blacklist_feedback(self, synapse: Base.FeedbackProtocol) -> Tuple[bool, str]:
+        """Wrapper for the blacklist function to avoid repetition in code"""
+        return self.blacklist_fn(synapse=synapse)
 
     def priority_fn(self, synapse: Base.Denoising_16kHz_Protocol | Base.Dereverberation_16kHz_Protocol) -> float:
         """
@@ -405,6 +409,10 @@ class SubnetMiner(Base.BaseNeuron):
         return self.priority_fn(synapse=synapse)
 
     def priority_16kHz_dereverberation(self, synapse: Base.Dereverberation_16kHz_Protocol) -> float:
+        """Wrapper for the priority function to avoid repetition in code"""
+        return self.priority_fn(synapse=synapse)
+    
+    def priority_feedback(self, synapse:Base.FeedbackProtocol) -> float:
         """Wrapper for the priority function to avoid repetition in code"""
         return self.priority_fn(synapse=synapse)
 
@@ -441,6 +449,28 @@ class SubnetMiner(Base.BaseNeuron):
         """Wrapper for the forward function to avoid repetition in code"""
         return self.forward(synapse=synapse, competition='DEREVERBERATION_16000HZ')
     
+    def receive_feedback(self, synapse: Base.FeedbackProtocol) -> Base.FeedbackProtocol:
+        """
+        Function to recieve the FeedbackSynapse. Miners should modify this function if
+        they wish to store the results of the validator benchmarking.
+        """
+        validator_hotkey = synapse.dendrite.hotkey
+        competition = synapse.data.get("competition", None)
+        benchmarking_data = synapse.data.get("benchmarking_data", None)
+
+        if competition and benchmarking_data:
+            self.neuron_logger(
+                severity="INFO",
+                message=f"Recieved feedback synapse from validator: {validator_hotkey} for competition: {competition}. Data: {benchmarking_data}"
+            )
+        else:
+            self.neuron_logger(
+                severity="WARNING",
+                message=f"Recieved empty feedback synapse from validator: {validator_hotkey}. Please make sure your model config is correct with the verfication script. More information is available in the docs:\nhttps://docs.soundsright.ai/mining/model_formatting.html"
+            )
+
+        ### ADD CODE HERE IF YOU WANT TO LOG THE BENCHMARKING DATA
+    
     def run(self):
         
         # Load existing model data or start with a blank slate 
@@ -461,14 +491,18 @@ class SubnetMiner(Base.BaseNeuron):
         )
 
         # Attach the miner functions to the Axon
-        axon.attach(
+        axon.attach( # DENOISING 16000 HZ
             forward_fn=self.forward_16kHz_denoising,
             blacklist_fn=self.blacklist_16kHz_denoising,
             priority_fn=self.priority_16kHz_denoising,
-        ).attach(
+        ).attach( # DEREVERBERATION 16000 HZ
             forward_fn=self.forward_16kHz_dereverberation,
             blacklist_fn=self.blacklist_16kHz_dereverberation,
-            priority_fn=self.priority_16kHz_dereverberation
+            priority_fn=self.priority_16kHz_dereverberation,
+        ).attach( # FEEDBACK SYNAPSE
+            forward_fn=self.receive_feedback,
+            blacklist_fn=self.blacklist_feedback,
+            priority_fn=self.priority_feedback,
         )
 
         self.neuron_logger(
