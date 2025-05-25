@@ -1429,6 +1429,9 @@ class SubnetValidator(Base.BaseNeuron):
                     # Then, check that hotkey knowledge matches
                     self.check_hotkeys()
 
+                    # Send feedback synapses to miners
+                    self.send_feedback_synapses()
+
                     # First reset competition scores and overall scores so that we can re-calculate them from validator model data
                     self.init_default_scores()
 
