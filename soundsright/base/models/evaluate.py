@@ -120,7 +120,7 @@ class ModelEvaluationHandler:
                 if not isinstance(self.hf_model_block, int):
                     return False
 
-                if self.historical_block and isinstance(self.block, int) and self.historical_block < self.hf_model_block:
+                if self.historical_block and isinstance(self.historical_block, int) and self.historical_block < self.hf_model_block:
                     self.hf_model_block = self.historical_block
                 
                 Utils.subnet_logger(
