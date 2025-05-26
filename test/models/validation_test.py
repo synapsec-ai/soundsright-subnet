@@ -24,7 +24,7 @@ def remove_all_in_path(path):
         except Exception as e:
             print(f"Failed to delete {file_path}. Reason: {e}")
             
-@pytest.mark.parametrize("model_id", [
+@pytest.mark.parametrize("model_id, revision", [
     ("synapsecai/SoundsRightModelTemplate", "DENOISING_16000HZ"),
     ("synapsecai/SoundsRightModelTemplate", "DEREVERBERATION_16000HZ"),
     ("huseinzol05/speech-enhancement-mask-unet","main"),
