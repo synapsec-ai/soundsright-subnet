@@ -32,6 +32,7 @@ class ModelEvaluationHandler:
         miner_hotkey: str,
         miner_models: List[dict],
         cuda_directory: str,
+        block: int | None,
     ):
         """Initializes ModelEvaluationHandler
 
@@ -69,6 +70,7 @@ class ModelEvaluationHandler:
         self.hf_model_name = hf_model_name
         self.hf_model_id = f"{hf_model_namespace}/{hf_model_name}"
         self.hf_model_revision = hf_model_revision
+        self.block = block # This is used for logging the historical value of the block 
         self.hf_model_block = None
         self.model_hash = ''
         self.forbidden_model_hashes = [
@@ -114,6 +116,8 @@ class ModelEvaluationHandler:
                 
                 self.model_metadata = self.metadata_handler.metadata
                 self.hf_model_block = self.metadata_handler.metadata_block
+                if self.block and self.block < self.hf_model_block:
+                    self.hf_model_block = self.block
                 
                 Utils.subnet_logger(
                     severity="DEBUG",

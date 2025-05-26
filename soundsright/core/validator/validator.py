@@ -540,6 +540,11 @@ class SubnetValidator(Base.BaseNeuron):
         # Obtain all model feedback organized by uid 
         model_feedback = self.obtain_model_feedback()
 
+        Utils.subnet_logger(
+            severity="TRACE",
+            message=f"Model feedback aggregate to send to miners via FeedbackSynapse: {model_feedback}"
+        )
+
         # Initialize asyncio loop 
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -1070,7 +1075,7 @@ class SubnetValidator(Base.BaseNeuron):
             message=f"SGMSE+ benchmarks: {self.sgmse_benchmarks}"
         )
     
-    def benchmark_model(self, model_metadata: dict, sample_rate: int, task: str, hotkey: str) -> dict:
+    def benchmark_model(self, model_metadata: dict, sample_rate: int, task: str, hotkey: str, block: int) -> dict:
         """Runs benchmarking for miner-submitted model using Models.ModelEvaluationHandler 
 
         Args:
@@ -1115,6 +1120,7 @@ class SubnetValidator(Base.BaseNeuron):
                 miner_hotkey=hotkey,
                 miner_models=self.miner_models[f'{task}_{sample_rate}HZ'],
                 cuda_directory=self.cuda_directory,
+                block=block,
             )
             
             metrics_dict, model_hash, model_block = eval_handler.download_run_and_evaluate()
@@ -1242,14 +1248,36 @@ class SubnetValidator(Base.BaseNeuron):
 
                                 # If the model in the synapse is validly formatted, has not been evaluated today and is not blacklisted:
                                 if not model_in_blacklist and not model_evaluated_today:
+
+                                    # Check to see if there is historical record of this model
+                                    miner_model_all_data = self.find_dict_by_hotkey(competition_miner_models, self.hotkeys[uid_to_query])
+
+                                    # If historical records do not exist
+                                    if not miner_model_all_data or Utils.check_if_historical_model_matches_current_model(current_model=response.data, historical_model=miner_model_all_data):
+
+                                        # Append it to cache of models to evaluate
+                                        self.model_cache[f"{task}_{sample_rate}HZ"].append(
+                                            {
+                                                "uid":uid_to_query,
+                                                "response_data":response.data,
+                                                "block": None,
+                                            }
+                                        )
                                     
-                                    # Append it to cache of models to evaluate
-                                    self.model_cache[f"{task}_{sample_rate}HZ"].append(
-                                        {
-                                            "uid":uid_to_query,
-                                            "response_data":response.data,
-                                        }
-                                    )
+                                    # If historical records do exist and are of the same model currently being submitted by the miner
+                                    else:
+
+                                        # Find block 
+                                        block = miner_model_all_data.get("block", None)
+
+                                        # Append it to cache of models to evaluate
+                                        self.model_cache[f"{task}_{sample_rate}HZ"].append(
+                                            {
+                                                "uid":uid_to_query,
+                                                "response_data":response.data,
+                                                "block": block,
+                                            }
+                                        )
 
                             # In the case of empty rersponse:
                             else: 
@@ -1282,17 +1310,21 @@ class SubnetValidator(Base.BaseNeuron):
                                 )
                                 
                                 model_evaluated_today=Utils.dict_in_list(target_dict=miner_model_data, list_of_dicts=competition_models_evaluated_today)
-                                # Check if modle is blacklisted
+                                # Check if model is blacklisted
                                 model_in_blacklist=Utils.dict_in_list(target_dict=miner_model_data, list_of_dicts=blacklisted_miner_models)
                                     
-                                # If the model in the synapse is validly formatted and not blacklisted:
+                                # If the recored model data is validly formatted and not blacklisted:
                                 if not model_in_blacklist and not model_evaluated_today:
-                                    
+
+                                    # Obtain the block the metadata was submitted at
+                                    block = miner_model_all_data.get("block", None)
+
                                     # Append it to cache of models to evaluate
                                     self.model_cache[f"{task}_{sample_rate}HZ"].append(
                                         {
                                             "uid":uid_to_query,
                                             "response_data":miner_model_data,
+                                            "block":block,
                                         }
                                     )
             
@@ -1331,7 +1363,7 @@ class SubnetValidator(Base.BaseNeuron):
                 for model_to_evaluate in models_to_evaluate:
                     
                     # Obtain uid and response data
-                    uid, response_data = model_to_evaluate['uid'], model_to_evaluate['response_data']
+                    uid, response_data, block = model_to_evaluate['uid'], model_to_evaluate['response_data'], model_to_evaluate["block"]
                     
                     # Create a dictionary logging miner model metadata & benchmark values
                     model_data = self.benchmark_model(
@@ -1339,6 +1371,7 @@ class SubnetValidator(Base.BaseNeuron):
                         sample_rate = sample_rate,
                         task = task,
                         hotkey = self.hotkeys[uid],
+                        block=block
                     )
 
                     if model_data:

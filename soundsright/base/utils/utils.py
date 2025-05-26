@@ -127,6 +127,32 @@ def validate_model_feedback(model_feedback):
 
     return True
 
+def check_if_historical_model_matches_current_model(current_model, historical_model):
+    """
+    Checks if the current model being submitted by a validator is identical to the model being submitted 
+    """
+    # Confirm both are dicts
+    if not isinstance(current_model, dict) or isinstance(historical_model, dict): 
+        return False
+    
+    # Obtain values to compare
+    current_namespace = current_model.get("hf_model_namespace", None)
+    current_name = current_model.get("hf_model_name", None)
+    current_revision = current_model.get("hf_model_revision", None)
+    historical_namespace = historical_model.get("hf_model_namespace", None)
+    historical_name = historical_model.get("hf_model_name", None)
+    historical_revision = historical_model.get("hf_model_revision", None)
+
+    # Check all are obtainable
+    if not current_namespace or not current_name or not current_revision or not historical_namespace or not historical_name or not historical_revision:
+        return False
+
+    # Check for equality
+    if current_namespace != historical_namespace or current_name != historical_name or current_revision != historical_revision:
+        return False
+
+    return True
+
 def sign_data(hotkey: bt.Keypair, data: str) -> str:
     """Signs the given data with the wallet hotkey
     
