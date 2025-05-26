@@ -14,7 +14,8 @@ from .utils import (
     validate_model_feedback,
     sign_data,
     dict_in_list,
-    extract_metadata
+    extract_metadata,
+    check_if_historical_model_matches_current_model,
 )
 
 from .container import (
