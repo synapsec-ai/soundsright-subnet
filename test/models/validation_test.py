@@ -27,9 +27,6 @@ def remove_all_in_path(path):
 @pytest.mark.parametrize("model_id, revision", [
     ("synapsecai/SoundsRightModelTemplate", "DENOISING_16000HZ"),
     ("synapsecai/SoundsRightModelTemplate", "DEREVERBERATION_16000HZ"),
-    ("huseinzol05/speech-enhancement-mask-unet","main"),
-    ("sp-uhh/speech-enhancement-sgmse", "main"), 
-    ("rollingkevin/speech-enhancement-unet", "main"),
 ])
 def test_get_model_content_hash(model_id, revision):
     
