@@ -102,7 +102,7 @@ class ModelEvaluationHandler:
                 hotkey=self.miner_hotkey,
             ))
             
-            if not outcome or not self.metadata_handler.metadata or not self.metadata_handler.metadata_block: 
+            if not outcome or not self.metadata_handler.metadata or not self.metadata_handler.metadata_block or self.metadata_handler.metadata_block == 0: 
                     
                 Utils.subnet_logger(
                     severity="ERROR",
@@ -116,7 +116,7 @@ class ModelEvaluationHandler:
                 
                 self.model_metadata = self.metadata_handler.metadata
                 self.hf_model_block = self.metadata_handler.metadata_block
-                if self.block and self.block < self.hf_model_block:
+                if self.block and self.hf_model_block and self.block < self.hf_model_block:
                     self.hf_model_block = self.block
                 
                 Utils.subnet_logger(
