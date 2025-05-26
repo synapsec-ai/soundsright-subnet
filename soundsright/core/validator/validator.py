@@ -540,7 +540,7 @@ class SubnetValidator(Base.BaseNeuron):
         # Obtain all model feedback organized by uid 
         model_feedback = self.obtain_model_feedback()
 
-        Utils.subnet_logger(
+        self.neuron_logger(
             severity="TRACE",
             message=f"Model feedback aggregate to send to miners via FeedbackSynapse: {model_feedback}"
         )
