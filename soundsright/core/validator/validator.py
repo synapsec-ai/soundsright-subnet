@@ -1120,7 +1120,7 @@ class SubnetValidator(Base.BaseNeuron):
                 miner_hotkey=hotkey,
                 miner_models=self.miner_models[f'{task}_{sample_rate}HZ'],
                 cuda_directory=self.cuda_directory,
-                block=block,
+                historical_block=block,
             )
             
             metrics_dict, model_hash, model_block = eval_handler.download_run_and_evaluate()

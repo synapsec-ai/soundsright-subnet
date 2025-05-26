@@ -70,7 +70,7 @@ class ModelEvaluationHandler:
         self.hf_model_name = hf_model_name
         self.hf_model_id = f"{hf_model_namespace}/{hf_model_name}"
         self.hf_model_revision = hf_model_revision
-        self.block = block # This is used for logging the historical value of the block 
+        self.historical_block = historical_block # This is used for logging the historical value of the block 
         self.hf_model_block = None
         self.model_hash = ''
         self.forbidden_model_hashes = [
@@ -116,8 +116,12 @@ class ModelEvaluationHandler:
                 
                 self.model_metadata = self.metadata_handler.metadata
                 self.hf_model_block = self.metadata_handler.metadata_block
-                if self.block and self.hf_model_block and self.block < self.hf_model_block:
-                    self.hf_model_block = self.block
+
+                if not isinstance(self.hf_model_block, int):
+                    return False
+
+                if self.historical_block and isinstance(self.block, int) and self.historical_block < self.hf_model_block:
+                    self.hf_model_block = self.historical_block
                 
                 Utils.subnet_logger(
                     severity="DEBUG",
