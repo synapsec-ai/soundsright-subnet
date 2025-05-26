@@ -32,7 +32,7 @@ class ModelEvaluationHandler:
         miner_hotkey: str,
         miner_models: List[dict],
         cuda_directory: str,
-        block: int | None,
+        historical_block: int | None,
     ):
         """Initializes ModelEvaluationHandler
 
@@ -142,7 +142,7 @@ class ModelEvaluationHandler:
             return False
             
     def validate_model_metadata(self):
-        """Validates that the model metadata is for a model belonging to the mienr with the following steps:
+        """Validates that the model metadata is for a model belonging to the miner with the following steps:
         
         1. Re-create model metadata string and confirm that its hash matches metadata uploaded to chain
         2. Make sure that model name is unique among models submitted. If it is not, it checks the block that 
