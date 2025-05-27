@@ -51,6 +51,8 @@ class SubnetValidator(Base.BaseNeuron):
         self.debug_mode = False
         self.skip_sgmse = False
         self.dataset_size = 100
+        self.start_date = datetime(2025, 5, 27, 9, 0, tzinfo=timezone.utc) # Reference for when to start competitions (May 27, 2025 @ 9:00 AM GMT)
+        self.period_days = 1 # How many days each competition lasts
         self.weights_objects = []
         self.sample_rates = [16000]
         self.tasks = ['DENOISING','DEREVERBERATION']
@@ -198,32 +200,39 @@ class SubnetValidator(Base.BaseNeuron):
 
     def get_next_competition_timestamp(self) -> int:
         """
-        Finds the Unix timestamp for the next day at 9:00 AM GMT.
+        Returns the Unix timestamp for the next competition at 9:00 AM GMT
+        that is a multiple of `period_days` after `self.start_date`.
+
+        Args:
+            start_date (datetime): The fixed base date to start counting from (should be 09:00 GMT).
+            period_days (int): The interval of competition recurrence in days.
         """
-        # Current time in GMT
         now = datetime.now(timezone.utc)
 
-        # Find the next day at 9:00 AM
-        next_day = now + timedelta(days=1)
-        next_day_at_nine = next_day.replace(hour=9, minute=0, second=0, microsecond=0)
+        # Compute number of full days since start_date
+        delta_days = (now - self.start_date).days
+        # Compute how many full periods have passed
+        periods_passed = delta_days // self.period_days
+        # Get the next period start
+        next_competition = self.start_date + timedelta(days=(periods_passed + 1) * self.period_days)
 
-        # Return Unix timestamp
-        return int(next_day_at_nine.timestamp())
+        return int(next_competition.timestamp())
 
     def update_next_competition_timestamp(self) -> None:
         """
-        Updates the next competition timestamp to the 9:00 AM GMT of the following day.
+        Updates `next_competition_timestamp` to the next competition time
+        that is a multiple of `period_days` after `self.start_date`.
         """
-        # Add 1 day to the current competition time
-        next_competition_time = datetime.fromtimestamp(self.next_competition_timestamp, tz=timezone.utc)
-        next_competition_time += timedelta(days=1)
+        current_time = datetime.fromtimestamp(self.next_competition_timestamp, tz=timezone.utc)
+        delta_days = (current_time - self.start_date).days
+        periods_passed = delta_days // self.period_days
+        next_time = self.start_date + timedelta(days=(periods_passed + 1) * self.period_days)
 
-        # Set the new timestamp
-        self.next_competition_timestamp = int(next_competition_time.timestamp())
+        self.next_competition_timestamp = int(next_time.timestamp())
 
         self.neuron_logger(
             severity="INFO",
-            message=f"Next competition will be at {datetime.fromtimestamp(self.next_competition_timestamp, tz=timezone.utc)}"
+            message=f"Next competition will be at {next_time}"
         )
 
         self.healthcheck_api.append_metric(metric_name="competitions_judged", value=1)
