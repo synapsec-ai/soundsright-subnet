@@ -261,7 +261,8 @@ def determine_competition_scores(
 
                     Utils.subnet_logger(
                         severity="TRACE",
-                        message=f"Only best historical model exists for competition: {competition}: {best_historical_model}"
+                        message=f"Only best historical model exists for competition: {competition}: {best_historical_model}",
+                        log_level=log_level
                     )
                     continue
 
