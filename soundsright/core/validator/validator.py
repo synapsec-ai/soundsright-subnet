@@ -537,7 +537,11 @@ class SubnetValidator(Base.BaseNeuron):
                 # Append data to aggregate
                 aggregate_model_feedback.append(model_feedback)
                             
-            except:
+            except Exception as e:
+                self.neuron_logger(
+                    severity="ERROR",
+                    message=f"Error obtaining model feedback for uid: {uid}: {e}"
+                )
                 continue
 
         return aggregate_model_feedback
