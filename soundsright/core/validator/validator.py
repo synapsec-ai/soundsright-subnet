@@ -510,6 +510,11 @@ class SubnetValidator(Base.BaseNeuron):
         # Obtain uids to query
         uids_to_query = self.get_uids_to_query()
 
+        self.neuron_logger(
+            severity="TRACE",
+            message="Obtaining model feedback:"
+        )
+
         # Iterate through each uid and find the associated model data 
         for uid in uids_to_query:
 
@@ -520,7 +525,12 @@ class SubnetValidator(Base.BaseNeuron):
 
                 # Find the hotkey 
                 hotkey = self.hotkeys[uid]
-                model_feedback["uid"]
+                self.neuron_logger(
+                    severity="TRACE",
+                    message=f"Hotkey for uid: {uid} is: {hotkey}"
+                )
+
+                model_feedback["uid"] = uid
                 
                 # Iterate through competitions
                 for competition in self.miner_models.keys():
@@ -533,6 +543,11 @@ class SubnetValidator(Base.BaseNeuron):
 
                             model_feedback["data"] = model_data
                             model_feedback["competition"] = competition
+
+                            self.neuron_logger(
+                                severity="TRACE",
+                                message=f"Data for hotkey: {hotkey} for competition: {competition} is: {model_data}"
+                            )
                 
                 # Append data to aggregate
                 aggregate_model_feedback.append(model_feedback)
