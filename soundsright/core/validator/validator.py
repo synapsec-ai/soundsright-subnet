@@ -565,11 +565,11 @@ class SubnetValidator(Base.BaseNeuron):
         try:
             # Iterate through item in model feedback
             for item in model_feedback:
-                if Utils.validate_model_feedback(model_feedback):
+                if Utils.validate_model_feedback(item):
                     
-                    uid=model_feedback["uid"]
-                    competition=model_feedback["competition"]
-                    data=model_feedback["data"]
+                    uid=item["uid"]
+                    competition=item["competition"]
+                    data=item["data"]
 
                     try:
                         response = loop.run_until_complete(self.send_feedback_synapse(
@@ -577,6 +577,10 @@ class SubnetValidator(Base.BaseNeuron):
                             competition=competition,
                             data=data,
                         ))
+                        self.neuron_logger(
+                            severity="DEBUG",
+                            message=f"Recieved response for feedback synapse to uid: {uid}: {response}"
+                        )
                     
                     except Exception as e:
                         self.neuron_logger(
