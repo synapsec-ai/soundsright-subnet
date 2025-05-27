@@ -156,7 +156,7 @@ class SubnetValidator(Base.BaseNeuron):
             Data.reset_all_data_directories(
                 tts_base_path=self.tts_path,
                 reverb_base_path=self.reverb_path,
-                noise_base_path=self.noise_path
+                noise_base_path=self.noise_path,
                 log_level=self.log_level
             )
 
