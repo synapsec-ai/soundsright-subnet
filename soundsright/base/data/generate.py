@@ -369,7 +369,7 @@ def create_noise_and_reverb_data_for_all_sampling_rates(
                     log_level=log_level,
                 )
     
-def reset_all_data_directories(tts_base_path: str, reverb_base_path: str, noise_base_path: str) -> bool:
+def reset_all_data_directories(tts_base_path: str, reverb_base_path: str, noise_base_path: str, log_level: str) -> bool:
     """
     Removes all .wav files from the subdirectories of the specified base paths.
 
@@ -403,7 +403,8 @@ def reset_all_data_directories(tts_base_path: str, reverb_base_path: str, noise_
                         except OSError as e:
                             Utils.subnet_logger(
                                 severity="ERROR",
-                                message=f"Error removing file located at: {file_path}"
+                                message=f"Error removing file located at: {file_path}",
+                                log_level=log_level
                             )
                             return False
     

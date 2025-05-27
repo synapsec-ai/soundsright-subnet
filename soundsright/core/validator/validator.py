@@ -51,6 +51,7 @@ class SubnetValidator(Base.BaseNeuron):
         self.debug_mode = False
         self.skip_sgmse = False
         self.dataset_size = 100
+        self.log_level="INFO" # Init log level
         self.start_date = datetime(2025, 5, 27, 9, 0, tzinfo=timezone.utc) # Reference for when to start competitions (May 27, 2025 @ 9:00 AM GMT)
         self.period_days = 1 # How many days each competition lasts
         self.weights_objects = []
@@ -156,6 +157,7 @@ class SubnetValidator(Base.BaseNeuron):
                 tts_base_path=self.tts_path,
                 reverb_base_path=self.reverb_path,
                 noise_base_path=self.noise_path
+                log_level=self.log_level
             )
 
             # Generate new TTS data
