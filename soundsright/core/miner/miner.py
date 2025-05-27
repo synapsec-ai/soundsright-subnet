@@ -455,18 +455,18 @@ class SubnetMiner(Base.BaseNeuron):
         they wish to store the results of the validator benchmarking.
         """
         validator_hotkey = synapse.dendrite.hotkey
-        competition = synapse.data.get("competition", None)
-        benchmarking_data = synapse.data.get("benchmarking_data", None)
+        competition = synapse.competition
+        benchmarking_data = synapse.data
 
         if competition and benchmarking_data:
             self.neuron_logger(
                 severity="INFO",
-                message=f"Recieved feedback synapse from validator: {validator_hotkey} for competition: {competition}. Data: {benchmarking_data}"
+                message=f"Received feedback synapse from validator: {validator_hotkey} for competition: {competition}. Data: {benchmarking_data}"
             )
         else:
             self.neuron_logger(
                 severity="WARNING",
-                message=f"Recieved empty feedback synapse from validator: {validator_hotkey}. Please make sure your model config is correct with the verfication script. More information is available in the docs:\nhttps://docs.soundsright.ai/mining/model_formatting.html"
+                message=f"Received empty feedback synapse from validator: {validator_hotkey}. Please make sure your model config is correct with the verification script. More information is available in the docs:\nhttps://docs.soundsright.ai/mining/model_formatting.html"
             )
 
         ### ADD CODE HERE IF YOU WANT TO LOG THE BENCHMARKING DATA
