@@ -449,24 +449,27 @@ class SubnetMiner(Base.BaseNeuron):
         """Wrapper for the forward function to avoid repetition in code"""
         return self.forward(synapse=synapse, competition='DEREVERBERATION_16000HZ')
     
-    def receive_feedback(self, synapse: Base.FeedbackProtocol) -> Base.FeedbackProtocol:
-        """
-        Function to recieve the FeedbackSynapse. Miners should modify this function if
-        they wish to store the results of the validator benchmarking.
-        """
-        validator_hotkey = synapse.dendrite.hotkey
-        competition = synapse.competition
-        benchmarking_data = synapse.data
+    def receive_feedback(self, *args, **kwargs):
+        synapse = args[0] if args else None
+        if synapse:
+            validator_hotkey = synapse.dendrite.hotkey
+            competition = synapse.competition
+            benchmarking_data = synapse.data
 
-        if competition and benchmarking_data:
-            self.neuron_logger(
-                severity="INFO",
-                message=f"Received feedback synapse from validator: {validator_hotkey} for competition: {competition}. Data: {benchmarking_data}"
-            )
+            if competition and benchmarking_data:
+                self.neuron_logger(
+                    severity="INFO",
+                    message=f"Received feedback synapse from validator: {validator_hotkey} for competition: {competition}. Data: {benchmarking_data}"
+                )
+            else:
+                self.neuron_logger(
+                    severity="WARNING",
+                    message=f"Received empty feedback synapse from validator: {validator_hotkey}. Please ensure your model config is correct."
+                )
         else:
             self.neuron_logger(
-                severity="WARNING",
-                message=f"Received empty feedback synapse from validator: {validator_hotkey}. Please make sure your model config is correct with the verification script. More information is available in the docs:\nhttps://docs.soundsright.ai/mining/model_formatting.html"
+                severity="ERROR",
+                message="No synapse received in args."
             )
 
         ### ADD CODE HERE IF YOU WANT TO LOG THE BENCHMARKING DATA
