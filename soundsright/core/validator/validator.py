@@ -53,7 +53,7 @@ class SubnetValidator(Base.BaseNeuron):
         self.dataset_size = 100
         self.log_level="INFO" # Init log level
         self.start_date = datetime(2025, 5, 27, 9, 0, tzinfo=timezone.utc) # Reference for when to start competitions (May 27, 2025 @ 9:00 AM GMT)
-        self.period_days = 1 # How many days each competition lasts
+        self.period_days = 2 # How many days each competition lasts
         self.avg_model_eval_time = 3600
         self.first_run_through_of_the_day = True
         self.weights_objects = []
@@ -498,6 +498,7 @@ class SubnetValidator(Base.BaseNeuron):
             Base.FeedbackProtocol(
                 competition=competition,
                 data=data,
+                best_models=self.best_miner_models,
                 subnet_version=self.subnet_version
             ),
             timeout=timeout,
@@ -1525,9 +1526,6 @@ class SubnetValidator(Base.BaseNeuron):
                     # Then, check that hotkey knowledge matches
                     self.check_hotkeys()
 
-                    # Send feedback synapses to miners
-                    self.send_feedback_synapses()
-
                     # First reset competition scores and overall scores so that we can re-calculate them from validator model data
                     self.init_default_scores()
 
@@ -1554,6 +1552,9 @@ class SubnetValidator(Base.BaseNeuron):
                         severity="INFO",
                         message=f"Overall miner scores: {self.scores}"
                     )
+
+                    # Send feedback synapses to miners
+                    self.send_feedback_synapses()
                     
                     # Update HealthCheck API
                     self.healthcheck_api.update_competition_scores(self.competition_scores)

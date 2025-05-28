@@ -198,7 +198,20 @@ class ModelEvaluationHandler:
         )
 
         if not self.model_hash or self.model_hash in self.forbidden_model_hashes:
+            Utils.subnet_logger(
+                severity="DEBUG",
+                message=f"Model hash for model: {self.hf_model_id} with revision: {self.hf_model_revision} could not be calculated or is invalid.",
+                log_level=self.log_level
+            )
             return False 
+        
+        if not Models.verify_directory_files(directory=self.model_path):
+            Utils.subnet_logger(
+                severity="DEBUG",
+                message=f"Model: {self.hf_model_id} with revision: {self.hf_model_revision} contains a forbidden file.",
+                log_level=self.log_level
+            )
+            return False
 
         # Make sure model hash is unique 
         if self.model_hash in [model_data['model_hash'] for model_data in self.miner_models]:

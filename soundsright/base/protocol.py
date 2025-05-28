@@ -55,6 +55,11 @@ class FeedbackProtocol(bt.Synapse):
         default=None,
         description = "Model benchmark results.",
     )
+
+    best_models: dict | None = pydantic.Field(
+        default=None,
+        description = "Data on best models for all competitions.",
+    )
     
     subnet_version: int = pydantic.Field(
         ...,
