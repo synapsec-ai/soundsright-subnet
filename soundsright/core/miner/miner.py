@@ -449,7 +449,7 @@ class SubnetMiner(Base.BaseNeuron):
         """Wrapper for the forward function to avoid repetition in code"""
         return self.forward(synapse=synapse, competition='DEREVERBERATION_16000HZ')
     
-    def forward_feedback(self, synapse: Base.FeedbackProtocol) -> Base.FeedbackProtocol:
+    def forward_feedback(self, synapse: Base.FeedbackProtocol, competition="all") -> Base.FeedbackProtocol:
         """
         Function to recieve the FeedbackSynapse. Miners should modify this function if
         they wish to store the results of the validator benchmarking.
