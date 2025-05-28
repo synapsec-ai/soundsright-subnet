@@ -470,6 +470,9 @@ class SubnetMiner(Base.BaseNeuron):
             )
 
         ### ADD CODE HERE IF YOU WANT TO LOG THE BENCHMARKING DATA
+
+
+        return synapse
     
     def run(self):
         
