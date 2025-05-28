@@ -1,6 +1,7 @@
 import asyncio
 import bittensor as bt 
 import json
+import time 
 
 def timeout_decorator(timeout):
     """
@@ -151,6 +152,15 @@ def check_if_historical_model_matches_current_model(current_model, historical_mo
     if current_namespace != historical_namespace or current_name != historical_name or current_revision != historical_revision:
         return False
 
+    return True
+
+def check_if_time_to_benchmark(next_competition_timestamp: int, avg_model_eval_time: int) -> bool:
+    """
+    Checks if there is time to evaluate a new model in the current competition.
+    """
+    current_time = time.time()
+    if current_time + avg_model_eval_time >= next_competition_timestamp:
+        return False 
     return True
 
 def sign_data(hotkey: bt.Keypair, data: str) -> str:

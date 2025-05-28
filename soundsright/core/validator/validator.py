@@ -54,6 +54,8 @@ class SubnetValidator(Base.BaseNeuron):
         self.log_level="INFO" # Init log level
         self.start_date = datetime(2025, 5, 27, 9, 0, tzinfo=timezone.utc) # Reference for when to start competitions (May 27, 2025 @ 9:00 AM GMT)
         self.period_days = 1 # How many days each competition lasts
+        self.avg_model_eval_time = 3600
+        self.first_run_through_of_the_day = True
         self.weights_objects = []
         self.sample_rates = [16000]
         self.tasks = ['DENOISING','DEREVERBERATION']
@@ -1126,6 +1128,16 @@ class SubnetValidator(Base.BaseNeuron):
 
         try:
 
+            if not self.first_run_through_of_the_day and Utils.check_if_time_to_benchmark(
+                next_competition_timestamp=self.next_competition_timestamp,
+                avg_model_eval_time=self.avg_model_eval_time,
+            ):
+                self.neuron_logger(
+                    severity="DEBUG",
+                    message=f"Not enough time in current competition to benchmark model for hotkey: {hotkey}."
+                )
+                return False
+
             # Validate that miner data is formatted correctly
             if not Utils.validate_miner_response(model_metadata):
                 
@@ -1446,6 +1458,23 @@ class SubnetValidator(Base.BaseNeuron):
             severity="TRACE",
             message=f"Best miner models: {self.best_miner_models}"
         )
+
+        if self.first_run_through_of_the_day:
+            self.first_run_through_of_the_day = False
+
+    def reset_for_new_competition(self) -> None:
+        """
+        Aggregate of all the things to reset each competition
+        """
+        # Reset evaluated model cache
+        for comp in self.models_evaluated_today.keys():
+            self.models_evaluated_today[comp] = []
+
+        # Reset remote logging
+        self.remote_logging_daily_tries = 0
+
+        # Reset to first run through of the day
+        self.first_run_through_of_the_day = True
                     
     def run(self) -> None:
         """
@@ -1529,10 +1558,6 @@ class SubnetValidator(Base.BaseNeuron):
                     # Update HealthCheck API
                     self.healthcheck_api.update_competition_scores(self.competition_scores)
                     self.healthcheck_api.update_scores(self.scores)
-                    
-                    # Reset evaluated model cache
-                    for comp in self.models_evaluated_today.keys():
-                        self.models_evaluated_today[comp] = []
 
                     # Update timestamp to next day's 9AM (GMT)
                     self.update_next_competition_timestamp()
@@ -1543,8 +1568,8 @@ class SubnetValidator(Base.BaseNeuron):
                     # Benchmark SGMSE+ for new dataset as a comparison for miner models
                     self.benchmark_sgmse_for_all_competitions()
 
-                    # Reset remote logging
-                    self.remote_logging_daily_tries=0
+                    # Reset validator values for new competition
+                    self.reset_for_new_competition()
 
                 # Handle setting of weights
                 self.handle_weight_setting()
