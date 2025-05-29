@@ -121,12 +121,13 @@ class ModelEvaluationHandler:
                     return False
 
                 if self.historical_block and isinstance(self.historical_block, int) and self.historical_block < self.hf_model_block:
-                    self.hf_model_block = self.historical_block
+                    
                     Utils.subnet_logger(
                         severity="TRACE",
                         message=f"Detected that miner has uploaded metadata for the same model: {self.hf_model_id} more than once. Old block: {self.historical_block}. New block: {self.hf_model_block}. Reverting back to original block of metadata upload.",
                         log_level=self.log_level,
                     )
+                    self.hf_model_block = self.historical_block
                 
                 Utils.subnet_logger(
                     severity="DEBUG",
