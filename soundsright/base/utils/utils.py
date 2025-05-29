@@ -154,12 +154,18 @@ def check_if_historical_model_matches_current_model(current_model, historical_mo
 
     return True
 
-def check_if_time_to_benchmark(next_competition_timestamp: int, avg_model_eval_time: int) -> bool:
+def check_if_time_to_benchmark(next_competition_timestamp: int, avg_model_eval_time: int, model_cache: dict) -> bool:
     """
     Checks if there is time to evaluate a new model in the current competition.
     """
     current_time = int(time.time())
-    if current_time + avg_model_eval_time >= next_competition_timestamp:
+    
+    cache_eval_time = 0
+    for comp in model_cache.keys():
+        for model in model_cache[comp]:
+            cache_eval_time += avg_model_eval_time
+
+    if current_time + avg_model_eval_time + cache_eval_time >= next_competition_timestamp:
         return False 
     return True
 

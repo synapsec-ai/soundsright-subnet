@@ -1136,6 +1136,7 @@ class SubnetValidator(Base.BaseNeuron):
             if not self.first_run_through_of_the_day and Utils.check_if_time_to_benchmark(
                 next_competition_timestamp=self.next_competition_timestamp,
                 avg_model_eval_time=self.avg_model_eval_time,
+                model_cache=self.model_cache
             ):
                 self.neuron_logger(
                     severity="DEBUG",
