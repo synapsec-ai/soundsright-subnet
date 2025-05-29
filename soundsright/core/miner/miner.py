@@ -362,6 +362,13 @@ class SubnetMiner(Base.BaseNeuron):
                 message=f"Blacklisted non-validator: {synapse.dendrite.hotkey}"
             )
             return (True, f"Hotkey {synapse.dendrite.hotkey} is not a validator")
+        
+        if not (self.metagraph.S[uid] >= self.validator_min_stake):
+            self.neuron_logger(
+                severity="INFO",
+                message=f"Blacklisted validator with less than minimum required stake: {synapse.dendrite.hotkey}"
+            )
+            return (True, f"Hotkey {synapse.dendrite.hotkey} does not have enough stake.")
 
         # Allow all other entities
         self.neuron_logger(
