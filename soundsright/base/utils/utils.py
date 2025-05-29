@@ -158,7 +158,7 @@ def check_if_time_to_benchmark(next_competition_timestamp: int, avg_model_eval_t
     """
     Checks if there is time to evaluate a new model in the current competition.
     """
-    current_time = time.time()
+    current_time = int(time.time())
     if current_time + avg_model_eval_time >= next_competition_timestamp:
         return False 
     return True
