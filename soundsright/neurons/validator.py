@@ -52,7 +52,7 @@ if __name__ == "__main__":
     
     parser.add_argument(
         "--dataset_size",
-        default=100,
+        default=110,
         type=int,
         help="Size of evaluation dataset."
     )
