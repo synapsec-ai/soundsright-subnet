@@ -5,7 +5,7 @@
 
 If you are unfamiliar with how Bittensor works, please check out [this primer](https://docs.bittensor.com/learn/bittensor-building-blocks) first!
 
-The SoundsRight subnet is focused on the research and development of speech enhancement models through daily fine-tuning competitions, powered by the decentralized Bittensor ecosystem. 
+The SoundsRight subnet is focused on the research and development of speech enhancement models through fine-tuning competitions, powered by the decentralized Bittensor ecosystem. 
 
 Miners in the subnet will upload their fine-tuned models to HuggingFace, and the subnet's validators are in charge of downloading the models and benchmarking their performance.
 
