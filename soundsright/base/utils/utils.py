@@ -1,6 +1,7 @@
 import asyncio
 import bittensor as bt 
 import json
+import time 
 
 def timeout_decorator(timeout):
     """
@@ -105,6 +106,77 @@ def validate_model_benchmark(model_benchmark):
         if k not in validation_dict.keys() or not isinstance(model_benchmark[k], validation_dict[k]):
             return False
         
+    return True
+
+def validate_model_feedback(model_feedback):
+
+    validation_dict = {
+        "uid": int,
+        "competition": str,
+        "data": dict
+    }
+
+    if not isinstance(model_feedback, dict):
+        return False 
+    
+    for k in validation_dict:
+        if k not in model_feedback.keys():
+            return False 
+        
+        if not isinstance(model_feedback[k], validation_dict[k]):
+            return False 
+
+    return True
+
+def check_if_historical_model_matches_current_model(current_model, historical_model):
+    """
+    Checks if the current model being submitted by a validator is identical to the model being submitted 
+    """
+    # Confirm both are dicts
+    if not isinstance(current_model, dict) or isinstance(historical_model, dict): 
+        return False
+    
+    # Obtain values to compare
+    current_namespace = current_model.get("hf_model_namespace", None)
+    current_name = current_model.get("hf_model_name", None)
+    current_revision = current_model.get("hf_model_revision", None)
+    historical_namespace = historical_model.get("hf_model_namespace", None)
+    historical_name = historical_model.get("hf_model_name", None)
+    historical_revision = historical_model.get("hf_model_revision", None)
+
+    # Check all are obtainable
+    if not current_namespace or not current_name or not current_revision or not historical_namespace or not historical_name or not historical_revision:
+        return False
+
+    # Check for equality
+    if current_namespace != historical_namespace or current_name != historical_name or current_revision != historical_revision:
+        return False
+
+    return True
+
+def validate_model_cache(model_cache: dict) -> bool:
+    if not isinstance(model_cache, dict):
+        return False
+
+    for comp in model_cache:
+        if not isinstance(model_cache[comp], list):
+            return False 
+        
+    return True
+
+def check_if_time_to_benchmark(next_competition_timestamp: int, avg_model_eval_time: int, model_cache: dict) -> bool:
+    """
+    Checks if there is time to evaluate a new model in the current competition.
+    """
+    current_time = int(time.time())
+
+    cache_eval_time = 0
+    if validate_model_cache(model_cache=model_cache):
+        for comp_models in model_cache.values():
+            cache_eval_time += len(comp_models) * avg_model_eval_time
+
+    if current_time + avg_model_eval_time + cache_eval_time >= next_competition_timestamp:
+        return False 
     return True
 
 def sign_data(hotkey: bt.Keypair, data: str) -> str:

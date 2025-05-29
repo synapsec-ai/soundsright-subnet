@@ -32,6 +32,7 @@ class ModelEvaluationHandler:
         miner_hotkey: str,
         miner_models: List[dict],
         cuda_directory: str,
+        historical_block: int | None,
     ):
         """Initializes ModelEvaluationHandler
 
@@ -69,6 +70,7 @@ class ModelEvaluationHandler:
         self.hf_model_name = hf_model_name
         self.hf_model_id = f"{hf_model_namespace}/{hf_model_name}"
         self.hf_model_revision = hf_model_revision
+        self.historical_block = historical_block # This is used for logging the historical value of the block 
         self.hf_model_block = None
         self.model_hash = ''
         self.forbidden_model_hashes = [
@@ -100,7 +102,7 @@ class ModelEvaluationHandler:
                 hotkey=self.miner_hotkey,
             ))
             
-            if not outcome or not self.metadata_handler.metadata or not self.metadata_handler.metadata_block: 
+            if not outcome or not self.metadata_handler.metadata or not self.metadata_handler.metadata_block or self.metadata_handler.metadata_block == 0: 
                     
                 Utils.subnet_logger(
                     severity="ERROR",
@@ -114,6 +116,18 @@ class ModelEvaluationHandler:
                 
                 self.model_metadata = self.metadata_handler.metadata
                 self.hf_model_block = self.metadata_handler.metadata_block
+
+                if not isinstance(self.hf_model_block, int):
+                    return False
+
+                if self.historical_block and isinstance(self.historical_block, int) and self.historical_block < self.hf_model_block:
+                    
+                    Utils.subnet_logger(
+                        severity="TRACE",
+                        message=f"Detected that miner has uploaded metadata for the same model: {self.hf_model_id} more than once. Old block: {self.historical_block}. New block: {self.hf_model_block}. Reverting back to original block of metadata upload.",
+                        log_level=self.log_level,
+                    )
+                    self.hf_model_block = self.historical_block
                 
                 Utils.subnet_logger(
                     severity="DEBUG",
@@ -134,7 +148,7 @@ class ModelEvaluationHandler:
             return False
             
     def validate_model_metadata(self):
-        """Validates that the model metadata is for a model belonging to the mienr with the following steps:
+        """Validates that the model metadata is for a model belonging to the miner with the following steps:
         
         1. Re-create model metadata string and confirm that its hash matches metadata uploaded to chain
         2. Make sure that model name is unique among models submitted. If it is not, it checks the block that 
@@ -185,7 +199,20 @@ class ModelEvaluationHandler:
         )
 
         if not self.model_hash or self.model_hash in self.forbidden_model_hashes:
+            Utils.subnet_logger(
+                severity="DEBUG",
+                message=f"Model hash for model: {self.hf_model_id} with revision: {self.hf_model_revision} could not be calculated or is invalid.",
+                log_level=self.log_level
+            )
             return False 
+        
+        if not Models.verify_directory_files(directory=self.model_path):
+            Utils.subnet_logger(
+                severity="DEBUG",
+                message=f"Model: {self.hf_model_id} with revision: {self.hf_model_revision} contains a forbidden file.",
+                log_level=self.log_level
+            )
+            return False
 
         # Make sure model hash is unique 
         if self.model_hash in [model_data['model_hash'] for model_data in self.miner_models]:

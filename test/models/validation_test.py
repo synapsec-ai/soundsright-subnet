@@ -24,12 +24,11 @@ def remove_all_in_path(path):
         except Exception as e:
             print(f"Failed to delete {file_path}. Reason: {e}")
             
-@pytest.mark.parametrize("model_id", [
-    ("huseinzol05/speech-enhancement-mask-unet"),
-    ("sp-uhh/speech-enhancement-sgmse"), 
-    ("rollingkevin/speech-enhancement-unet"),
+@pytest.mark.parametrize("model_id, revision", [
+    ("synapsecai/SoundsRightModelTemplate", "DENOISING_16000HZ"),
+    ("synapsecai/SoundsRightModelTemplate", "DEREVERBERATION_16000HZ"),
 ])
-def test_get_model_content_hash(model_id):
+def test_get_model_content_hash(model_id, revision):
     
     model_path=f"{os.path.expanduser('~')}/.soundsright/model_test"
     model_dir = os.path.join(os.getcwd(), model_path)
@@ -38,7 +37,7 @@ def test_get_model_content_hash(model_id):
 
     model_hash_1, sorted_files_1 = Models.get_model_content_hash(
         model_id=model_id,
-        revision="main",
+        revision=revision,
         local_dir=model_dir,
         log_level="INFO"
     )
@@ -47,7 +46,7 @@ def test_get_model_content_hash(model_id):
     
     model_hash_2, sorted_files_2 = Models.get_model_content_hash(
         model_id=model_id,
-        revision="main",
+        revision=revision,
         local_dir=model_dir,
         log_level="INFO"
     )
@@ -58,3 +57,5 @@ def test_get_model_content_hash(model_id):
     assert len(sorted_files_1) == len(sorted_files_2), "File lengths different"
     assert sorted_files_1 == sorted_files_2, "File order different"
     assert model_hash_1 == model_hash_2, "Hashes different"
+
+    print(f"Model hash for model: {model_id} with branch: {revision}: {model_hash_1}")

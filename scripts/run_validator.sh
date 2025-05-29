@@ -51,24 +51,23 @@ check_runtime_environment() {
 }
 
 parse_arguments() {
-
     while [[ $# -gt 0 ]]; do
-        if [[ $1 == "--"* ]]; then
-            arg_name=${1:2}  # Remove leading "--" from the argument name
+        if [[ $1 == --* ]]; then
+            arg_name=${1:2}  # Remove leading "--"
 
-            # Special handling for logging argument
-            if [[ "$arg_name" == "logging"* ]]; then
-                shift
-                if [[ $1 != "--"* ]]; then
-                    IFS='.' read -ra parts <<< "$arg_name"
-                    args[${parts[0]}]=${parts[1]}
-                fi
+            shift  # Move to next argument (might be value or another flag)
+
+            # Check if next argument is another flag or an actual value
+            if [[ $# -eq 0 || $1 == --* ]]; then
+                args[$arg_name]=true  # Boolean flag, set to true
+                continue  # Do not shift again
             else
+                args[$arg_name]="$1"  # Assign value
                 shift
-                args[$arg_name]="$1"  # Assign the argument value to the argument name
             fi
+        else
+            shift
         fi
-        shift
     done
 
     for key in "${!args[@]}"; do

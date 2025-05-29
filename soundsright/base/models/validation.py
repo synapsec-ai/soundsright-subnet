@@ -8,6 +8,38 @@ from huggingface_hub import snapshot_download
 
 import soundsright.base.utils as Utils
 
+def get_file_content_hash(filepath, chunk_size=8192):
+    """
+    Computes SHA-256 hash of a single file
+    """
+    sha256_hash = hashlib.sha256()
+    
+    try:
+        with open(filepath, "rb") as f:
+            for chunk in iter(lambda: f.read(chunk_size), b""):
+                sha256_hash.update(chunk)
+    except Exception as e:
+        return ""
+    
+    return sha256_hash.hexdigest()
+
+def verify_directory_files(directory):
+    
+    forbidden_hashes = [
+        "e3875747b5646092d5c556bae68e5af639e2c1f45f009c669f379cd4d415cbd8",
+        "2ec94cf546ef0a9d66f90364bd735820c78d9a214133588e90ce9ce01cd8a73b",
+        "b770d098538dec1c06c6917bf327a7922ef326321aa23678f071d86c5f39716f",
+    ]
+    for root, _, files in os.walk(directory):
+        for file_name in files:
+            file_path = os.path.join(root, file_name)
+            file_hash = get_file_content_hash(file_path)
+            
+            if file_hash in forbidden_hashes:
+                return False
+
+    return True
+
 def get_directory_content_hash(directory: str):
     """
     Computes a single hash of the combined contents of all files in a directory,

@@ -1,6 +1,6 @@
 import bittensor as bt
 
-def subnet_logger(severity: str, message: str, log_level: str):
+def subnet_logger(severity: str, message: str, log_level: str = "TRACE"):
     """This method is a wrapper for the bt.logging function to add extra
     functionality around the native logging capabilities. This method is
     used together with the neuron_logger() method."""

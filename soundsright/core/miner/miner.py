@@ -362,6 +362,13 @@ class SubnetMiner(Base.BaseNeuron):
                 message=f"Blacklisted non-validator: {synapse.dendrite.hotkey}"
             )
             return (True, f"Hotkey {synapse.dendrite.hotkey} is not a validator")
+        
+        if not (self.metagraph.S[uid] >= self.validator_min_stake):
+            self.neuron_logger(
+                severity="INFO",
+                message=f"Blacklisted validator with less than minimum required stake: {synapse.dendrite.hotkey}"
+            )
+            return (True, f"Hotkey {synapse.dendrite.hotkey} does not have enough stake.")
 
         # Allow all other entities
         self.neuron_logger(
@@ -375,6 +382,10 @@ class SubnetMiner(Base.BaseNeuron):
         return self.blacklist_fn(synapse=synapse)
 
     def blacklist_16kHz_dereverberation(self, synapse: Base.Dereverberation_16kHz_Protocol) -> Tuple[bool, str]:
+        """Wrapper for the blacklist function to avoid repetition in code"""
+        return self.blacklist_fn(synapse=synapse)
+    
+    def blacklist_feedback(self, synapse: Base.FeedbackProtocol) -> Tuple[bool, str]:
         """Wrapper for the blacklist function to avoid repetition in code"""
         return self.blacklist_fn(synapse=synapse)
 
@@ -405,6 +416,10 @@ class SubnetMiner(Base.BaseNeuron):
         return self.priority_fn(synapse=synapse)
 
     def priority_16kHz_dereverberation(self, synapse: Base.Dereverberation_16kHz_Protocol) -> float:
+        """Wrapper for the priority function to avoid repetition in code"""
+        return self.priority_fn(synapse=synapse)
+    
+    def priority_feedback(self, synapse:Base.FeedbackProtocol) -> float:
         """Wrapper for the priority function to avoid repetition in code"""
         return self.priority_fn(synapse=synapse)
 
@@ -441,6 +456,42 @@ class SubnetMiner(Base.BaseNeuron):
         """Wrapper for the forward function to avoid repetition in code"""
         return self.forward(synapse=synapse, competition='DEREVERBERATION_16000HZ')
     
+    def forward_feedback(self, synapse: Base.FeedbackProtocol) -> Base.FeedbackProtocol:
+        """
+        Function to recieve the FeedbackSynapse. Miners should modify this function if
+        they wish to store the results of the validator benchmarking.
+        """
+        validator_hotkey = synapse.dendrite.hotkey
+        competition = synapse.competition
+        benchmarking_data = synapse.data
+        best_models_data = synapse.best_models
+
+        if competition and benchmarking_data:
+            self.neuron_logger(
+                severity="INFO",
+                message=f"Received feedback synapse from validator: {validator_hotkey} for competition: {competition}."
+            )
+
+            self.neuron_logger(
+                severity="INFO",
+                message=f"Feedback data: {benchmarking_data}"
+            )
+
+            self.neuron_logger(
+                severity="INFO",
+                message=f"Best models data: {best_models_data}"
+            )
+        else:
+            self.neuron_logger(
+                severity="WARNING",
+                message=f"Received empty feedback synapse from validator: {validator_hotkey}. Please make sure your model config is correct with the verification script. More information is available in the docs:\nhttps://docs.soundsright.ai/mining/model_formatting.html"
+            )
+
+        ### ADD CODE HERE IF YOU WANT TO LOG THE BENCHMARKING DATA
+
+
+        return synapse
+    
     def run(self):
         
         # Load existing model data or start with a blank slate 
@@ -461,14 +512,18 @@ class SubnetMiner(Base.BaseNeuron):
         )
 
         # Attach the miner functions to the Axon
-        axon.attach(
+        axon.attach( # DENOISING 16000 HZ
             forward_fn=self.forward_16kHz_denoising,
             blacklist_fn=self.blacklist_16kHz_denoising,
             priority_fn=self.priority_16kHz_denoising,
-        ).attach(
+        ).attach( # DEREVERBERATION 16000 HZ
             forward_fn=self.forward_16kHz_dereverberation,
             blacklist_fn=self.blacklist_16kHz_dereverberation,
-            priority_fn=self.priority_16kHz_dereverberation
+            priority_fn=self.priority_16kHz_dereverberation,
+        ).attach( # FEEDBACK SYNAPSE
+            forward_fn=self.forward_feedback,
+            blacklist_fn=self.blacklist_feedback,
+            priority_fn=self.priority_feedback,
         )
 
         self.neuron_logger(

@@ -16,7 +16,7 @@ for directory in [tts_base_path, noise_base_path, reverb_base_path, arni_path, w
         os.makedirs(directory)
         print(f"Created directory: {directory}")
 
-reset_all_data_directories(tts_base_path=tts_base_path, reverb_base_path=reverb_base_path, noise_base_path=noise_base_path)
+reset_all_data_directories(tts_base_path=tts_base_path, reverb_base_path=reverb_base_path, noise_base_path=noise_base_path, log_level="TRACE")
 
 if False:
     print("Downloading datasets")
@@ -42,4 +42,4 @@ create_noise_and_reverb_data_for_all_sampling_rates(
 
 remove=input("remove all files? y/n")
 if remove=='y':
-    reset_all_data_directories(tts_base_path=tts_base_path, reverb_base_path=reverb_base_path, noise_base_path=noise_base_path)
+    reset_all_data_directories(tts_base_path=tts_base_path, reverb_base_path=reverb_base_path, noise_base_path=noise_base_path, log_level="TRACE")

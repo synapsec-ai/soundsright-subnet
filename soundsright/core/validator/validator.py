@@ -51,6 +51,11 @@ class SubnetValidator(Base.BaseNeuron):
         self.debug_mode = False
         self.skip_sgmse = False
         self.dataset_size = 100
+        self.log_level="INFO" # Init log level
+        self.start_date = datetime(2025, 5, 27, 9, 0, tzinfo=timezone.utc) # Reference for when to start competitions (May 27, 2025 @ 9:00 AM GMT)
+        self.period_days = 2 # How many days each competition lasts
+        self.avg_model_eval_time = 3600
+        self.first_run_through_of_the_day = True
         self.weights_objects = []
         self.sample_rates = [16000]
         self.tasks = ['DENOISING','DEREVERBERATION']
@@ -153,7 +158,8 @@ class SubnetValidator(Base.BaseNeuron):
             Data.reset_all_data_directories(
                 tts_base_path=self.tts_path,
                 reverb_base_path=self.reverb_path,
-                noise_base_path=self.noise_path
+                noise_base_path=self.noise_path,
+                log_level=self.log_level
             )
 
             # Generate new TTS data
@@ -198,32 +204,43 @@ class SubnetValidator(Base.BaseNeuron):
 
     def get_next_competition_timestamp(self) -> int:
         """
-        Finds the Unix timestamp for the next day at 9:00 AM GMT.
+        Returns the Unix timestamp for the next competition at 9:00 AM GMT
+        that is a multiple of `period_days` after `self.start_date`.
+
+        Args:
+            start_date (datetime): The fixed base date to start counting from (should be 09:00 GMT).
+            period_days (int): The interval of competition recurrence in days.
         """
-        # Current time in GMT
         now = datetime.now(timezone.utc)
 
-        # Find the next day at 9:00 AM
-        next_day = now + timedelta(days=1)
-        next_day_at_nine = next_day.replace(hour=9, minute=0, second=0, microsecond=0)
-
-        # Return Unix timestamp
-        return int(next_day_at_nine.timestamp())
-
-    def update_next_competition_timestamp(self) -> None:
-        """
-        Updates the next competition timestamp to the 9:00 AM GMT of the following day.
-        """
-        # Add 1 day to the current competition time
-        next_competition_time = datetime.fromtimestamp(self.next_competition_timestamp, tz=timezone.utc)
-        next_competition_time += timedelta(days=1)
-
-        # Set the new timestamp
-        self.next_competition_timestamp = int(next_competition_time.timestamp())
+        # Compute number of full days since start_date
+        delta_days = (now - self.start_date).days
+        # Compute how many full periods have passed
+        periods_passed = delta_days // self.period_days
+        # Get the next period start
+        next_competition = self.start_date + timedelta(days=(periods_passed + 1) * self.period_days)
 
         self.neuron_logger(
             severity="INFO",
-            message=f"Next competition will be at {datetime.fromtimestamp(self.next_competition_timestamp, tz=timezone.utc)}"
+            message=f"Next competition will be at {next_competition}"
+        )
+        return int(next_competition.timestamp())
+
+    def update_next_competition_timestamp(self) -> None:
+        """
+        Updates `next_competition_timestamp` to the next competition time
+        that is a multiple of `period_days` after `self.start_date`.
+        """
+        current_time = datetime.fromtimestamp(self.next_competition_timestamp, tz=timezone.utc)
+        delta_days = (current_time - self.start_date).days
+        periods_passed = delta_days // self.period_days
+        next_time = self.start_date + timedelta(days=(periods_passed + 1) * self.period_days)
+
+        self.next_competition_timestamp = int(next_time.timestamp())
+
+        self.neuron_logger(
+            severity="INFO",
+            message=f"Next competition will be at {next_time}"
         )
 
         self.healthcheck_api.append_metric(metric_name="competitions_judged", value=1)
@@ -441,6 +458,9 @@ class SubnetValidator(Base.BaseNeuron):
                 self.competition_scores[competition] = np.concatenate((self.competition_scores[competition], additional_zeros))
 
     async def send_competition_synapse(self, uid_to_query: int, sample_rate: int, task: str, timeout: int = 5) -> List[bt.synapse]:
+        """
+        Sends synapses to obtain model metadata for DENOSIING_16000HZ and DEREVERBERATION_16000HZ competitions.
+        """
         # Broadcast query to valid Axons
         
         self.neuron_logger(
@@ -465,6 +485,135 @@ class SubnetValidator(Base.BaseNeuron):
                 timeout=timeout,
                 deserialize=True,
             )
+        
+    async def send_feedback_synapse(self, uid_to_query: int, competition: str, data: dict, timeout: int = 5) -> List[bt.Synapse]:
+        """
+        Sends FeedbackSynapse to miners 
+        """
+        self.neuron_logger(
+            severity="DEBUG",
+            message=f"Sent feedback synapse for competition: {competition} to UID: {uid_to_query} with data: {data}"
+        )
+        
+        axon_to_query = self.metagraph.axons[uid_to_query]
+        
+        return await self.dendrite.forward(
+            axon_to_query,
+            Base.FeedbackProtocol(
+                competition=competition,
+                data=data,
+                best_models=self.best_miner_models,
+                subnet_version=self.subnet_version
+            ),
+            timeout=timeout,
+            deserialize=True,
+        )
+    
+    def obtain_model_feedback(self):
+        """
+        Organizes self.miner_models to be sent as FeedbackSynapse objects to miners
+        """
+        # Init model feedback as empty list
+        aggregate_model_feedback = []
+
+        # Obtain uids to query
+        uids_to_query = self.get_uids_to_query()
+
+        self.neuron_logger(
+            severity="TRACE",
+            message="Obtaining model feedback:"
+        )
+
+        # Iterate through each uid and find the associated model data 
+        for uid in uids_to_query:
+
+            try: 
+
+                # Initialize empty dict for model_feedback
+                model_feedback = {}
+
+                # Find the hotkey 
+                hotkey = self.hotkeys[uid]
+                self.neuron_logger(
+                    severity="TRACE",
+                    message=f"Hotkey for uid: {uid} is: {hotkey}"
+                )
+
+                model_feedback["uid"] = uid
+                
+                # Iterate through competitions
+                for competition in self.miner_models.keys():
+
+                    # Iterate through models in the competition
+                    for model_data in self.miner_models[competition]:
+
+                        # If the hotkey matches
+                        if model_data["hotkey"] == hotkey:
+
+                            model_feedback["data"] = model_data
+                            model_feedback["competition"] = competition
+
+                            self.neuron_logger(
+                                severity="TRACE",
+                                message=f"Data for hotkey: {hotkey} for competition: {competition} is: {model_data}"
+                            )
+                
+                # Append data to aggregate
+                aggregate_model_feedback.append(model_feedback)
+                            
+            except Exception as e:
+                self.neuron_logger(
+                    severity="ERROR",
+                    message=f"Error obtaining model feedback for uid: {uid}: {e}"
+                )
+                continue
+
+        return aggregate_model_feedback
+    
+    def send_feedback_synapses(self):
+        """
+        Sends all feedback synapses to miners
+        """
+        # Obtain all model feedback organized by uid 
+        model_feedback = self.obtain_model_feedback()
+
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Model feedback aggregate to send to miners via FeedbackSynapse: {model_feedback}"
+        )
+
+        # Initialize asyncio loop 
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        try:
+            # Iterate through item in model feedback
+            for item in model_feedback:
+                if Utils.validate_model_feedback(item):
+                    
+                    uid=item["uid"]
+                    competition=item["competition"]
+                    data=item["data"]
+
+                    try:
+                        response = loop.run_until_complete(self.send_feedback_synapse(
+                            uid_to_query=uid,
+                            competition=competition,
+                            data=data,
+                        ))
+                        self.neuron_logger(
+                            severity="DEBUG",
+                            message=f"Recieved response for feedback synapse to uid: {uid}: {response}"
+                        )
+                    
+                    except Exception as e:
+                        self.neuron_logger(
+                            severity="ERROR",
+                            message=f"Error sending feedback synapse to UID: {uid} for competition: {competition} with data: {data}"
+                        )
+
+        finally:
+            self.dendrite.close_session(using_new_loop=True)
 
     def save_state(self) -> None:
         """Saves the state of the validator to a file."""
@@ -967,7 +1116,7 @@ class SubnetValidator(Base.BaseNeuron):
             message=f"SGMSE+ benchmarks: {self.sgmse_benchmarks}"
         )
     
-    def benchmark_model(self, model_metadata: dict, sample_rate: int, task: str, hotkey: str) -> dict:
+    def benchmark_model(self, model_metadata: dict, sample_rate: int, task: str, hotkey: str, block: int) -> dict:
         """Runs benchmarking for miner-submitted model using Models.ModelEvaluationHandler 
 
         Args:
@@ -983,6 +1132,17 @@ class SubnetValidator(Base.BaseNeuron):
         self.handle_weight_setting()
 
         try:
+
+            if not self.first_run_through_of_the_day and Utils.check_if_time_to_benchmark(
+                next_competition_timestamp=self.next_competition_timestamp,
+                avg_model_eval_time=self.avg_model_eval_time,
+                model_cache=self.model_cache
+            ):
+                self.neuron_logger(
+                    severity="DEBUG",
+                    message=f"Not enough time in current competition to benchmark model for hotkey: {hotkey}."
+                )
+                return False
 
             # Validate that miner data is formatted correctly
             if not Utils.validate_miner_response(model_metadata):
@@ -1012,6 +1172,7 @@ class SubnetValidator(Base.BaseNeuron):
                 miner_hotkey=hotkey,
                 miner_models=self.miner_models[f'{task}_{sample_rate}HZ'],
                 cuda_directory=self.cuda_directory,
+                historical_block=block,
             )
             
             metrics_dict, model_hash, model_block = eval_handler.download_run_and_evaluate()
@@ -1139,14 +1300,36 @@ class SubnetValidator(Base.BaseNeuron):
 
                                 # If the model in the synapse is validly formatted, has not been evaluated today and is not blacklisted:
                                 if not model_in_blacklist and not model_evaluated_today:
+
+                                    # Check to see if there is historical record of this model
+                                    miner_model_all_data = self.find_dict_by_hotkey(competition_miner_models, self.hotkeys[uid_to_query])
+
+                                    # If historical records do not exist
+                                    if not miner_model_all_data or Utils.check_if_historical_model_matches_current_model(current_model=response.data, historical_model=miner_model_all_data):
+
+                                        # Append it to cache of models to evaluate
+                                        self.model_cache[f"{task}_{sample_rate}HZ"].append(
+                                            {
+                                                "uid":uid_to_query,
+                                                "response_data":response.data,
+                                                "block": None,
+                                            }
+                                        )
                                     
-                                    # Append it to cache of models to evaluate
-                                    self.model_cache[f"{task}_{sample_rate}HZ"].append(
-                                        {
-                                            "uid":uid_to_query,
-                                            "response_data":response.data,
-                                        }
-                                    )
+                                    # If historical records do exist and are of the same model currently being submitted by the miner
+                                    else:
+
+                                        # Find block 
+                                        block = miner_model_all_data.get("block", None)
+
+                                        # Append it to cache of models to evaluate
+                                        self.model_cache[f"{task}_{sample_rate}HZ"].append(
+                                            {
+                                                "uid":uid_to_query,
+                                                "response_data":response.data,
+                                                "block": block,
+                                            }
+                                        )
 
                             # In the case of empty rersponse:
                             else: 
@@ -1179,17 +1362,21 @@ class SubnetValidator(Base.BaseNeuron):
                                 )
                                 
                                 model_evaluated_today=Utils.dict_in_list(target_dict=miner_model_data, list_of_dicts=competition_models_evaluated_today)
-                                # Check if modle is blacklisted
+                                # Check if model is blacklisted
                                 model_in_blacklist=Utils.dict_in_list(target_dict=miner_model_data, list_of_dicts=blacklisted_miner_models)
                                     
-                                # If the model in the synapse is validly formatted and not blacklisted:
+                                # If the recored model data is validly formatted and not blacklisted:
                                 if not model_in_blacklist and not model_evaluated_today:
-                                    
+
+                                    # Obtain the block the metadata was submitted at
+                                    block = miner_model_all_data.get("block", None)
+
                                     # Append it to cache of models to evaluate
                                     self.model_cache[f"{task}_{sample_rate}HZ"].append(
                                         {
                                             "uid":uid_to_query,
                                             "response_data":miner_model_data,
+                                            "block":block,
                                         }
                                     )
             
@@ -1228,7 +1415,7 @@ class SubnetValidator(Base.BaseNeuron):
                 for model_to_evaluate in models_to_evaluate:
                     
                     # Obtain uid and response data
-                    uid, response_data = model_to_evaluate['uid'], model_to_evaluate['response_data']
+                    uid, response_data, block = model_to_evaluate['uid'], model_to_evaluate['response_data'], model_to_evaluate["block"]
                     
                     # Create a dictionary logging miner model metadata & benchmark values
                     model_data = self.benchmark_model(
@@ -1236,6 +1423,7 @@ class SubnetValidator(Base.BaseNeuron):
                         sample_rate = sample_rate,
                         task = task,
                         hotkey = self.hotkeys[uid],
+                        block=block
                     )
 
                     if model_data:
@@ -1276,6 +1464,23 @@ class SubnetValidator(Base.BaseNeuron):
             severity="TRACE",
             message=f"Best miner models: {self.best_miner_models}"
         )
+
+        if self.first_run_through_of_the_day:
+            self.first_run_through_of_the_day = False
+
+    def reset_for_new_competition(self) -> None:
+        """
+        Aggregate of all the things to reset each competition
+        """
+        # Reset evaluated model cache
+        for comp in self.models_evaluated_today.keys():
+            self.models_evaluated_today[comp] = []
+
+        # Reset remote logging
+        self.remote_logging_daily_tries = 0
+
+        # Reset to first run through of the day
+        self.first_run_through_of_the_day = True
                     
     def run(self) -> None:
         """
@@ -1352,14 +1557,13 @@ class SubnetValidator(Base.BaseNeuron):
                         severity="INFO",
                         message=f"Overall miner scores: {self.scores}"
                     )
+
+                    # Send feedback synapses to miners
+                    self.send_feedback_synapses()
                     
                     # Update HealthCheck API
                     self.healthcheck_api.update_competition_scores(self.competition_scores)
                     self.healthcheck_api.update_scores(self.scores)
-                    
-                    # Reset evaluated model cache
-                    for comp in self.models_evaluated_today.keys():
-                        self.models_evaluated_today[comp] = []
 
                     # Update timestamp to next day's 9AM (GMT)
                     self.update_next_competition_timestamp()
@@ -1370,8 +1574,8 @@ class SubnetValidator(Base.BaseNeuron):
                     # Benchmark SGMSE+ for new dataset as a comparison for miner models
                     self.benchmark_sgmse_for_all_competitions()
 
-                    # Reset remote logging
-                    self.remote_logging_daily_tries=0
+                    # Reset validator values for new competition
+                    self.reset_for_new_competition()
 
                 # Handle setting of weights
                 self.handle_weight_setting()
