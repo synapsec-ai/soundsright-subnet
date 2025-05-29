@@ -462,7 +462,17 @@ class SubnetMiner(Base.BaseNeuron):
         if competition and benchmarking_data:
             self.neuron_logger(
                 severity="INFO",
-                message=f"Received feedback synapse from validator: {validator_hotkey} for competition: {competition}. Data: {benchmarking_data}. Best models data: {best_models_data}"
+                message=f"Received feedback synapse from validator: {validator_hotkey} for competition: {competition}."
+            )
+
+            self.neuron_logger(
+                severity="INFO",
+                message=f"Feedback data: {benchmarking_data}"
+            )
+
+            self.neuron_logger(
+                severity="INFO",
+                message=f"Best models data: {best_models_data}"
             )
         else:
             self.neuron_logger(
