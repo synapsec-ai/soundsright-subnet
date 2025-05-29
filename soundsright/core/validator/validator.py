@@ -220,6 +220,10 @@ class SubnetValidator(Base.BaseNeuron):
         # Get the next period start
         next_competition = self.start_date + timedelta(days=(periods_passed + 1) * self.period_days)
 
+        self.neuron_logger(
+            severity="INFO",
+            message=f"Next competition will be at {next_competition}"
+        )
         return int(next_competition.timestamp())
 
     def update_next_competition_timestamp(self) -> None:
