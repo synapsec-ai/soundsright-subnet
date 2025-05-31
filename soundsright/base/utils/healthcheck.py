@@ -223,7 +223,7 @@ class HealthCheckAPI:
             dt = datetime.datetime.fromtimestamp(self.next_competition_timestamp, tz=datetime.timezone.utc)
             formatted_timestamp = dt.strftime('%Y-%m-%d %H:%M:%S GMT')
             return {
-                "data":self.next_competition_timestamp,
+                "data":formatted_timestamp,
                 "timestamp": str(datetime.datetime.now()),
             }
         except Exception:
