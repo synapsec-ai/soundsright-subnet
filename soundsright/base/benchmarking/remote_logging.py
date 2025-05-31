@@ -85,17 +85,19 @@ def miner_models_remote_logging(hotkey: bt.Keypair, current_miner_models: dict, 
             "X-Nonce": nonce,
             "X-Timestamp": timestamp,
         }
-        
-        Utils.subnet_logger(
-            severity="DEBUG",
-            message=f"Sending current models to remote logger. Model data: {current_miner_models}. Headers: {headers}",
-            log_level=log_level,
-        )
 
+        filtered_models = filter_miner_models(current_miner_models)
+        
         body = {
-            "models":filter_miner_models(current_miner_models),
+            "models":filtered_models,
             "category":"current"
         }
+
+        Utils.subnet_logger(
+            severity="DEBUG",
+            message=f"Sending current models to remote logger. Model data: {filtered_models}. Headers: {headers}",
+            log_level=log_level,
+        )
 
         res = requests_post(url="https://logs.soundsright.ai/", headers=headers, data=body, log_level=log_level)
 
