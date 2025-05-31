@@ -1445,7 +1445,6 @@ class SubnetValidator(Base.BaseNeuron):
                 
                 # Extend blacklist and remove duplicate entries
                 self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"].extend(same_hash_blacklist)
-                self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"].extend(same_metadata_blacklist)
                 self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"] = Benchmarking.remove_blacklist_duplicates(self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"])
                 self.miner_models[f"{task}_{sample_rate}HZ"] = hash_metadata_filtered_new_competition_miner_models
 
