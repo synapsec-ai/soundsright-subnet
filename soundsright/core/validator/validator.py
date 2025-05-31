@@ -1559,13 +1559,14 @@ class SubnetValidator(Base.BaseNeuron):
 
                     # Send feedback synapses to miners
                     self.send_feedback_synapses()
-                    
-                    # Update HealthCheck API
-                    self.healthcheck_api.update_competition_scores(self.competition_scores)
-                    self.healthcheck_api.update_scores(self.scores)
 
                     # Update timestamp to next day's 9AM (GMT)
                     self.update_next_competition_timestamp()
+
+                    # Update HealthCheck API
+                    self.healthcheck_api.update_competition_scores(self.competition_scores)
+                    self.healthcheck_api.update_scores(self.scores)
+                    self.healthcheck_api.update_next_competition_timestamp(self.next_competition_timestamp)
 
                     # Update dataset for next day's competition
                     self.generate_new_dataset()

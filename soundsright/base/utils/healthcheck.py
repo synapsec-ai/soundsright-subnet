@@ -28,6 +28,8 @@ Validator Endpoints:
         Returns information about current competition-specific miner scores
     /healthcheck/scores
         Returns information about current overall miner scores
+    /healthcheck/next_competition
+        Returns timestamp of next competition time
 
 Port and host can be controlled with --healthcheck_port and
 --healthcheck_host parameters.
@@ -67,6 +69,7 @@ class HealthCheckAPI:
         self.best_models = best_models
         self.competition_scores = None
         self.scores = None
+        self.next_competition_timestamp = None
         
         # Status variables
         self.health_metrics = {
@@ -143,6 +146,11 @@ class HealthCheckAPI:
             self._healthcheck_scores,
             response_model=HealthCheckDataResponse,
         )
+        self.app.add_api_route(
+            "/healthcheck/next_competition",
+            self._healthcheck_next_competition,
+            response_model=HealthCheckDataResponse,
+        )
 
     def _healthcheck_metrics(self):
         try:
@@ -205,6 +213,17 @@ class HealthCheckAPI:
         try:
             return {
                 "data":self.scores,
+                "timestamp": str(datetime.datetime.now()),
+            }
+        except Exception:
+            return {"status": False, "timestamp": str(datetime.datetime.now())}
+        
+    def _healthcheck_next_competition(self):
+        try:
+            dt = datetime.datetime.fromtimestamp(self.next_competition_timestamp, tz=datetime.timezone.utc)
+            formatted_timestamp = dt.strftime('%Y-%m-%d %H:%M:%S GMT')
+            return {
+                "data":self.next_competition_timestamp,
                 "timestamp": str(datetime.datetime.now()),
             }
         except Exception:
@@ -311,3 +330,6 @@ class HealthCheckAPI:
         
     def update_scores(self, scores):
         self.scores = scores
+
+    def update_next_competition_timestamp(self, next_competition_timestamp):
+        self.next_competition_timestamp = next_competition_timestamp
