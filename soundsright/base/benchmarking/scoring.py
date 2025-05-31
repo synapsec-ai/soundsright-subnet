@@ -460,7 +460,6 @@ def filter_models_with_same_metadata(new_competition_miner_models: list) -> list
         List[dict]: Filtered list of benchmarking results for models in current competition 
     """
     unique_models = {}
-    blacklisted_models = []
     
     for item in new_competition_miner_models:
         if item and isinstance(item, dict) and 'block' in item.keys() and 'hf_model_namespace' in item.keys() and 'hf_model_name' in item.keys() and 'hf_model_revision' in item.keys():
@@ -472,20 +471,13 @@ def filter_models_with_same_metadata(new_competition_miner_models: list) -> list
             if model_id in unique_models:
                 # Keep the entry with the lowest 'block' value
                 if block < unique_models[model_id]['block']:
-                    blacklist_model = unique_models[model_id]
-                    filtered_blacklist_model = {
-                        'hf_model_namespace':blacklist_model['hf_model_namespace'],
-                        'hf_model_name':blacklist_model['hf_model_name'],
-                        'hf_model_revision':blacklist_model['hf_model_revision'],
-                    }
-                    blacklisted_models.append(filtered_blacklist_model)
                     unique_models[model_id] = item
             else:
                 # If model_hash not seen before, add it to unique_models
                 unique_models[model_id] = item
 
     # Return a list of unique items with the lowest 'block' value for each 'model_hash'
-    return list(unique_models.values()), blacklisted_models
+    return list(unique_models.values())
 
 def filter_models_for_deregistered_miners(miner_models, hotkeys):
     """Removes models from list if the miner who submitted it has deregistered.

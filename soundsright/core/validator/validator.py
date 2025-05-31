@@ -1439,7 +1439,7 @@ class SubnetValidator(Base.BaseNeuron):
                 )
                 
                 # In the case that multiple models have the same metadata, we only want to include the model with the earliest block when the metadata was uploaded to the chain
-                hash_metadata_filtered_new_competition_miner_models, same_metadata_blacklist = Benchmarking.filter_models_with_same_metadata(
+                hash_metadata_filtered_new_competition_miner_models = Benchmarking.filter_models_with_same_metadata(
                     new_competition_miner_models=hash_filtered_new_competition_miner_models
                 )
                 
