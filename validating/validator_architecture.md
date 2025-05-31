@@ -6,7 +6,7 @@ layout: page
 ---
 # Validator Architecture Overview
 
-Validators on the subnet are in charge of benchmarking miner models and assigning weights for miners who submit the top performing models for each competition. Competitions span one day, and below is a diagram illustrating what the validator does during each:
+Validators on the subnet are in charge of benchmarking miner models and assigning weights for miners who submit the top performing models for each competition. Competitions span two days, and below is a diagram illustrating what the validator does during each:
 
 ```mermaid
 sequenceDiagram

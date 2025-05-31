@@ -183,14 +183,14 @@ curl http://127.0.0.1:6000/healthcheck/events | jq
 ```
 
 #### 6.3 Models for Current Competitions
-This endpoint offers insight into the best models known by the validator for the previous day's competition. It can be queried with:
+This endpoint offers insight into the best models known by the validator for the previous competition. It can be queried with:
 ```
 curl http://127.0.0.1:6000/healthcheck/current_models | jq
 ```
 
 #### 6.4 Best Models by Competition
 
-This endpoint offers insight into the best models known by the validator for the previous day's competition. It can be queried with:
+This endpoint offers insight into the best models known by the validator for the previous competition. It can be queried with:
 ```
 curl http://127.0.0.1:6000/healthcheck/best_models | jq
 ```
@@ -204,14 +204,14 @@ curl http://127.0.0.1:6000/healthcheck/competitions | jq
 
 #### 6.6 Scores by Competition
 
-This endpoint offers insight into the previous day's miner scores for each competition. It can be queried with:
+This endpoint offers insight into the previous miner scores for each competition. It can be queried with:
 ```
 curl http://127.0.0.1:6000/healthcheck/competition_scores | jq
 ```
 
 #### 6.7 Overall Scores
 
-This endpoint offers insight into the previous day's overall miner scores. It can be queried with:
+This endpoint offers insight into the previous overall miner scores. It can be queried with:
 ```
 curl http://127.0.0.1:6000/healthcheck/scores | jq
 ```
