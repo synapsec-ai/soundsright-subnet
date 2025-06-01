@@ -49,11 +49,11 @@ class HealthCheckResponse(BaseModel):
     timestamp: str
 
 class HealthCheckDataResponse(BaseModel):
-    data: Dict | None
+    data: Dict | None | bool
     timestamp: str
     
 class HealthCheckScoreResponse(BaseModel):
-    data: np.ndarray | None
+    data: np.ndarray | None | bool
     timestamp: str
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -160,7 +160,7 @@ class HealthCheckAPI:
                 "timestamp": str(datetime.datetime.now()),
             }
         except Exception:
-            return {"status": False, "timestamp": str(datetime.datetime.now())}
+            return {"data": None, "timestamp": str(datetime.datetime.now())}
 
     def _healthcheck_events(self):
         try:
@@ -170,7 +170,7 @@ class HealthCheckAPI:
                 "timestamp": str(datetime.datetime.now()),
             }
         except Exception:
-            return {"status": False, "timestamp": str(datetime.datetime.now())}
+            return {"data": None, "timestamp": str(datetime.datetime.now())}
         
     def _healthcheck_current_models(self):
         try: 
@@ -179,7 +179,7 @@ class HealthCheckAPI:
                 "timestamp": str(datetime.datetime.now()),
             }
         except Exception:
-            return {"status": False, "timestamp": str(datetime.datetime.now())}
+            return {"data": None, "timestamp": str(datetime.datetime.now())}
         
     def _healthcheck_best_models(self):
         try: 
@@ -188,7 +188,7 @@ class HealthCheckAPI:
                 "timestamp": str(datetime.datetime.now()),
             }
         except Exception:
-            return {"status": False, "timestamp": str(datetime.datetime.now())}
+            return {"data": None, "timestamp": str(datetime.datetime.now())}
         
     def _healthcheck_competitions(self):
         try: 
@@ -198,7 +198,7 @@ class HealthCheckAPI:
                 "timestamp": str(datetime.datetime.now()),
             }
         except Exception:
-            return {"status": False, "timestamp": str(datetime.datetime.now())}
+            return {"data": None, "timestamp": str(datetime.datetime.now())}
         
     def _healthcheck_competition_scores(self):
         try:
@@ -207,7 +207,7 @@ class HealthCheckAPI:
                 "timestamp": str(datetime.datetime.now()),
             }
         except Exception:
-            return {"status": False, "timestamp": str(datetime.datetime.now())}
+            return {"data": None, "timestamp": str(datetime.datetime.now())}
         
     def _healthcheck_scores(self):
         try:
@@ -216,7 +216,7 @@ class HealthCheckAPI:
                 "timestamp": str(datetime.datetime.now()),
             }
         except Exception:
-            return {"status": False, "timestamp": str(datetime.datetime.now())}
+            return {"data": None, "timestamp": str(datetime.datetime.now())}
         
     def _healthcheck_next_competition(self):
         try:
@@ -227,7 +227,7 @@ class HealthCheckAPI:
                 "timestamp": str(datetime.datetime.now()),
             }
         except Exception:
-            return {"status": False, "timestamp": str(datetime.datetime.now())}
+            return {"data": None, "timestamp": str(datetime.datetime.now())}
 
     def run(self):
         """This method runs the HealthCheckAPI"""
