@@ -28,6 +28,8 @@ Validator Endpoints:
         Returns information about current competition-specific miner scores
     /healthcheck/scores
         Returns information about current overall miner scores
+    /healthcheck/next_competition
+        Returns timestamp of next competition time
 
 Port and host can be controlled with --healthcheck_port and
 --healthcheck_host parameters.
@@ -47,11 +49,11 @@ class HealthCheckResponse(BaseModel):
     timestamp: str
 
 class HealthCheckDataResponse(BaseModel):
-    data: Dict | None
+    data: Dict | None | bool | list | str
     timestamp: str
     
 class HealthCheckScoreResponse(BaseModel):
-    data: np.ndarray | None
+    data: np.ndarray | None | bool
     timestamp: str
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -67,6 +69,7 @@ class HealthCheckAPI:
         self.best_models = best_models
         self.competition_scores = None
         self.scores = None
+        self.next_competition_timestamp = None
         
         # Status variables
         self.health_metrics = {
@@ -143,6 +146,11 @@ class HealthCheckAPI:
             self._healthcheck_scores,
             response_model=HealthCheckDataResponse,
         )
+        self.app.add_api_route(
+            "/healthcheck/next_competition",
+            self._healthcheck_next_competition,
+            response_model=HealthCheckDataResponse,
+        )
 
     def _healthcheck_metrics(self):
         try:
@@ -152,7 +160,7 @@ class HealthCheckAPI:
                 "timestamp": str(datetime.datetime.now()),
             }
         except Exception:
-            return {"status": False, "timestamp": str(datetime.datetime.now())}
+            return {"data": None, "timestamp": str(datetime.datetime.now())}
 
     def _healthcheck_events(self):
         try:
@@ -162,7 +170,7 @@ class HealthCheckAPI:
                 "timestamp": str(datetime.datetime.now()),
             }
         except Exception:
-            return {"status": False, "timestamp": str(datetime.datetime.now())}
+            return {"data": None, "timestamp": str(datetime.datetime.now())}
         
     def _healthcheck_current_models(self):
         try: 
@@ -171,7 +179,7 @@ class HealthCheckAPI:
                 "timestamp": str(datetime.datetime.now()),
             }
         except Exception:
-            return {"status": False, "timestamp": str(datetime.datetime.now())}
+            return {"data": None, "timestamp": str(datetime.datetime.now())}
         
     def _healthcheck_best_models(self):
         try: 
@@ -180,7 +188,7 @@ class HealthCheckAPI:
                 "timestamp": str(datetime.datetime.now()),
             }
         except Exception:
-            return {"status": False, "timestamp": str(datetime.datetime.now())}
+            return {"data": None, "timestamp": str(datetime.datetime.now())}
         
     def _healthcheck_competitions(self):
         try: 
@@ -190,25 +198,39 @@ class HealthCheckAPI:
                 "timestamp": str(datetime.datetime.now()),
             }
         except Exception:
-            return {"status": False, "timestamp": str(datetime.datetime.now())}
+            return {"data": None, "timestamp": str(datetime.datetime.now())}
         
     def _healthcheck_competition_scores(self):
         try:
+            output = {}
+            for competition in self.competition_scores.keys():
+                output[competition] = self.competition_scores[competition].tolist()
             return {
-                "data":self.competition_scores,
+                "data":output,
                 "timestamp": str(datetime.datetime.now()),
             }
         except Exception:
-            return {"status": False, "timestamp": str(datetime.datetime.now())}
+            return {"data": None, "timestamp": str(datetime.datetime.now())}
         
     def _healthcheck_scores(self):
         try:
             return {
-                "data":self.scores,
+                "data":self.scores.tolist(),
                 "timestamp": str(datetime.datetime.now()),
             }
         except Exception:
-            return {"status": False, "timestamp": str(datetime.datetime.now())}
+            return {"data": None, "timestamp": str(datetime.datetime.now())}
+        
+    def _healthcheck_next_competition(self):
+        try:
+            dt = datetime.datetime.fromtimestamp(self.next_competition_timestamp, tz=datetime.timezone.utc)
+            formatted_timestamp = dt.strftime('%Y-%m-%d %H:%M:%S GMT')
+            return {
+                "data":formatted_timestamp,
+                "timestamp": str(datetime.datetime.now()),
+            }
+        except Exception:
+            return {"data": None, "timestamp": str(datetime.datetime.now())}
 
     def run(self):
         """This method runs the HealthCheckAPI"""
@@ -311,3 +333,6 @@ class HealthCheckAPI:
         
     def update_scores(self, scores):
         self.scores = scores
+
+    def update_next_competition_timestamp(self, next_competition_timestamp):
+        self.next_competition_timestamp = next_competition_timestamp

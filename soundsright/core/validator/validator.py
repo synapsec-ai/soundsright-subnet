@@ -1435,17 +1435,18 @@ class SubnetValidator(Base.BaseNeuron):
                 
                 # In the case that multiple models have the same hash, we only want to include the model with the earliest block when the metadata was uploaded to the chain
                 hash_filtered_new_competition_miner_models, same_hash_blacklist = Benchmarking.filter_models_with_same_hash(
-                    new_competition_miner_models=new_competition_miner_models
+                    new_competition_miner_models=new_competition_miner_models,
+                    hotkeys=self.hotkeys
                 )
                 
                 # In the case that multiple models have the same metadata, we only want to include the model with the earliest block when the metadata was uploaded to the chain
-                hash_metadata_filtered_new_competition_miner_models, same_metadata_blacklist = Benchmarking.filter_models_with_same_metadata(
-                    new_competition_miner_models=hash_filtered_new_competition_miner_models
+                hash_metadata_filtered_new_competition_miner_models = Benchmarking.filter_models_with_same_metadata(
+                    new_competition_miner_models=hash_filtered_new_competition_miner_models,
+                    hotkeys=self.hotkeys
                 )
                 
                 # Extend blacklist and remove duplicate entries
                 self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"].extend(same_hash_blacklist)
-                self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"].extend(same_metadata_blacklist)
                 self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"] = Benchmarking.remove_blacklist_duplicates(self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"])
                 self.miner_models[f"{task}_{sample_rate}HZ"] = hash_metadata_filtered_new_competition_miner_models
 
@@ -1560,13 +1561,14 @@ class SubnetValidator(Base.BaseNeuron):
 
                     # Send feedback synapses to miners
                     self.send_feedback_synapses()
-                    
-                    # Update HealthCheck API
-                    self.healthcheck_api.update_competition_scores(self.competition_scores)
-                    self.healthcheck_api.update_scores(self.scores)
 
                     # Update timestamp to next day's 9AM (GMT)
                     self.update_next_competition_timestamp()
+
+                    # Update HealthCheck API
+                    self.healthcheck_api.update_competition_scores(self.competition_scores)
+                    self.healthcheck_api.update_scores(self.scores)
+                    self.healthcheck_api.update_next_competition_timestamp(self.next_competition_timestamp)
 
                     # Update dataset for next day's competition
                     self.generate_new_dataset()
