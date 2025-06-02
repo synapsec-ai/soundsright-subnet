@@ -49,7 +49,7 @@ class HealthCheckResponse(BaseModel):
     timestamp: str
 
 class HealthCheckDataResponse(BaseModel):
-    data: Dict | None | bool | list | str | np.ndarray
+    data: Dict | None | bool | list | str
     timestamp: str
     
 class HealthCheckScoreResponse(BaseModel):
@@ -212,7 +212,7 @@ class HealthCheckAPI:
     def _healthcheck_scores(self):
         try:
             return {
-                "data":self.scores,
+                "data":self.scores.tolist(),
                 "timestamp": str(datetime.datetime.now()),
             }
         except Exception:
