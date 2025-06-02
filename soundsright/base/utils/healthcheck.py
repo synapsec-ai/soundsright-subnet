@@ -49,7 +49,7 @@ class HealthCheckResponse(BaseModel):
     timestamp: str
 
 class HealthCheckDataResponse(BaseModel):
-    data: Dict | None | bool | list | str
+    data: Dict | None | bool | list | str | np.ndarray
     timestamp: str
     
 class HealthCheckScoreResponse(BaseModel):
