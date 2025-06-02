@@ -202,8 +202,11 @@ class HealthCheckAPI:
         
     def _healthcheck_competition_scores(self):
         try:
+            output = {}
+            for competition in self.competition_scores.keys():
+                output[competition] = self.competition_scores[competition].tolist()
             return {
-                "data":self.competition_scores,
+                "data":output,
                 "timestamp": str(datetime.datetime.now()),
             }
         except Exception:
