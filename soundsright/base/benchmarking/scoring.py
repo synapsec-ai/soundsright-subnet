@@ -181,6 +181,7 @@ def assign_remainder_scores(
     best_model_benchmark: dict,
     metric: str, 
     metagraph: bt.metagraph,
+    log_level: str,
 ):
     best_model_hotkey = best_model_benchmark["hotkey"]
     best_model_avg = best_model_benchmark["metrics"][metric]["average"]
@@ -218,14 +219,15 @@ def assign_remainder_scores(
         except:
             continue
 
-    ratio_sum = sum([m["performance_ratio"] for m in model_tracker_list])
-    remainder_key = f"{competition}_remainder"
-    remainder_score = competition_max_scores[remainder_key] * metric_proportions["metric"]
-    for m in model_tracker_list:
-        score_ratio = (m["performance_ratio"] / ratio_sum) 
-        score = score_ratio * remainder_score
-        uid = m["uid"]
-        competition_scores[uid] += score
+    if model_tracker_list:
+        ratio_sum = sum([m["performance_ratio"] for m in model_tracker_list])
+        remainder_key = f"{competition}_remainder"
+        remainder_score = competition_max_scores[remainder_key] * metric_proportions["metric"]
+        for m in model_tracker_list:
+            score_ratio = (m["performance_ratio"] / ratio_sum) 
+            score = score_ratio * remainder_score
+            uid = m["uid"]
+            competition_scores[uid] += score
     
     return competition_scores
 
@@ -346,6 +348,18 @@ def determine_competition_scores(
                         message=f"Competition winner for metric: {metric_name} in current competition: {competition} is: {best_historical_model}. Assigning score: {competition_metric_score}",
                         log_level=log_level,
                     )
+
+                    competition_scores[competition] = assign_remainder_scores(
+                        competition_scores=competition_scores[competition],
+                        competition_max_scores=competition_max_scores,
+                        competition=competition,
+                        metric_proportions=metric_proportions,
+                        miner_models=current_models,
+                        best_model_benchmark=best_historical_model,
+                        metric=metric_name,
+                        metagraph=metagraph,
+                        log_level=log_level
+                    )
                     continue
                 
                 # Assign score to the best current model if best historical model does not exist
@@ -361,6 +375,18 @@ def determine_competition_scores(
                         severity="TRACE",
                         message=f"Competition winner for metric: {metric_name} in current competition: {competition} is: {best_current_model}. Assigning score: {competition_metric_score}",
                         log_level=log_level,
+                    )
+
+                    competition_scores[competition] = assign_remainder_scores(
+                        competition_scores=competition_scores[competition],
+                        competition_max_scores=competition_max_scores,
+                        competition=competition,
+                        metric_proportions=metric_proportions,
+                        miner_models=current_models,
+                        best_model_benchmark=best_current_model,
+                        metric=metric_name,
+                        metagraph=metagraph,
+                        log_level=log_level
                     )
                     continue
                 
@@ -383,6 +409,18 @@ def determine_competition_scores(
                         severity="TRACE",
                         message=f"Competition winner for metric: {metric_name} in current competition: {competition} is: {best_current_model}. Assigning score: {competition_metric_score}",
                         log_level=log_level,
+                    )
+
+                    competition_scores[competition] = assign_remainder_scores(
+                        competition_scores=competition_scores[competition],
+                        competition_max_scores=competition_max_scores,
+                        competition=competition,
+                        metric_proportions=metric_proportions,
+                        miner_models=current_models,
+                        best_model_benchmark=best_current_model,
+                        metric=metric_name,
+                        metagraph=metagraph,
+                        log_level=log_level
                     )
                     continue
 
@@ -418,8 +456,15 @@ def determine_competition_scores(
                     )
 
                     competition_scores[competition] = assign_remainder_scores(
-                        competition_scores=competition_scores[competition]
-                        competition_max_scores=competition_max_scores
+                        competition_scores=competition_scores[competition],
+                        competition_max_scores=competition_max_scores,
+                        competition=competition,
+                        metric_proportions=metric_proportions,
+                        miner_models=current_models,
+                        best_model_benchmark=best_current_model,
+                        metric=metric_name,
+                        metagraph=metagraph,
+                        log_level=log_level
                     )
             
                 # Otherwise, assign score to old model
@@ -435,6 +480,18 @@ def determine_competition_scores(
                         severity="TRACE",
                         message=f"Competition winner for metric: {metric_name} in current competition: {competition} is: {best_historical_model}. Assigning score: {competition_metric_score}",
                         log_level=log_level,
+                    )
+
+                    competition_scores[competition] = assign_remainder_scores(
+                        competition_scores=competition_scores[competition],
+                        competition_max_scores=competition_max_scores,
+                        competition=competition,
+                        metric_proportions=metric_proportions,
+                        miner_models=current_models,
+                        best_model_benchmark=best_historical_model,
+                        metric=metric_name,
+                        metagraph=metagraph,
+                        log_level=log_level
                     )
             
             except Exception as e:
