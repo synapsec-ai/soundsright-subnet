@@ -469,7 +469,7 @@ class SubnetValidator(Base.BaseNeuron):
     def add_miner_nonce(self, hotkey: str, value: int) -> bool:
         if self._validate_value(value=value) and self._validate_hotkey(hotkey=hotkey):
             if hotkey in self.values.keys():
-                self.values[hotkey].append(value)
+                self.values[hotkey] = value
             else:
                 self.values[hotkey] = [value]
             return True
@@ -1451,6 +1451,12 @@ class SubnetValidator(Base.BaseNeuron):
                                 
                                 # Add this data to HealthCheck API 
                                 self.healthcheck_api.append_metric(metric_name="responses.total_valid_responses", value=1)
+
+                                if response.miner_nonce:
+                                    self.add_miner_nonce(
+                                        hotkey = self.hotkeys[uid_to_query],
+                                        value=response.miner_nonce
+                                    )
                                 
                                 # In case that synapse response is not formatted correctly and no known historical data:
                                 if not Utils.validate_miner_response(response.data):

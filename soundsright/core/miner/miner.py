@@ -80,7 +80,12 @@ class SubnetMiner(Base.BaseNeuron):
 
         self.next_competition_timestamp = self.get_next_competition_timestamp()
 
+        self.interval = 3600
+        self.cycle = (t := int(time.time())) - (t % self.interval)
+
         self.random_value = self._generate_random_value()
+        self.trusted_validators = []
+        self.trusted_validators = self.determine_trusted_validators()
 
     def get_next_competition_timestamp(self) -> int:
         """
@@ -133,10 +138,14 @@ class SubnetMiner(Base.BaseNeuron):
         )
         return random_value
     
-    def update_random_value(self) -> bool:
+    def update_random_value_and_trusted_validators(self) -> bool:
         if int(time.time()) >= self.next_competition_timestamp:
             self.random_value = self._generate_random_value()
             self.update_next_competition_timestamp()
+
+        if (t := int(time.time())) - self.interval >= self.cycle:
+            self.cycle = t - (t % self.interval)
+            self.trusted_validators = self.determine_trusted_validators()
 
     def _get_stake_for_hotkey(self, hotkey: str) -> int:
 
@@ -172,14 +181,20 @@ class SubnetMiner(Base.BaseNeuron):
                     trust_data[trusted_uid] += int(validator["stake"])
 
         trusted_validators_uids = []
-        # Determine trusted validators based on voring power
+        # Determine trusted validators based on voting power
         for uid,total_stake_vote in trust_data.items():
             uid_power = total_stake_vote/total_stake
             if uid_power >= stake_percentage_required:
-                print(f'UID {uid} is trusted with power of {uid_power}')
+                self.neuron_logger(
+                    severity="DEBUG",
+                    message=f'UID {uid} is trusted with power of {uid_power}'
+                )
                 trusted_validators_uids.append(uid)
             else:
-                print(f'UID {uid} is NOT trusted with power of {uid_power}')
+                self.neuron_logger(
+                    severity="DEBUG",
+                    message=f'UID {uid} is NOT trusted with power of {uid_power}'
+                )
 
         # Final trusted validators
         trusted_validators = []
@@ -207,6 +222,12 @@ class SubnetMiner(Base.BaseNeuron):
             return trusted_uids
         
         return None
+    
+    def check_if_trusted_validator(self, hotkey: str) -> bool:
+        for trusted_validator in self.trusted_validators:
+            if trusted_validator["hotkey"] == hotkey:
+                return True 
+        return False
 
     def save_state(self):
         """Save miner state to models.json file
@@ -570,6 +591,10 @@ class SubnetMiner(Base.BaseNeuron):
 
         # Set data output (None is returned if no model data is provided since it is a default in the init)
         synapse.data = self.miner_model_data[competition]
+        if self.check_if_trusted_validator(hotkey=hotkey):
+            synapse.miner_nonce = self.random_value
+        else:
+            synapse.miner_nonce = None
 
         self.neuron_logger(
             severity="INFO",
@@ -693,6 +718,9 @@ class SubnetMiner(Base.BaseNeuron):
         
         while True:
             try:
+
+                self.update_random_value_and_trusted_validators()
+
                 # Below: Periodically update our knowledge of the network graph.
                 if self.step % 600 == 0:
                     self.neuron_logger(
