@@ -926,7 +926,7 @@ class SubnetValidator(Base.BaseNeuron):
             if all(x==1 for x in weights):
                 return [(x/max_value) for x in weights]
             elif all(x==0 for x in weights):
-                return [x for x in weights]
+                return [(1/max_value) for x in weights]
             else:
                 return [(x/max(weights)) for x in weights]
             
