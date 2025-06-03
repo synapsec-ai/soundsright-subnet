@@ -94,7 +94,8 @@ class SubnetValidator(Base.BaseNeuron):
         self.competition_max_scores = {
             'DENOISING_16000HZ':40,
             'DEREVERBERATION_16000HZ':40,
-            'remainder':20,
+            'DENOISING_16000HZ_remainder':10,
+            'DEREVERBERATION_16000HZ_remainder':10,
         }
         self.metric_proportions = {
             "DENOISING_16000HZ":{

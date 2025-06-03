@@ -172,6 +172,63 @@ def validate_historical_benchmark(benchmark, metagraph):
     
     return True
 
+def assign_remainder_scores(
+    competition_scores: np.ndarray,
+    competition_max_scores: dict,
+    competition: str,
+    metric_proportions: dict,
+    miner_models: list,
+    best_model_benchmark: dict,
+    metric: str, 
+    metagraph: bt.metagraph,
+):
+    best_model_hotkey = best_model_benchmark["hotkey"]
+    best_model_avg = best_model_benchmark["metrics"][metric]["average"]
+    model_tracker_list = []
+
+    for model_benchmark in miner_models:
+
+        try:
+
+            if validate_benchmark(
+                benchmark=model_benchmark,
+                metric_name=metric,
+                metagraph=metagraph
+            ):
+
+                model_tracker = {}
+                model_hotkey = model_benchmark.get("hotkey", None)
+                model_tracker["hotkey"] = model_hotkey
+                model_uid = metagraph.hotkeys.index(model_hotkey)
+                model_tracker["uid"] = model_uid
+                model_avg = model_benchmark["metrics"][metric].get("average", None)
+
+                if model_hotkey and model_hotkey != best_model_hotkey and model_avg:
+                    
+                    performance_ratio = model_avg / best_model_avg
+                    model_tracker["performance_ratio"] = performance_ratio
+                    model_tracker_list.append(model_tracker)
+
+                else:
+                    continue
+
+            else:
+                continue
+
+        except:
+            continue
+
+    ratio_sum = sum([m["performance_ratio"] for m in model_tracker_list])
+    remainder_key = f"{competition}_remainder"
+    remainder_score = competition_max_scores[remainder_key] * metric_proportions["metric"]
+    for m in model_tracker_list:
+        score_ratio = (m["performance_ratio"] / ratio_sum) 
+        score = score_ratio * remainder_score
+        uid = m["uid"]
+        competition_scores[uid] += score
+    
+    return competition_scores
+
 def determine_competition_scores(
     competition_scores: dict, 
     competition_max_scores: dict,
@@ -358,6 +415,11 @@ def determine_competition_scores(
                         severity="TRACE",
                         message=f"Competition winner for metric: {metric_name} in current competition: {competition} is: {best_current_model}. Assigning score: {competition_metric_score}",
                         log_level=log_level,
+                    )
+
+                    competition_scores[competition] = assign_remainder_scores(
+                        competition_scores=competition_scores[competition]
+                        competition_max_scores=competition_max_scores
                     )
             
                 # Otherwise, assign score to old model
