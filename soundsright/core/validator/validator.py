@@ -1101,7 +1101,7 @@ class SubnetValidator(Base.BaseNeuron):
         """Softmax scaling"""
         scaled_weights = [(w * 2.5) for w in weights]
         softmax = np.exp(scaled_weights) / np.sum(np.exp(scaled_weights))
-        return ((softmax / np.max(softmax)) * max_value)
+        return ((softmax / np.max(softmax)) * max_value).tolist()
     
     def weights_mutation_alg2(self, weights: list, max_value: int) -> list:
         """Power Scaling"""
