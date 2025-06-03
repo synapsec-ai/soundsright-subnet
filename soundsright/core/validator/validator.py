@@ -50,7 +50,7 @@ class SubnetValidator(Base.BaseNeuron):
         self.query = None
         self.debug_mode = False
         self.skip_sgmse = False
-        self.dataset_size = 110
+        self.dataset_size = 300
         self.log_level="INFO" # Init log level
         self.start_date = datetime(2025, 5, 27, 9, 0, tzinfo=timezone.utc) # Reference for when to start competitions (May 27, 2025 @ 9:00 AM GMT)
         self.period_days = 2 # How many days each competition lasts
@@ -926,7 +926,7 @@ class SubnetValidator(Base.BaseNeuron):
             if all(x==1 for x in weights):
                 return [(x/max_value) for x in weights]
             elif all(x==0 for x in weights):
-                return [x for x in weights]
+                return [(1/max_value) for x in weights]
             else:
                 return [(x/max(weights)) for x in weights]
             
