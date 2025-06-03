@@ -56,8 +56,6 @@ class SubnetValidator(Base.BaseNeuron):
         self.dataset_size = 300
         self.log_level="INFO" # Init log level
         self.cuda_directory = ""
-        self.start_date = datetime(2025, 5, 27, 9, 0, tzinfo=timezone.utc) # Reference for when to start competitions (May 27, 2025 @ 9:00 AM GMT)
-        self.period_days = 2 # How many days each competition lasts
         self.avg_model_eval_time = 3600
         self.first_run_through_of_the_day = True
 

@@ -18,7 +18,7 @@ class ModelMetadataHandler:
         self.metadata = ''
         self.metadata_block = 0
         
-    Utils.timeout_decorator(timeout=60)
+    @Utils.timeout_decorator(timeout=60)
     async def upload_model_metadata_to_chain(self, metadata: str):
         """_summary_
 
@@ -40,7 +40,7 @@ class ModelMetadataHandler:
         
         return outcome
     
-    Utils.timeout_decorator(timeout=60)    
+    @Utils.timeout_decorator(timeout=60)    
     async def obtain_model_metadata_from_chain(self, hotkey: str):
         """_summary_
 
@@ -79,6 +79,35 @@ class ModelMetadataHandler:
                 msg=f"Error fetching model metadata: {e}"
             )
             return False
+        
+    @Utils.timeout_decorator(timeout=60)    
+    async def obtain_trusted_validator_metadata_from_chain(self, hotkey: str):
+        """_summary_
+
+        Args:
+            hotkey (str): ss58_address of miner hotkey
+
+        Returns:
+            bool: True if model metadata could be obtained from chain, False otherwise
+        """
+        try:
+            
+            metadata = bt.core.extrinsics.serving.get_metadata(
+                subtensor=self.subtensor,
+                netuid=self.subnet_netuid,
+                hotkey=hotkey
+            )
+            
+            commitment = metadata["info"]["fields"][0][0]
+            bytes_tuple = commitment[next(iter(commitment.keys()))][0]
+            
+            return bytes_tuple
+        
+        except Exception as e:
+            bt.logging.error(
+                msg=f"Error fetching model metadata: {e}"
+            )
+            return None
         
     def get_competition_id_from_competition_name(self, competition_name):
         """Obtains competition id from competition name for metadata purposes
