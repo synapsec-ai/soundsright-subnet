@@ -13,6 +13,7 @@ import sys
 import logging
 import pickle
 from substrateinterface.utils.ss58 import is_valid_ss58_address
+from scipy.interpolate import PchipInterpolator
 from math import sqrt
 
 # Import custom modules
@@ -572,15 +573,6 @@ class SubnetValidator(Base.BaseNeuron):
             message=f"New weight adjustment algorithm determined: {self.algorithm}"
         )
 
-    def weight_mutation_alg1(self, weights: list) -> list:
-        return weights 
-    
-    def weight_mutation_alg2(self, weights: list) -> list:
-        return weights 
-
-    def weight_mutation_alg3(self, weights: list) -> list:
-        return weights 
-
     def _parse_args(self, parser) -> argparse.Namespace:
         return parser.parse_args()
 
@@ -1105,12 +1097,35 @@ class SubnetValidator(Base.BaseNeuron):
                     message=f"Set weights failed due to error: {e}"
                 )
 
+    def weights_mutation_alg1(self, weights: list, max_value: int) -> list:
+        """Softmax scaling"""
+        scaled_weights = [(w * 2.5) for w in weights]
+        softmax = np.exp(scaled_weights) / np.sum(np.exp(scaled_weights))
+        return ((softmax / np.max(softmax)) * max_value)
+    
+    def weights_mutation_alg2(self, weights: list, max_value: int) -> list:
+        """Power Scaling"""
+        if not weights:
+            return []
+        
+        power = 0.63
+        min_w = min(weights)
+        max_w = max(weights)
+        if max_w == min_w:
+            return [max_value] * len(weights)
+        norm_weights = [(w - min_w) / (max_w - min_w) for w in weights]
+        transformed = [w ** power for w in norm_weights]
+        return [w * max_value for w in transformed]
+
+    def weights_mutation_alg3(self, weights: list, max_value: int) -> list:
+        """Return weights as is"""
+        return [(w * max_value) for w in weights]
+
     @Utils.timeout_decorator(timeout=30)
     async def commit_weights(self) -> None:
         """Sets the weights for the subnet"""
 
-        def normalize_weights_list(weights):
-            max_value = self.subtensor.get_subnet_hyperparameters(netuid=self.neuron_config.netuid).max_weight_limit
+        def normalize_weights_list(weights, max_value:int):
             if all(x==1 for x in weights):
                 return [(x/max_value) for x in weights]
             elif all(x==0 for x in weights):
@@ -1121,9 +1136,7 @@ class SubnetValidator(Base.BaseNeuron):
         self.healthcheck_api.update_metric(metric_name='weights.targets', value=np.count_nonzero(self.scores))
 
         weights = self.scores
-        salt=secrets.randbelow(2**16)
-        block = self.subtensor.get_current_block()
-        uids = [int(uid) for uid in self.metagraph.uids]
+        max_value = self.subtensor.get_subnet_hyperparameters(netuid=self.neuron_config.netuid).max_weight_limit
         
         self.neuron_logger(
             severity="INFO",
@@ -1136,18 +1149,29 @@ class SubnetValidator(Base.BaseNeuron):
                 message=f"Setting weights with the following parameters: netuid={self.neuron_config.netuid}, wallet={self.wallet}, uids={self.metagraph.uids}, weights={weights}, version_key={self.subnet_version}"
             )
 
-            weights = normalize_weights_list(weights)
+            weights = normalize_weights_list(
+                weights=weights,
+                max_value=max_value,
+            )
 
             # Modify according to miner nonce avg
             if self.algorithm == 1:
-                weights = self.weight_mutation_alg1(weights=weights)
+                weights = self.weights_mutation_alg1(
+                    weights=weights,
+                    max_value=max_value,
+                )
             elif self.algorithm == 2:
-                weights = self.weight_mutation_alg2(weights=weights)
+                weights = self.weights_mutation_alg2(
+                    weights=weights,
+                    max_value=max_value,
+                )
             else:
-                weights = self.weight_mutation_alg3(weights=weights)
+                weights = self.weights_mutation_alg3(
+                    weights=weights,
+                    max_value=max_value,
+                )
 
             # This is a crucial step that updates the incentive mechanism on the Bittensor blockchain.
-            # Miners with higher scores (or weights) receive a larger share of TAO rewards on this subnet.
             result = self.subtensor.set_weights(
                 netuid=self.neuron_config.netuid,  # Subnet to set weights on.
                 wallet=self.wallet,  # Wallet to sign set weights using hotkey.
