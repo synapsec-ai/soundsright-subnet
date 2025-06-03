@@ -12,6 +12,7 @@ import asyncio
 import sys
 import logging
 import pickle
+from substrateinterface.utils.ss58 import is_valid_ss58_address
 
 # Import custom modules
 import soundsright.base.benchmarking as Benchmarking
@@ -37,14 +38,15 @@ class SubnetValidator(Base.BaseNeuron):
 
         super().__init__(parser=parser, profile="validator")
         
-        self.version = Utils.config["module_version"]
-        self.neuron_config = None
-        self.cuda_directory = ""
+        # Bittensor Objects
         self.wallet = None
         self.subtensor = None
         self.dendrite = None
         self.metagraph: bt.metagraph | None = None
-        self.scores = None
+
+        # Validator Params
+        self.version = Utils.config["module_version"]
+        self.neuron_config = None
         self.hotkeys = None
         self.load_validator_state = None
         self.query = None
@@ -52,10 +54,30 @@ class SubnetValidator(Base.BaseNeuron):
         self.skip_sgmse = False
         self.dataset_size = 300
         self.log_level="INFO" # Init log level
+        self.cuda_directory = ""
         self.start_date = datetime(2025, 5, 27, 9, 0, tzinfo=timezone.utc) # Reference for when to start competitions (May 27, 2025 @ 9:00 AM GMT)
         self.period_days = 2 # How many days each competition lasts
         self.avg_model_eval_time = 3600
         self.first_run_through_of_the_day = True
+
+        # WC Prevention
+        self.algorithm = 1
+        self.interval = 3600
+        self.max_uids = 256 
+        self.miner_nonces = {}
+        self.cycle = (t := int(time.time())) - (t % self.interval)
+        self.trusted_uids = []
+        self.trusted_validators_filepath = os.path.join(self.base_path, "trusted_validators.txt")
+        self.trusted_validators = [
+            "",
+            "",
+            "",
+            "",
+            "",
+        ]
+        
+        # Benchmarking / Scoring Object Init
+        self.scores = None
         self.weights_objects = []
         self.sample_rates = [16000]
         self.tasks = ['DENOISING','DEREVERBERATION']
@@ -72,8 +94,9 @@ class SubnetValidator(Base.BaseNeuron):
             "DEREVERBERATION_16000HZ":[],
         }
         self.competition_max_scores = {
-            'DENOISING_16000HZ':50,
-            'DEREVERBERATION_16000HZ':50,
+            'DENOISING_16000HZ':40,
+            'DEREVERBERATION_16000HZ':40,
+            'remainder':20,
         }
         self.metric_proportions = {
             "DENOISING_16000HZ":{
@@ -108,16 +131,23 @@ class SubnetValidator(Base.BaseNeuron):
             "DEREVERBERATION_16000HZ":[],
         }
 
+        # Remote Logging
         self.remote_logging_interval = 3600
         self.last_remote_logging_timestamp = 0
         self.remote_logging_daily_tries=0
 
+        # Init Functions
         self.apply_config(bt_classes=[bt.subtensor, bt.logging, bt.wallet])
         self.initialize_neuron()        
+        self.init_default_trusted_validators()
+
+        # Helper Objects
         self.TTSHandler = Data.TTSHandler(
             tts_base_path=self.tts_path, 
             sample_rates=self.sample_rates
         )
+
+        # Dataset download and initial benchmarking
         dataset_download_outcome = Data.dataset_download(
             wham_path = self.noise_data_path,
             arni_path = self.rir_data_path,
@@ -359,6 +389,8 @@ class SubnetValidator(Base.BaseNeuron):
                 severity="INFO",
                 message=f"Validator is running with UID: {validator_uid}"
             )
+
+        self.trusted_uids = self.resolve_trusted_uids()
             
         self.skip_sgmse = args.skip_sgmse
             
@@ -395,6 +427,43 @@ class SubnetValidator(Base.BaseNeuron):
         )
 
         return True
+    
+    def init_default_trusted_validators(self):
+        if not os.path.exists(self.trusted_validators_filepath):
+            with open(self.trusted_validators_filepath, 'w') as file:
+                for validator in self.trusted_validators:
+                    file.write(validator + '\n')
+            self.neuron_logger(
+                severity="DEBUG",
+                message=f"File created and validators saved to {self.trusted_validators_filepath}")
+
+    def _validate_value(self, value) -> bool:
+        # Must be uint16
+        return isinstance(value, int) and 0 < value <= 2**16
+
+    def _validate_hotkey(self, hotkey) -> bool:
+        # Must be valid ss58_address
+        return is_valid_ss58_address(hotkey)
+    
+    def resolve_trusted_uids(self) -> list:
+        # Reads distrusted validators from file.
+        # File must contain one hotkey per line
+
+        # Read neurons in subnet to memory
+        neurons = self.metagraph.neurons
+        distrusted_uids = []
+
+        with open(self.trusted_validators_filepath, 'r') as f:
+            for line in f:
+                hotkey = line.strip()
+                if is_valid_ss58_address(hotkey):
+                    for neuron in neurons:
+                        if neuron.hotkey == hotkey:
+                            trusted_uids.append(neuron.uid)
+                else:
+                    raise ValueError(f'Invalid hotkey in distrusted validators file: {hotkey} ')
+                
+        return distrusted_uids
 
     def _parse_args(self, parser) -> argparse.Namespace:
         return parser.parse_args()
