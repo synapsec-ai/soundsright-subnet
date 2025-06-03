@@ -68,12 +68,11 @@ class SubnetValidator(Base.BaseNeuron):
         self.cycle = (t := int(time.time())) - (t % self.interval)
         self.trusted_uids = []
         self.trusted_validators_filepath = os.path.join(self.base_path, "trusted_validators.txt")
-        self.trusted_validators = [
-            "",
-            "",
-            "",
-            "",
-            "",
+        self.default_trusted_validators = [
+            "5FFApaS75bv5pJHfAp2FVLBj9ZaXuFDjEypsaBNc1wCfe52v",
+            "5E6ozeDck55s5a71SQCMP2LP5SnkDRhu3cdrCuEVDayZiE4T",
+            "5F2CsUDVbRbVMXTh9fAzF9GacjVX7UapvRxidrxe7z8BYckQ",
+            "5GpNucZ8ydwoFaQ8FE9TNKPcqbu5gSuBdDLQvf5bJAwBcDLG",
         ]
         
         # Benchmarking / Scoring Object Init
@@ -431,11 +430,12 @@ class SubnetValidator(Base.BaseNeuron):
     def init_default_trusted_validators(self):
         if not os.path.exists(self.trusted_validators_filepath):
             with open(self.trusted_validators_filepath, 'w') as file:
-                for validator in self.trusted_validators:
+                for validator in self.default_trusted_validators:
                     file.write(validator + '\n')
             self.neuron_logger(
                 severity="DEBUG",
-                message=f"File created and validators saved to {self.trusted_validators_filepath}")
+                message=f"File created and validators saved to {self.trusted_validators_filepath}"
+            )
 
     def _validate_value(self, value) -> bool:
         # Must be uint16
@@ -451,7 +451,7 @@ class SubnetValidator(Base.BaseNeuron):
 
         # Read neurons in subnet to memory
         neurons = self.metagraph.neurons
-        distrusted_uids = []
+        trusted_uids = []
 
         with open(self.trusted_validators_filepath, 'r') as f:
             for line in f:
@@ -459,11 +459,11 @@ class SubnetValidator(Base.BaseNeuron):
                 if is_valid_ss58_address(hotkey):
                     for neuron in neurons:
                         if neuron.hotkey == hotkey:
-                            trusted_uids.append(neuron.uid)
+                            self.trusted_uids.append(neuron.uid)
                 else:
                     raise ValueError(f'Invalid hotkey in distrusted validators file: {hotkey} ')
                 
-        return distrusted_uids
+        self.trusted_uids = trusted_uids
 
     def _parse_args(self, parser) -> argparse.Namespace:
         return parser.parse_args()
@@ -970,6 +970,7 @@ class SubnetValidator(Base.BaseNeuron):
         if self.subtensor.get_current_block() >= self.last_updated_block + 350 and not self.debug_mode: 
 
             self.handle_metagraph_sync()
+            self.check_hotkeys()
 
             # Try set/commit weights
             try:
