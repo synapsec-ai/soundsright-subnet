@@ -13,6 +13,7 @@ import sys
 import logging
 import pickle
 from substrateinterface.utils.ss58 import is_valid_ss58_address
+from math import sqrt
 
 # Import custom modules
 import soundsright.base.benchmarking as Benchmarking
@@ -144,6 +145,12 @@ class SubnetValidator(Base.BaseNeuron):
         self.TTSHandler = Data.TTSHandler(
             tts_base_path=self.tts_path, 
             sample_rates=self.sample_rates
+        )
+        self.metadata_handler = Models.ModelMetadataHandler(
+            subtensor=self.subtensor,
+            subnet_netuid=self.neuron_config.netuid,
+            log_level=self.log_level,
+            wallet=self.wallet,
         )
 
         # Dataset download and initial benchmarking
@@ -439,11 +446,40 @@ class SubnetValidator(Base.BaseNeuron):
 
     def _validate_value(self, value) -> bool:
         # Must be uint16
-        return isinstance(value, int) and 0 < value <= 2**16
+        return isinstance(value, int) and 0 < value <= 100000
 
     def _validate_hotkey(self, hotkey) -> bool:
         # Must be valid ss58_address
         return is_valid_ss58_address(hotkey)
+    
+    def _validate_commit_data(self, trusted_uids: list) -> bool:
+        # Must be a list with less than max_uids entries
+        try:
+            if isinstance(trusted_uids, list) and not isinstance(trusted_uids, bool) and len(trusted_uids) <= self.max_uids:
+                return True
+            else:
+                return False
+        except Exception:
+            return False
+    
+    def update_cycle(self) -> bool:
+        if (t := int(time.time())) - self.interval < self.cycle:
+            return False
+        self.cycle = t - (t % self.interval)
+        return True
+    
+    def add_miner_nonce(self, hotkey: str, value: int) -> bool:
+        if self._validate_value(value=value) and self._validate_hotkey(hotkey=hotkey):
+            if hotkey in self.values.keys():
+                self.values[hotkey].append(value)
+            else:
+                self.values[hotkey] = [value]
+            return True
+
+        return False
+    
+    def _clear_miner_nonces(self):
+        self.miner_nonces = {}
     
     def resolve_trusted_uids(self) -> list:
         # Reads distrusted validators from file.
@@ -464,6 +500,73 @@ class SubnetValidator(Base.BaseNeuron):
                     raise ValueError(f'Invalid hotkey in distrusted validators file: {hotkey} ')
                 
         self.trusted_uids = trusted_uids
+
+    def commit_trusted_validators(self) -> tuple:
+        if not self._validate_commit_data(trusted_uids=self.trusted_uids):
+            return False, 0, "Failed to validate list of trusted uids"
+
+        # Create 256 bit byte array (256 bits = 32 bytes)
+        trust_state = bytearray(32)
+
+        # Set UIDs as trusted in the bytearray
+        for _,uid in enumerate(self.trusted_uids):
+            trust_state[uid // 8] |= (1 << (uid % 8))
+
+        metadata = bytes(trust_state)
+
+        upload_outcome = asyncio.run(self.metadata_handler.upload_model_metadata_to_chain(metadata=metadata))
+
+        if upload_outcome:
+            self.neuron_logger(
+                severity="DEBUG",
+                message=f"Successfully committed trusted validator metadata to chain."
+            )
+        else:
+            self.neuron_logger(
+                severity="ERROR",
+                message=f"Failed to commit trusted validator metadata to chain."
+            )
+
+    def update_trusted_uids(self):
+        try:
+            self.resolve_trusted_uids()
+            self.commit_trusted_validators()
+        except Exception as e:
+            self.neuron_logger(
+                severity="ERROR",
+                message=f"Error while committing trusted uid metadata to chain: {e}"
+            )
+
+    def determine_lower_and_upper_bounds(self, n):
+
+        lower = 50000 - (0.4307 * sqrt((8.33e8 / n)))
+        upper = 50000 + (0.4307 * sqrt((8.33e8 / n)))
+
+        return lower, upper
+
+    def determine_weight_mutation_algorithm(self):
+
+        n = len(self.miner_nonces.keys())
+        if n == 0:
+            return
+        
+        lower_bound, upper_bound = self.determine_lower_and_upper_bounds(n=n)
+        total = 0
+        for value in self.miner_nonces.values():
+            total += value 
+        avg = total / n
+
+        if avg <= lower_bound:
+            self.algorithm = 1
+        elif avg >= upper_bound:
+            self.algorithm = 3
+        else:
+            self.algorithm = 2
+
+        self.neuron_logger(
+            severity="DEBUG",
+            message=f"New weight adjustment algorithm determined: {self.algorithm}"
+        )
 
     def _parse_args(self, parser) -> argparse.Namespace:
         return parser.parse_args()
