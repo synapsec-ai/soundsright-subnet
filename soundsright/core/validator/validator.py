@@ -969,6 +969,8 @@ class SubnetValidator(Base.BaseNeuron):
         # Check if it's time to set/commit new weights
         if self.subtensor.get_current_block() >= self.last_updated_block + 350 and not self.debug_mode: 
 
+            self.handle_metagraph_sync()
+
             # Try set/commit weights
             try:
                 asyncio.run(self.commit_weights())
