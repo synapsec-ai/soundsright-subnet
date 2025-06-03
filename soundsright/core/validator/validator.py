@@ -61,7 +61,7 @@ class SubnetValidator(Base.BaseNeuron):
 
         # WC Prevention
         self.algorithm = 1
-        self.interval = 3600
+        self.interval = 7200
         self.max_uids = 256 
         self.miner_nonces = {}
         self.cycle = (t := int(time.time())) - (t % self.interval)
@@ -138,6 +138,7 @@ class SubnetValidator(Base.BaseNeuron):
         self.apply_config(bt_classes=[bt.subtensor, bt.logging, bt.wallet])
         self.initialize_neuron()        
         self.init_default_trusted_validators()
+        self.update_trusted_uids()
 
         # Helper Objects
         self.TTSHandler = Data.TTSHandler(
@@ -535,6 +536,10 @@ class SubnetValidator(Base.BaseNeuron):
                 message=f"Error while committing trusted uid metadata to chain: {e}"
             )
 
+    def handle_trusted_validators(self):
+        if self.update_cycle:
+            self.update_trusted_uids()
+
     def determine_lower_and_upper_bounds(self, n):
 
         lower = 50000 - (0.4307 * sqrt((8.33e8 / n)))
@@ -565,6 +570,15 @@ class SubnetValidator(Base.BaseNeuron):
             severity="DEBUG",
             message=f"New weight adjustment algorithm determined: {self.algorithm}"
         )
+
+    def weight_mutation_alg1(self, weights: list) -> list:
+        return weights 
+    
+    def weight_mutation_alg2(self, weights: list) -> list:
+        return weights 
+
+    def weight_mutation_alg3(self, weights: list) -> list:
+        return weights 
 
     def _parse_args(self, parser) -> argparse.Namespace:
         return parser.parse_args()
@@ -1122,6 +1136,14 @@ class SubnetValidator(Base.BaseNeuron):
             )
 
             weights = normalize_weights_list(weights)
+
+            # Modify according to miner nonce avg
+            if self.algorithm == 1:
+                weights = self.weight_mutation_alg1(weights=weights)
+            elif self.algorithm == 2:
+                weights = self.weight_mutation_alg2(weights=weights)
+            else:
+                weights = self.weight_mutation_alg3(weights=weights)
 
             # This is a crucial step that updates the incentive mechanism on the Bittensor blockchain.
             # Miners with higher scores (or weights) receive a larger share of TAO rewards on this subnet.
@@ -1687,6 +1709,9 @@ class SubnetValidator(Base.BaseNeuron):
                         severity="ERROR",
                         message=f"Hotkey is not registered on metagraph: {self.wallet.hotkey.ss58_address}."
                     )
+
+                # Update metadata about trusted validators if need be
+                self.handle_trusted_validators()
 
                 # Save validator state
                 self.save_state()
