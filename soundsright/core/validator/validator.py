@@ -1620,6 +1620,10 @@ class SubnetValidator(Base.BaseNeuron):
         finally:
             self.dendrite.close_session(using_new_loop=True)
 
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Pre-filter model cache: {self.model_cache}"
+        )
         self.filter_cache()
 
     def filter_cache(self):
