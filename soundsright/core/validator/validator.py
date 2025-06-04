@@ -1620,6 +1620,8 @@ class SubnetValidator(Base.BaseNeuron):
         finally:
             self.dendrite.close_session(using_new_loop=True)
 
+        self.filter_cache()
+
     def filter_cache(self):
         """One model per competition per coldkey"""
         new_model_cache = {}
@@ -1673,7 +1675,7 @@ class SubnetValidator(Base.BaseNeuron):
 
                 self.neuron_logger(
                     severity="TRACE",
-                    message=f"Competition model evaluation cache for competition: {task}_{sample_rate}HZ: {models_to_evaluate}"
+                    message=f"Filtered competition model evaluation cache for competition: {task}_{sample_rate}HZ: {models_to_evaluate}"
                 )
                 
                 # Iterate through models to evaluate
