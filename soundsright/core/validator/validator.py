@@ -1624,7 +1624,8 @@ class SubnetValidator(Base.BaseNeuron):
             severity="TRACE",
             message=f"Pre-filter model cache: {self.model_cache}"
         )
-        self.filter_cache()
+        if not self.debug_mode:
+            self.filter_cache()
 
     def filter_cache(self):
         """One model per competition per coldkey"""
