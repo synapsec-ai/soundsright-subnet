@@ -1619,6 +1619,34 @@ class SubnetValidator(Base.BaseNeuron):
             
         finally:
             self.dendrite.close_session(using_new_loop=True)
+
+    def filter_cache(self):
+        """One model per competition per coldkey"""
+        new_model_cache = {}
+
+        for competition in self.model_cache.keys():
+            
+            filtered_models = []
+            unique_models = {}
+
+            for model in self.model_cache[competition]:
+
+                uid = model.get("uid", None)
+                if uid and isinstance(uid, int) and uid <= (len(self.metagraph.coldkeys) - 1):
+
+                    ck = self.metagraph.coldkeys[uid]
+                    
+                    if ck in unique_models.keys():
+                        if uid < unique_models[ck]["uid"]:
+                            unique_models[ck] = model
+                    
+                    else:
+                        unique_models[ck] = model 
+
+            filtered_models = list(unique_models.values())
+            new_model_cache[competition] = filtered_models    
+
+        self.model_cache = new_model_cache                
             
     def run_competitions(self, sample_rates, tasks) -> None:
             
