@@ -228,7 +228,7 @@ def assign_remainder_scores(
     if model_tracker_list:
         ratio_sum = sum([m["performance_ratio"] for m in model_tracker_list])
         remainder_key = f"{competition}_remainder"
-        remainder_score = competition_max_scores[remainder_key] * metric_proportions["metric"]
+        remainder_score = competition_max_scores[remainder_key] * metric_proportions[metric]
         for m in model_tracker_list:
             score_ratio = (m["performance_ratio"] / ratio_sum) 
             score = score_ratio * remainder_score
