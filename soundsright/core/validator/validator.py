@@ -398,7 +398,8 @@ class SubnetValidator(Base.BaseNeuron):
                 message=f"Validator is running with UID: {validator_uid}"
             )
 
-        self.trusted_uids = self.resolve_trusted_uids()
+        if self.wc_prevention_protcool:
+            self.trusted_uids = self.resolve_trusted_uids()
             
         self.skip_sgmse = args.skip_sgmse
             
