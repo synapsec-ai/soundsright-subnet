@@ -78,14 +78,17 @@ class SubnetMiner(Base.BaseNeuron):
 
         self.miner_model_data = None
 
-        self.next_competition_timestamp = self.get_next_competition_timestamp()
+        self.next_competition_timestamp = None
 
         self.interval = 3600
         self.cycle = (t := int(time.time())) - (t % self.interval)
-
-        self.random_value = self._generate_random_value()
         self.trusted_validators = []
-        self.trusted_validators = self.determine_trusted_validators()
+        self.random_value = None
+
+        if self.wc_prevention_protcool:
+            self.next_competition_timestamp = self.get_next_competition_timestamp()
+            self.random_value = self._generate_random_value()
+            self.trusted_validators = self.determine_trusted_validators()
 
     def get_next_competition_timestamp(self) -> int:
         """
@@ -591,8 +594,12 @@ class SubnetMiner(Base.BaseNeuron):
 
         # Set data output (None is returned if no model data is provided since it is a default in the init)
         synapse.data = self.miner_model_data[competition]
-        if self.check_if_trusted_validator(hotkey=hotkey):
-            synapse.miner_nonce = self.random_value
+
+        if self.wc_prevention_protcool:
+            if self.check_if_trusted_validator(hotkey=hotkey):
+                synapse.miner_nonce = self.random_value
+            else:
+                synapse.miner_nonce = None
         else:
             synapse.miner_nonce = None
 
@@ -719,7 +726,8 @@ class SubnetMiner(Base.BaseNeuron):
         while True:
             try:
 
-                self.update_random_value_and_trusted_validators()
+                if self.wc_prevention_protcool:
+                    self.update_random_value_and_trusted_validators()
 
                 # Below: Periodically update our knowledge of the network graph.
                 if self.step % 600 == 0:

@@ -210,6 +210,12 @@ def assign_remainder_scores(
                     model_tracker["performance_ratio"] = performance_ratio
                     model_tracker_list.append(model_tracker)
 
+                    Utils.subnet_logger(
+                        severity="TRACE",
+                        message=f"New entry in model_tracker_list for competition: {competition} and metric: {metric}: {model_tracker}",
+                        log_level=log_level
+                    )
+
                 else:
                     continue
 
@@ -228,6 +234,11 @@ def assign_remainder_scores(
             score = score_ratio * remainder_score
             uid = m["uid"]
             competition_scores[uid] += score
+
+    Utils.subnet_logger(
+        severity="TRACE",
+        message=f"Scores for competition: {competition} for metric: {metric} after assigning remainder: {competition_scores}"
+    )
     
     return competition_scores
 

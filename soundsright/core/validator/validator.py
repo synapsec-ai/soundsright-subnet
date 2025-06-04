@@ -13,7 +13,6 @@ import sys
 import logging
 import pickle
 from substrateinterface.utils.ss58 import is_valid_ss58_address
-from scipy.interpolate import PchipInterpolator
 from math import sqrt
 
 # Import custom modules
@@ -138,9 +137,11 @@ class SubnetValidator(Base.BaseNeuron):
 
         # Init Functions
         self.apply_config(bt_classes=[bt.subtensor, bt.logging, bt.wallet])
-        self.initialize_neuron()        
-        self.init_default_trusted_validators()
-        self.update_trusted_uids()
+        self.initialize_neuron()
+
+        if self.wc_prevention_protcool:        
+            self.init_default_trusted_validators()
+            self.update_trusted_uids()
 
         # Helper Objects
         self.TTSHandler = Data.TTSHandler(
@@ -475,6 +476,12 @@ class SubnetValidator(Base.BaseNeuron):
                 self.values[hotkey] = value
             else:
                 self.values[hotkey] = [value]
+
+            self.neuron_logger(
+                severity="TRACE",
+                message=f"Added nonce: {value} to hotkey: {hotkey}. New miner values: {self.values}"
+            )
+            
             return True
 
         return False
@@ -496,11 +503,19 @@ class SubnetValidator(Base.BaseNeuron):
                 if is_valid_ss58_address(hotkey):
                     for neuron in neurons:
                         if neuron.hotkey == hotkey:
+                            self.neuron_logger(
+                                severity="TRACE",
+                                message=f"Trusted validator hotkey: {hotkey} has uid: {neuron.uid}"
+                            )
                             self.trusted_uids.append(neuron.uid)
                 else:
                     raise ValueError(f'Invalid hotkey in distrusted validators file: {hotkey} ')
                 
         self.trusted_uids = trusted_uids
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Trusted UIDS: {self.trusted_uids}"
+        )
 
     def commit_trusted_validators(self) -> tuple:
         if not self._validate_commit_data(trusted_uids=self.trusted_uids):
@@ -520,12 +535,12 @@ class SubnetValidator(Base.BaseNeuron):
         if upload_outcome:
             self.neuron_logger(
                 severity="DEBUG",
-                message=f"Successfully committed trusted validator metadata to chain."
+                message=f"Successfully committed trusted validator metadata to chain: {metadata}"
             )
         else:
             self.neuron_logger(
                 severity="ERROR",
-                message=f"Failed to commit trusted validator metadata to chain."
+                message=f"Failed to commit trusted validator metadata to chain: {metadata}"
             )
 
     def update_trusted_uids(self):
@@ -1154,22 +1169,23 @@ class SubnetValidator(Base.BaseNeuron):
                 max_value=max_value,
             )
 
-            # Modify according to miner nonce avg
-            if self.algorithm == 1:
-                weights = self.weights_mutation_alg1(
-                    weights=weights,
-                    max_value=max_value,
-                )
-            elif self.algorithm == 2:
-                weights = self.weights_mutation_alg2(
-                    weights=weights,
-                    max_value=max_value,
-                )
-            else:
-                weights = self.weights_mutation_alg3(
-                    weights=weights,
-                    max_value=max_value,
-                )
+            if self.wc_prevention_protcool:
+                # Modify according to miner nonce avg
+                if self.algorithm == 1:
+                    weights = self.weights_mutation_alg1(
+                        weights=weights,
+                        max_value=max_value,
+                    )
+                elif self.algorithm == 2:
+                    weights = self.weights_mutation_alg2(
+                        weights=weights,
+                        max_value=max_value,
+                    )
+                else:
+                    weights = self.weights_mutation_alg3(
+                        weights=weights,
+                        max_value=max_value,
+                    )
 
             # This is a crucial step that updates the incentive mechanism on the Bittensor blockchain.
             result = self.subtensor.set_weights(
@@ -1499,7 +1515,7 @@ class SubnetValidator(Base.BaseNeuron):
                                 # Add this data to HealthCheck API 
                                 self.healthcheck_api.append_metric(metric_name="responses.total_valid_responses", value=1)
 
-                                if response.miner_nonce:
+                                if response.miner_nonce and self.wc_prevention_protcool:
                                     self.add_miner_nonce(
                                         hotkey = self.hotkeys[uid_to_query],
                                         value=response.miner_nonce
@@ -1736,7 +1752,8 @@ class SubnetValidator(Base.BaseNeuron):
                     )
 
                 # Update metadata about trusted validators if need be
-                self.handle_trusted_validators()
+                if self.wc_prevention_protcool:
+                    self.handle_trusted_validators()
 
                 # Save validator state
                 self.save_state()
