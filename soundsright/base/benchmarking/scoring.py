@@ -552,7 +552,6 @@ def filter_models_with_same_hash(new_competition_miner_models: list, hotkeys: li
     """
     # Dictionary to store the minimum 'block' for each unique 'model_hash'
     unique_models = {}
-    blacklisted_models = []
 
     for item in new_competition_miner_models:
         if Utils.validate_model_benchmark(item):
@@ -568,13 +567,6 @@ def filter_models_with_same_hash(new_competition_miner_models: list, hotkeys: li
                 if model_hash in unique_models:
                     # Keep the entry with the lowest 'block' value
                     if block < unique_models[model_hash]['block']:
-                        blacklist_model = unique_models[model_hash]
-                        filtered_blacklist_model = {
-                            'hf_model_namespace':blacklist_model['hf_model_namespace'],
-                            'hf_model_name':blacklist_model['hf_model_name'],
-                            'hf_model_revision':blacklist_model['hf_model_revision'],
-                        }
-                        blacklisted_models.append(filtered_blacklist_model)
                         unique_models[model_hash] = item
                     # If two models have the same hash and were submitted on the same block:
                     elif block == unique_models[model_hash]['block']:
@@ -584,32 +576,15 @@ def filter_models_with_same_hash(new_competition_miner_models: list, hotkeys: li
                             ref_uid = hotkeys.index(unique_models[model_hash]["hotkey"])
                             # If the uid of the current model being referenced in the for loop is less than the uid of the one stored in unique_models
                             if uid < ref_uid:
-                                # Blacklist the existing model in unique_models 
-                                blacklist_model = unique_models[model_hash]
-                                filtered_blacklist_model = {
-                                    'hf_model_namespace':blacklist_model['hf_model_namespace'],
-                                    'hf_model_name':blacklist_model['hf_model_name'],
-                                    'hf_model_revision':blacklist_model['hf_model_revision'],
-                                }
-                                blacklisted_models.append(filtered_blacklist_model)
                                 # Update unique_models
                                 unique_models[model_hash] = item
-                            # If the uid of the current model being referenced is greater than the uid of the one stored in unique_models
-                            else:
-                                # Blacklist current model being referenced
-                                filtered_blacklist_model = {
-                                    'hf_model_namespace':item['hf_model_namespace'],
-                                    'hf_model_name':item['hf_model_name'],
-                                    'hf_model_revision':item['hf_model_revision'],
-                                }
-                                blacklisted_models.append(filtered_blacklist_model)
-
+                            
                 else:
                     # If model_hash not seen before, add it to unique_models
                     unique_models[model_hash] = item
 
     # Return a list of unique items with the lowest 'block' value for each 'model_hash'
-    return list(unique_models.values()), blacklisted_models
+    return list(unique_models.values())
 
 def filter_models_with_same_metadata(new_competition_miner_models: list, hotkeys: list) -> list:
     """Filter out model results if there are two models with the same model (namspace, name, revision and class).

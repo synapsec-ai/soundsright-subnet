@@ -1677,7 +1677,7 @@ class SubnetValidator(Base.BaseNeuron):
                         self.models_evaluated_today[f"{task}_{sample_rate}HZ"].append(model_data)
                 
                 # In the case that multiple models have the same hash, we only want to include the model with the earliest block when the metadata was uploaded to the chain
-                hash_filtered_new_competition_miner_models, same_hash_blacklist = Benchmarking.filter_models_with_same_hash(
+                hash_filtered_new_competition_miner_models = Benchmarking.filter_models_with_same_hash(
                     new_competition_miner_models=new_competition_miner_models,
                     hotkeys=self.hotkeys
                 )
@@ -1689,7 +1689,6 @@ class SubnetValidator(Base.BaseNeuron):
                 )
                 
                 # Extend blacklist and remove duplicate entries
-                self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"].extend(same_hash_blacklist)
                 self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"] = Benchmarking.remove_blacklist_duplicates(self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"])
                 self.miner_models[f"{task}_{sample_rate}HZ"] = hash_metadata_filtered_new_competition_miner_models
 
