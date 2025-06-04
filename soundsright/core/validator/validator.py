@@ -1625,6 +1625,8 @@ class SubnetValidator(Base.BaseNeuron):
             
         finally:
             self.dendrite.close_session(using_new_loop=True)
+
+        self.filter_cache()
             
     def run_competitions(self, sample_rates, tasks) -> None:
             
