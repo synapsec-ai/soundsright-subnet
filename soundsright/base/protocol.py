@@ -10,11 +10,6 @@ class Denoising_16kHz_Protocol(bt.Synapse):
         default=None,
         description = "HuggingFace model identfication",
     )
-
-    miner_nonce: int | None = pydantic.Field(
-        default=None,
-        description = "Miner nonce, is a value between 1 and 100,000",
-    )
     
     subnet_version: int = pydantic.Field(
         ...,
@@ -34,11 +29,6 @@ class Dereverberation_16kHz_Protocol(bt.Synapse):
     data: dict | None = pydantic.Field(
         default=None,
         description = "HuggingFace model identfication",
-    )
-
-    miner_nonce: int | None = pydantic.Field(
-        default=None,
-        description = "Miner nonce, is a value between 1 and 100,000",
     )
     
     subnet_version: int = pydantic.Field(

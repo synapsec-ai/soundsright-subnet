@@ -595,14 +595,6 @@ class SubnetMiner(Base.BaseNeuron):
         # Set data output (None is returned if no model data is provided since it is a default in the init)
         synapse.data = self.miner_model_data[competition]
 
-        if self.wc_prevention_protcool:
-            if self.check_if_trusted_validator(hotkey=hotkey):
-                synapse.miner_nonce = self.random_value
-            else:
-                synapse.miner_nonce = None
-        else:
-            synapse.miner_nonce = None
-
         self.neuron_logger(
             severity="INFO",
             message=f"Processed synapse from validator: {hotkey} for competition: {competition}"

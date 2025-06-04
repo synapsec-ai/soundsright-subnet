@@ -1515,12 +1515,6 @@ class SubnetValidator(Base.BaseNeuron):
                                 
                                 # Add this data to HealthCheck API 
                                 self.healthcheck_api.append_metric(metric_name="responses.total_valid_responses", value=1)
-
-                                if response.miner_nonce and self.wc_prevention_protcool:
-                                    self.add_miner_nonce(
-                                        hotkey = self.hotkeys[uid_to_query],
-                                        value=response.miner_nonce
-                                    )
                                 
                                 # In case that synapse response is not formatted correctly and no known historical data:
                                 if not Utils.validate_miner_response(response.data):
