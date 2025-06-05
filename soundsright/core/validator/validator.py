@@ -650,6 +650,11 @@ class SubnetValidator(Base.BaseNeuron):
             for competition in self.competition_scores: 
                 self.competition_scores[competition] = np.concatenate((self.competition_scores[competition], additional_zeros))
 
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Score length: {len(self.scores)} adjusted to fit metagraph length: {metagraph_len}"
+        )
+
     async def send_competition_synapse(self, uid_to_query: int, sample_rate: int, task: str, timeout: int = 5) -> List[bt.synapse]:
         """
         Sends synapses to obtain model metadata for DENOSIING_16000HZ and DEREVERBERATION_16000HZ competitions.

@@ -13,7 +13,7 @@ class ModuleConfig:
     def __init__(self):
 
         # Determine module code version
-        self.__version__ = "1.5.0"
+        self.__version__ = "1.5.1"
 
         # Determine the score version
         self.__score_version__ = "3"
