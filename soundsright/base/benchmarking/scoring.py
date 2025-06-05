@@ -202,19 +202,24 @@ def assign_remainder_scores(
                 model_tracker["hotkey"] = model_hotkey
                 model_uid = metagraph.hotkeys.index(model_hotkey)
                 model_tracker["uid"] = model_uid
-                model_avg = model_benchmark["metrics"][metric].get("average", None)
+                model_metrics = model_benchmark.get("metrics", None)
+                if model_metrics:
+                    model_avg = model_benchmark["metrics"][metric].get("average", None)
 
-                if model_hotkey and model_hotkey != best_model_hotkey and model_avg:
-                    
-                    performance_ratio = model_avg / best_model_avg
-                    model_tracker["performance_ratio"] = performance_ratio
-                    model_tracker_list.append(model_tracker)
+                    if model_hotkey and model_hotkey != best_model_hotkey and model_avg:
+                        
+                        performance_ratio = model_avg / best_model_avg
+                        model_tracker["performance_ratio"] = performance_ratio
+                        model_tracker_list.append(model_tracker)
 
-                    Utils.subnet_logger(
-                        severity="TRACE",
-                        message=f"New entry in model_tracker_list for competition: {competition} and metric: {metric}: {model_tracker}",
-                        log_level=log_level
-                    )
+                        Utils.subnet_logger(
+                            severity="TRACE",
+                            message=f"New entry in model_tracker_list for competition: {competition} and metric: {metric}: {model_tracker}",
+                            log_level=log_level
+                        )
+
+                    else:
+                        continue
 
                 else:
                     continue
