@@ -611,10 +611,10 @@ class SubnetValidator(Base.BaseNeuron):
                     severity="INFO",
                     message=f"State and metagraph hotkey length mismatch. Metagraph: {len(self.metagraph.hotkeys)} State: {len(self.hotkeys)}. Adjusting scores accordingly."
                 )
-                self.adjust_scores_length(
-                    metagraph_len=len(self.metagraph.hotkeys),
-                    state_len=len(self.hotkeys)
-                )
+        
+        self.adjust_scores_length(
+            metagraph_len=len(self.metagraph.hotkeys),
+        )
         
         self.hotkeys = copy.deepcopy(self.metagraph.hotkeys)
         
@@ -629,31 +629,27 @@ class SubnetValidator(Base.BaseNeuron):
         for competition in self.competition_scores: 
             self.competition_scores[competition][hotkey_index] = 0.0
 
-    def adjust_scores_length(self, metagraph_len, state_len) -> None:
-        if metagraph_len > state_len:
-            additional_zeros = np.zeros(
-                    (metagraph_len-state_len),
-                    dtype=np.float32,
-                )
-
-            self.scores = np.concatenate((self.scores, additional_zeros))
-            for competition in self.competition_scores: 
-                self.competition_scores[competition] = np.concatenate((self.competition_scores[competition], additional_zeros))
-        
-        if metagraph_len > len(self.scores):
-            additional_zeros = np.zeros(
-                    (metagraph_len-state_len),
-                    dtype=np.float32,
-                )
-
-            self.scores = np.concatenate((self.scores, additional_zeros))
-            for competition in self.competition_scores: 
-                self.competition_scores[competition] = np.concatenate((self.competition_scores[competition], additional_zeros))
+    def adjust_scores_length(self, metagraph_len) -> None:
 
         self.neuron_logger(
             severity="TRACE",
-            message=f"Score length: {len(self.scores)} adjusted to fit metagraph length: {metagraph_len}"
+            message=f"Checking if score lenghts need to be adjusted to fit metagraph length."
         )
+        
+        if metagraph_len > len(self.scores):
+            additional_zeros = np.zeros(
+                    (metagraph_len-len(self.scores)),
+                    dtype=np.float32,
+                )
+
+            self.scores = np.concatenate((self.scores, additional_zeros))
+            for competition in self.competition_scores: 
+                self.competition_scores[competition] = np.concatenate((self.competition_scores[competition], additional_zeros))
+
+            self.neuron_logger(
+                severity="TRACE",
+                message=f"Score length: {len(self.scores)} adjusted to fit metagraph length: {metagraph_len}"
+            )
 
     async def send_competition_synapse(self, uid_to_query: int, sample_rate: int, task: str, timeout: int = 5) -> List[bt.synapse]:
         """
