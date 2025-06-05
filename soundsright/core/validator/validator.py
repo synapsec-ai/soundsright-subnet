@@ -12,6 +12,7 @@ import asyncio
 import sys
 import logging
 import pickle
+from math import sqrt
 
 # Import custom modules
 import soundsright.base.benchmarking as Benchmarking
@@ -37,14 +38,15 @@ class SubnetValidator(Base.BaseNeuron):
 
         super().__init__(parser=parser, profile="validator")
         
-        self.version = Utils.config["module_version"]
-        self.neuron_config = None
-        self.cuda_directory = ""
+        # Bittensor Objects
         self.wallet = None
         self.subtensor = None
         self.dendrite = None
         self.metagraph: bt.metagraph | None = None
-        self.scores = None
+
+        # Validator Params
+        self.version = Utils.config["module_version"]
+        self.neuron_config = None
         self.hotkeys = None
         self.load_validator_state = None
         self.query = None
@@ -52,10 +54,22 @@ class SubnetValidator(Base.BaseNeuron):
         self.skip_sgmse = False
         self.dataset_size = 300
         self.log_level="INFO" # Init log level
-        self.start_date = datetime(2025, 5, 27, 9, 0, tzinfo=timezone.utc) # Reference for when to start competitions (May 27, 2025 @ 9:00 AM GMT)
-        self.period_days = 2 # How many days each competition lasts
-        self.avg_model_eval_time = 3600
+        self.cuda_directory = ""
+        self.avg_model_eval_time = 5400
         self.first_run_through_of_the_day = True
+
+        # WC Prevention
+        self.algorithm = 1
+        self.interval = 5400
+        self.max_uids = 256 
+        self.miner_nonces = {}
+        self.cycle = (t := int(time.time())) - (t % self.interval)
+        self.trusted_uids = []
+        self.trusted_validators_filepath = os.path.join(self.base_path, "trusted_validators.txt")
+        self.default_trusted_validators = []
+        
+        # Benchmarking / Scoring Object Init
+        self.scores = None
         self.weights_objects = []
         self.sample_rates = [16000]
         self.tasks = ['DENOISING','DEREVERBERATION']
@@ -72,8 +86,10 @@ class SubnetValidator(Base.BaseNeuron):
             "DEREVERBERATION_16000HZ":[],
         }
         self.competition_max_scores = {
-            'DENOISING_16000HZ':50,
-            'DEREVERBERATION_16000HZ':50,
+            'DENOISING_16000HZ':40,
+            'DEREVERBERATION_16000HZ':40,
+            'DENOISING_16000HZ_remainder':10,
+            'DEREVERBERATION_16000HZ_remainder':10,
         }
         self.metric_proportions = {
             "DENOISING_16000HZ":{
@@ -108,16 +124,32 @@ class SubnetValidator(Base.BaseNeuron):
             "DEREVERBERATION_16000HZ":[],
         }
 
+        # Remote Logging
         self.remote_logging_interval = 3600
         self.last_remote_logging_timestamp = 0
         self.remote_logging_daily_tries=0
 
+        # Init Functions
         self.apply_config(bt_classes=[bt.subtensor, bt.logging, bt.wallet])
-        self.initialize_neuron()        
+        self.initialize_neuron()
+
+        if self.wc_prevention_protcool:        
+            self.init_default_trusted_validators()
+            self.update_trusted_uids()
+
+        # Helper Objects
         self.TTSHandler = Data.TTSHandler(
             tts_base_path=self.tts_path, 
             sample_rates=self.sample_rates
         )
+        self.metadata_handler = Models.ModelMetadataHandler(
+            subtensor=self.subtensor,
+            subnet_netuid=self.neuron_config.netuid,
+            log_level=self.log_level,
+            wallet=self.wallet,
+        )
+
+        # Dataset download and initial benchmarking
         dataset_download_outcome = Data.dataset_download(
             wham_path = self.noise_data_path,
             arni_path = self.rir_data_path,
@@ -359,6 +391,9 @@ class SubnetValidator(Base.BaseNeuron):
                 severity="INFO",
                 message=f"Validator is running with UID: {validator_uid}"
             )
+
+        if self.wc_prevention_protcool:
+            self.trusted_uids = self.resolve_trusted_uids()
             
         self.skip_sgmse = args.skip_sgmse
             
@@ -395,6 +430,154 @@ class SubnetValidator(Base.BaseNeuron):
         )
 
         return True
+    
+    def init_default_trusted_validators(self):
+        if not os.path.exists(self.trusted_validators_filepath):
+            with open(self.trusted_validators_filepath, 'w') as file:
+                for validator in self.default_trusted_validators:
+                    file.write(validator + '\n')
+            self.neuron_logger(
+                severity="DEBUG",
+                message=f"File created and validators saved to {self.trusted_validators_filepath}"
+            )
+
+    def _validate_value(self, value) -> bool:
+        # Must be uint16
+        return isinstance(value, int) and 0 < value <= 100000
+    
+    def _validate_commit_data(self, trusted_uids: list) -> bool:
+        # Must be a list with less than max_uids entries
+        try:
+            if isinstance(trusted_uids, list) and not isinstance(trusted_uids, bool) and len(trusted_uids) <= self.max_uids:
+                return True
+            else:
+                return False
+        except Exception:
+            return False
+    
+    def update_cycle(self) -> bool:
+        if (t := int(time.time())) - self.interval < self.cycle:
+            return False
+        self.cycle = t - (t % self.interval)
+        return True
+    
+    def add_miner_nonce(self, hotkey: str, value: int) -> bool:
+        if self._validate_value(value=value) and self._validate_hotkey(hotkey=hotkey):
+            if hotkey in self.values.keys():
+                self.values[hotkey] = value
+            else:
+                self.values[hotkey] = [value]
+
+            self.neuron_logger(
+                severity="TRACE",
+                message=f"Added nonce: {value} to hotkey: {hotkey}. New miner values: {self.values}"
+            )
+            
+            return True
+
+        return False
+    
+    def _clear_miner_nonces(self):
+        self.miner_nonces = {}
+    
+    def resolve_trusted_uids(self) -> list:
+        # Reads distrusted validators from file.
+        # File must contain one hotkey per line
+
+        # Read neurons in subnet to memory
+        neurons = self.metagraph.neurons
+        trusted_uids = []
+
+        with open(self.trusted_validators_filepath, 'r') as f:
+            for line in f:
+                hotkey = line.strip()
+                if is_valid_ss58_address(hotkey):
+                    for neuron in neurons:
+                        if neuron.hotkey == hotkey:
+                            self.neuron_logger(
+                                severity="TRACE",
+                                message=f"Trusted validator hotkey: {hotkey} has uid: {neuron.uid}"
+                            )
+                            self.trusted_uids.append(neuron.uid)
+                else:
+                    raise ValueError(f'Invalid hotkey in distrusted validators file: {hotkey} ')
+                
+        self.trusted_uids = trusted_uids
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Trusted UIDS: {self.trusted_uids}"
+        )
+
+    def commit_trusted_validators(self) -> tuple:
+        if not self._validate_commit_data(trusted_uids=self.trusted_uids):
+            return False, 0, "Failed to validate list of trusted uids"
+
+        # Create 256 bit byte array (256 bits = 32 bytes)
+        trust_state = bytearray(32)
+
+        # Set UIDs as trusted in the bytearray
+        for _,uid in enumerate(self.trusted_uids):
+            trust_state[uid // 8] |= (1 << (uid % 8))
+
+        metadata = bytes(trust_state)
+
+        upload_outcome = asyncio.run(self.metadata_handler.upload_model_metadata_to_chain(metadata=metadata))
+
+        if upload_outcome:
+            self.neuron_logger(
+                severity="DEBUG",
+                message=f"Successfully committed trusted validator metadata to chain: {metadata}"
+            )
+        else:
+            self.neuron_logger(
+                severity="ERROR",
+                message=f"Failed to commit trusted validator metadata to chain: {metadata}"
+            )
+
+    def update_trusted_uids(self):
+        try:
+            self.resolve_trusted_uids()
+            self.commit_trusted_validators()
+        except Exception as e:
+            self.neuron_logger(
+                severity="ERROR",
+                message=f"Error while committing trusted uid metadata to chain: {e}"
+            )
+
+    def handle_trusted_validators(self):
+        if self.update_cycle:
+            self.update_trusted_uids()
+
+    def determine_lower_and_upper_bounds(self, n):
+
+        lower = 50000 - (0.4307 * sqrt((8.33e8 / n)))
+        upper = 50000 + (0.4307 * sqrt((8.33e8 / n)))
+
+        return lower, upper
+
+    def determine_weight_mutation_algorithm(self):
+
+        n = len(self.miner_nonces.keys())
+        if n == 0:
+            return
+        
+        lower_bound, upper_bound = self.determine_lower_and_upper_bounds(n=n)
+        total = 0
+        for value in self.miner_nonces.values():
+            total += value 
+        avg = total / n
+
+        if avg <= lower_bound:
+            self.algorithm = 1
+        elif avg >= upper_bound:
+            self.algorithm = 3
+        else:
+            self.algorithm = 2
+
+        self.neuron_logger(
+            severity="DEBUG",
+            message=f"New weight adjustment algorithm determined: {self.algorithm}"
+        )
 
     def _parse_args(self, parser) -> argparse.Namespace:
         return parser.parse_args()
@@ -900,6 +1083,9 @@ class SubnetValidator(Base.BaseNeuron):
         # Check if it's time to set/commit new weights
         if self.subtensor.get_current_block() >= self.last_updated_block + 350 and not self.debug_mode: 
 
+            self.handle_metagraph_sync()
+            self.check_hotkeys()
+
             # Try set/commit weights
             try:
                 asyncio.run(self.commit_weights())
@@ -917,25 +1103,46 @@ class SubnetValidator(Base.BaseNeuron):
                     message=f"Set weights failed due to error: {e}"
                 )
 
+    def weights_mutation_alg1(self, weights: list, max_value: int) -> list:
+        """Softmax scaling"""
+        scaled_weights = [(w * 2.5) for w in weights]
+        softmax = np.exp(scaled_weights) / np.sum(np.exp(scaled_weights))
+        return ((softmax / np.max(softmax)) * max_value).tolist()
+    
+    def weights_mutation_alg2(self, weights: list, max_value: int) -> list:
+        """Power Scaling"""
+        if not weights:
+            return []
+        
+        power = 0.63
+        min_w = min(weights)
+        max_w = max(weights)
+        if max_w == min_w:
+            return [max_value] * len(weights)
+        norm_weights = [(w - min_w) / (max_w - min_w) for w in weights]
+        transformed = [w ** power for w in norm_weights]
+        return [w * max_value for w in transformed]
+
+    def weights_mutation_alg3(self, weights: list, max_value: int) -> list:
+        """Return weights as is"""
+        return [(w * max_value) for w in weights]
+
     @Utils.timeout_decorator(timeout=30)
     async def commit_weights(self) -> None:
         """Sets the weights for the subnet"""
 
-        def normalize_weights_list(weights):
-            max_value = self.subtensor.get_subnet_hyperparameters(netuid=self.neuron_config.netuid).max_weight_limit
+        def normalize_weights_list(weights, max_value:int):
             if all(x==1 for x in weights):
                 return [(x/max_value) for x in weights]
             elif all(x==0 for x in weights):
-                return [(1/max_value) for x in weights]
+                return [0.01 for x in weights]
             else:
                 return [(x/max(weights)) for x in weights]
             
         self.healthcheck_api.update_metric(metric_name='weights.targets', value=np.count_nonzero(self.scores))
 
         weights = self.scores
-        salt=secrets.randbelow(2**16)
-        block = self.subtensor.get_current_block()
-        uids = [int(uid) for uid in self.metagraph.uids]
+        max_value = self.subtensor.get_subnet_hyperparameters(netuid=self.neuron_config.netuid).max_weight_limit
         
         self.neuron_logger(
             severity="INFO",
@@ -948,10 +1155,30 @@ class SubnetValidator(Base.BaseNeuron):
                 message=f"Setting weights with the following parameters: netuid={self.neuron_config.netuid}, wallet={self.wallet}, uids={self.metagraph.uids}, weights={weights}, version_key={self.subnet_version}"
             )
 
-            weights = normalize_weights_list(weights)
+            weights = normalize_weights_list(
+                weights=weights,
+                max_value=max_value,
+            )
+
+            if self.wc_prevention_protcool:
+                # Modify according to miner nonce avg
+                if self.algorithm == 1:
+                    weights = self.weights_mutation_alg1(
+                        weights=weights,
+                        max_value=max_value,
+                    )
+                elif self.algorithm == 2:
+                    weights = self.weights_mutation_alg2(
+                        weights=weights,
+                        max_value=max_value,
+                    )
+                else:
+                    weights = self.weights_mutation_alg3(
+                        weights=weights,
+                        max_value=max_value,
+                    )
 
             # This is a crucial step that updates the incentive mechanism on the Bittensor blockchain.
-            # Miners with higher scores (or weights) receive a larger share of TAO rewards on this subnet.
             result = self.subtensor.set_weights(
                 netuid=self.neuron_config.netuid,  # Subnet to set weights on.
                 wallet=self.wallet,  # Wallet to sign set weights using hotkey.
@@ -1382,6 +1609,41 @@ class SubnetValidator(Base.BaseNeuron):
             
         finally:
             self.dendrite.close_session(using_new_loop=True)
+
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Pre-filter model cache: {self.model_cache}"
+        )
+        if not self.debug_mode:
+            self.filter_cache()
+
+    def filter_cache(self):
+        """One model per competition per coldkey"""
+        new_model_cache = {}
+
+        for competition in self.model_cache.keys():
+            
+            filtered_models = []
+            unique_models = {}
+
+            for model in self.model_cache[competition]:
+
+                uid = model.get("uid", None)
+                if isinstance(uid, int) and 0 <= uid < len(self.metagraph.coldkeys):
+
+                    ck = self.metagraph.coldkeys[uid]
+                    
+                    if ck in unique_models.keys():
+                        if uid < unique_models[ck]["uid"]:
+                            unique_models[ck] = model
+                    
+                    else:
+                        unique_models[ck] = model 
+
+            filtered_models = list(unique_models.values())
+            new_model_cache[competition] = filtered_models    
+
+        self.model_cache = new_model_cache                
             
     def run_competitions(self, sample_rates, tasks) -> None:
             
@@ -1408,7 +1670,7 @@ class SubnetValidator(Base.BaseNeuron):
 
                 self.neuron_logger(
                     severity="TRACE",
-                    message=f"Competition model evaluation cache for competition: {task}_{sample_rate}HZ: {models_to_evaluate}"
+                    message=f"Filtered competition model evaluation cache for competition: {task}_{sample_rate}HZ: {models_to_evaluate}"
                 )
                 
                 # Iterate through models to evaluate
@@ -1434,7 +1696,7 @@ class SubnetValidator(Base.BaseNeuron):
                         self.models_evaluated_today[f"{task}_{sample_rate}HZ"].append(model_data)
                 
                 # In the case that multiple models have the same hash, we only want to include the model with the earliest block when the metadata was uploaded to the chain
-                hash_filtered_new_competition_miner_models, same_hash_blacklist = Benchmarking.filter_models_with_same_hash(
+                hash_filtered_new_competition_miner_models = Benchmarking.filter_models_with_same_hash(
                     new_competition_miner_models=new_competition_miner_models,
                     hotkeys=self.hotkeys
                 )
@@ -1446,7 +1708,6 @@ class SubnetValidator(Base.BaseNeuron):
                 )
                 
                 # Extend blacklist and remove duplicate entries
-                self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"].extend(same_hash_blacklist)
                 self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"] = Benchmarking.remove_blacklist_duplicates(self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"])
                 self.miner_models[f"{task}_{sample_rate}HZ"] = hash_metadata_filtered_new_competition_miner_models
 
@@ -1508,6 +1769,10 @@ class SubnetValidator(Base.BaseNeuron):
                         severity="ERROR",
                         message=f"Hotkey is not registered on metagraph: {self.wallet.hotkey.ss58_address}."
                     )
+
+                # Update metadata about trusted validators if need be
+                if self.wc_prevention_protcool:
+                    self.handle_trusted_validators()
 
                 # Save validator state
                 self.save_state()

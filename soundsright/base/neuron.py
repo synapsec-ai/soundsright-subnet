@@ -8,7 +8,7 @@ value-creation chain. There are two primary neuron classes: validator and miner.
 
 from argparse import ArgumentParser
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 import bittensor as bt
 import numpy as np
 import pickle
@@ -64,6 +64,9 @@ class BaseNeuron:
         self.sgmse_output_path = None # Where the SGMSE+ model outputs will be stored
         self.healthcheck_api = None
         self.log_level = "INFO"
+        self.start_date = datetime(2025, 6, 5, 9, 0, tzinfo=timezone.utc) # Reference for when to start competitions (June 5, 2025 @ 9:00 AM GMT)
+        self.period_days = 2
+        self.wc_prevention_protcool = False # Switch to toggle whether or not to use the WC Prevention Protocol
 
     def config(self, bt_classes: list) -> bt.config:
         """Applies neuron configuration.

@@ -8,6 +8,8 @@ import asyncio
 import os
 import traceback
 import time
+import random
+from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv 
 load_dotenv()
 
@@ -75,7 +77,161 @@ class SubnetMiner(Base.BaseNeuron):
         self.validator_stats = {}
 
         self.miner_model_data = None
+
+        self.next_competition_timestamp = None
+
+        self.interval = 3600
+        self.cycle = (t := int(time.time())) - (t % self.interval)
+        self.trusted_validators = []
+        self.random_value = None
+
+        if self.wc_prevention_protcool:
+            self.next_competition_timestamp = self.get_next_competition_timestamp()
+            self.random_value = self._generate_random_value()
+            self.trusted_validators = self.determine_trusted_validators()
+
+    def get_next_competition_timestamp(self) -> int:
+        """
+        Returns the Unix timestamp for the next competition at 9:00 AM GMT
+        that is a multiple of `period_days` after `self.start_date`.
+
+        Args:
+            start_date (datetime): The fixed base date to start counting from (should be 09:00 GMT).
+            period_days (int): The interval of competition recurrence in days.
+        """
+        now = datetime.now(timezone.utc)
+
+        # Compute number of full days since start_date
+        delta_days = (now - self.start_date).days
+        # Compute how many full periods have passed
+        periods_passed = delta_days // self.period_days
+        # Get the next period start
+        next_competition = self.start_date + timedelta(days=(periods_passed + 1) * self.period_days)
+
+        self.neuron_logger(
+            severity="INFO",
+            message=f"Next competition will be at {next_competition}"
+        )
+        return int(next_competition.timestamp())
+
+    def update_next_competition_timestamp(self) -> None:
+        """
+        Updates `next_competition_timestamp` to the next competition time
+        that is a multiple of `period_days` after `self.start_date`.
+        """
+        current_time = datetime.fromtimestamp(self.next_competition_timestamp, tz=timezone.utc)
+        delta_days = (current_time - self.start_date).days
+        periods_passed = delta_days // self.period_days
+        next_time = self.start_date + timedelta(days=(periods_passed + 1) * self.period_days)
+
+        self.next_competition_timestamp = int(next_time.timestamp())
+
+        self.neuron_logger(
+            severity="INFO",
+            message=f"Next competition will be at {next_time}"
+        )
+
+        self.healthcheck_api.append_metric(metric_name="competitions_judged", value=1)
+
+    def _generate_random_value(self) -> int:
+        random_value = random.randint(1,100000)
+        self.neuron_logger(
+            severity="DEBUG",
+            message=f"Determined new random value: {random_value}"
+        )
+        return random_value
+    
+    def update_random_value_and_trusted_validators(self) -> bool:
+        if int(time.time()) >= self.next_competition_timestamp:
+            self.random_value = self._generate_random_value()
+            self.update_next_competition_timestamp()
+
+        if (t := int(time.time())) - self.interval >= self.cycle:
+            self.cycle = t - (t % self.interval)
+            self.trusted_validators = self.determine_trusted_validators()
+
+    def _get_stake_for_hotkey(self, hotkey: str) -> int:
+
+        stake_for_hotkey = self.subtensor.get_hotkey_stake(hotkey_ss58=hotkey, netuid=self.netuid)
+        return stake_for_hotkey
+    
+    def determine_trusted_validators(self, stake_percentage_required: float=0.75) -> list:
+        # This function determines the list of validators that are trusted
+        # By default, 75% of the total stake must vote validators to be trusted in 
+        # order for miner to trust the validator
+
+        # Store trust data
+        trust_data = {}
+        # Get uids that qualify for commitment check and their stake
+        neurons = self.metagraph.neurons
+        validators = []
+        for neuron in neurons:
+            if neuron.stake >= self.validator_min_stake:
+                trusted_uids = self._get_trusted_uids(hotkey=neuron.hotkey)
+                if trusted_uids:
+                    validators.append({"hotkey": neuron.hotkey, "stake": neuron.stake, "trusted_uids": trusted_uids})
+
+        # Keep track of total voting power (stake)
+        total_stake = 0
+
+        # Calculate how much stake is voting for validator to be trusted
+        for validator in validators:
+            total_stake += int(validator["stake"])
+            for trusted_uid in validator["trusted_uids"]:
+                if trusted_uid not in trust_data.keys():
+                    trust_data[trusted_uid] = int(validator["stake"])
+                else:
+                    trust_data[trusted_uid] += int(validator["stake"])
+
+        trusted_validators_uids = []
+        # Determine trusted validators based on voting power
+        for uid,total_stake_vote in trust_data.items():
+            uid_power = total_stake_vote/total_stake
+            if uid_power >= stake_percentage_required:
+                self.neuron_logger(
+                    severity="DEBUG",
+                    message=f'UID {uid} is trusted with power of {uid_power}'
+                )
+                trusted_validators_uids.append(uid)
+            else:
+                self.neuron_logger(
+                    severity="DEBUG",
+                    message=f'UID {uid} is NOT trusted with power of {uid_power}'
+                )
+
+        # Final trusted validators
+        trusted_validators = []
+        # Resolve hotkeys
+        for uid in trusted_validators_uids:
+            hotkey = self.metagraph.neurons[uid].hotkey
+            trusted_validators.append({"hotkey": hotkey, "uid": uid})
         
+        return trusted_validators
+
+    def _get_trusted_uids(self, hotkey: str) -> str:
+
+        bytes_tuple = asyncio.run(self.metadata_handler.obtain_trusted_validator_metadata_from_chain(
+            hotkey=hotkey, 
+        ))
+
+        if bytes_tuple and len(bytes_tuple == 32):
+
+            # Convert commitment bytes to list of trusted UIDs
+            trusted_uids = []
+            for n in range(0,255):
+                if (bytes_tuple[n // 8] >> (n % 8)) & 1:
+                    trusted_uids.append(n)
+
+            return trusted_uids
+        
+        return None
+    
+    def check_if_trusted_validator(self, hotkey: str) -> bool:
+        for trusted_validator in self.trusted_validators:
+            if trusted_validator["hotkey"] == hotkey:
+                return True 
+        return False
+
     def save_state(self):
         """Save miner state to models.json file
         """
@@ -561,6 +717,10 @@ class SubnetMiner(Base.BaseNeuron):
         
         while True:
             try:
+
+                if self.wc_prevention_protcool:
+                    self.update_random_value_and_trusted_validators()
+
                 # Below: Periodically update our knowledge of the network graph.
                 if self.step % 600 == 0:
                     self.neuron_logger(

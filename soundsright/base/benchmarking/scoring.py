@@ -172,6 +172,96 @@ def validate_historical_benchmark(benchmark, metagraph):
     
     return True
 
+def assign_remainder_scores(
+    competition_scores: np.ndarray,
+    competition_max_scores: dict,
+    competition: str,
+    metric_proportions: dict,
+    miner_models: list,
+    best_model_benchmark: dict,
+    metric: str, 
+    metagraph: bt.metagraph,
+    log_level: str,
+):
+    best_model_hotkey = best_model_benchmark["hotkey"]
+    best_model_avg = best_model_benchmark["metrics"][metric]["average"]
+    model_tracker_list = []
+
+    for model_benchmark in miner_models:
+
+        try:
+
+            if validate_benchmark(
+                benchmark=model_benchmark,
+                metric_name=metric,
+                metagraph=metagraph
+            ):
+
+                model_tracker = {}
+                model_hotkey = model_benchmark.get("hotkey", None)
+                model_tracker["hotkey"] = model_hotkey
+                model_uid = metagraph.hotkeys.index(model_hotkey)
+                model_tracker["uid"] = model_uid
+                model_metrics = model_benchmark.get("metrics", None)
+                if model_metrics and isinstance(model_metrics, dict):
+                    model_avg = model_benchmark["metrics"][metric].get("average", None)
+
+                    if model_hotkey and model_hotkey != best_model_hotkey and model_avg:
+                        
+                        performance_ratio = model_avg / best_model_avg
+                        model_tracker["performance_ratio"] = performance_ratio
+                        model_tracker_list.append(model_tracker)
+
+                        Utils.subnet_logger(
+                            severity="TRACE",
+                            message=f"New entry in model_tracker_list for competition: {competition} and metric: {metric}: {model_tracker}",
+                            log_level=log_level
+                        )
+
+                    else:
+                        continue
+
+                else:
+                    continue
+
+            else:
+                continue
+
+        except:
+            continue
+
+    try:
+        if model_tracker_list:
+            ratio_sum = sum([m["performance_ratio"] for m in model_tracker_list])
+            remainder_key = f"{competition}_remainder"
+            remainder_score = competition_max_scores[remainder_key] * metric_proportions[competition][metric]
+            for m in model_tracker_list:
+                score_ratio = (m["performance_ratio"] / ratio_sum) 
+                score = score_ratio * remainder_score
+                uid = m["uid"]
+                competition_scores[uid] += score
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"Assigning remainder score of {score} to uid: {uid} for competition: {competition} and metric: {metric}",
+                    log_level=log_level
+                )
+
+        Utils.subnet_logger(
+            severity="TRACE",
+            message=f"Scores for competition: {competition} for metric: {metric} after assigning remainder: {competition_scores}",
+            log_level=log_level
+        )
+
+        return competition_scores
+        
+    except Exception as e:
+        Utils.subnet_logger(
+            severity="ERROR",
+            message=f"Error when calculating remainder scores for competition: {competition} for metric: {metric}: {e}"
+        )
+        
+    return competition_scores
+
 def determine_competition_scores(
     competition_scores: dict, 
     competition_max_scores: dict,
@@ -289,6 +379,18 @@ def determine_competition_scores(
                         message=f"Competition winner for metric: {metric_name} in current competition: {competition} is: {best_historical_model}. Assigning score: {competition_metric_score}",
                         log_level=log_level,
                     )
+
+                    competition_scores[competition] = assign_remainder_scores(
+                        competition_scores=competition_scores[competition],
+                        competition_max_scores=competition_max_scores,
+                        competition=competition,
+                        metric_proportions=metric_proportions,
+                        miner_models=current_models,
+                        best_model_benchmark=best_historical_model,
+                        metric=metric_name,
+                        metagraph=metagraph,
+                        log_level=log_level
+                    )
                     continue
                 
                 # Assign score to the best current model if best historical model does not exist
@@ -304,6 +406,18 @@ def determine_competition_scores(
                         severity="TRACE",
                         message=f"Competition winner for metric: {metric_name} in current competition: {competition} is: {best_current_model}. Assigning score: {competition_metric_score}",
                         log_level=log_level,
+                    )
+
+                    competition_scores[competition] = assign_remainder_scores(
+                        competition_scores=competition_scores[competition],
+                        competition_max_scores=competition_max_scores,
+                        competition=competition,
+                        metric_proportions=metric_proportions,
+                        miner_models=current_models,
+                        best_model_benchmark=best_current_model,
+                        metric=metric_name,
+                        metagraph=metagraph,
+                        log_level=log_level
                     )
                     continue
                 
@@ -326,6 +440,18 @@ def determine_competition_scores(
                         severity="TRACE",
                         message=f"Competition winner for metric: {metric_name} in current competition: {competition} is: {best_current_model}. Assigning score: {competition_metric_score}",
                         log_level=log_level,
+                    )
+
+                    competition_scores[competition] = assign_remainder_scores(
+                        competition_scores=competition_scores[competition],
+                        competition_max_scores=competition_max_scores,
+                        competition=competition,
+                        metric_proportions=metric_proportions,
+                        miner_models=current_models,
+                        best_model_benchmark=best_current_model,
+                        metric=metric_name,
+                        metagraph=metagraph,
+                        log_level=log_level
                     )
                     continue
 
@@ -359,6 +485,18 @@ def determine_competition_scores(
                         message=f"Competition winner for metric: {metric_name} in current competition: {competition} is: {best_current_model}. Assigning score: {competition_metric_score}",
                         log_level=log_level,
                     )
+
+                    competition_scores[competition] = assign_remainder_scores(
+                        competition_scores=competition_scores[competition],
+                        competition_max_scores=competition_max_scores,
+                        competition=competition,
+                        metric_proportions=metric_proportions,
+                        miner_models=current_models,
+                        best_model_benchmark=best_current_model,
+                        metric=metric_name,
+                        metagraph=metagraph,
+                        log_level=log_level
+                    )
             
                 # Otherwise, assign score to old model
                 else: 
@@ -373,6 +511,18 @@ def determine_competition_scores(
                         severity="TRACE",
                         message=f"Competition winner for metric: {metric_name} in current competition: {competition} is: {best_historical_model}. Assigning score: {competition_metric_score}",
                         log_level=log_level,
+                    )
+
+                    competition_scores[competition] = assign_remainder_scores(
+                        competition_scores=competition_scores[competition],
+                        competition_max_scores=competition_max_scores,
+                        competition=competition,
+                        metric_proportions=metric_proportions,
+                        miner_models=current_models,
+                        best_model_benchmark=best_historical_model,
+                        metric=metric_name,
+                        metagraph=metagraph,
+                        log_level=log_level
                     )
             
             except Exception as e:
@@ -422,7 +572,6 @@ def filter_models_with_same_hash(new_competition_miner_models: list, hotkeys: li
     """
     # Dictionary to store the minimum 'block' for each unique 'model_hash'
     unique_models = {}
-    blacklisted_models = []
 
     for item in new_competition_miner_models:
         if Utils.validate_model_benchmark(item):
@@ -438,13 +587,6 @@ def filter_models_with_same_hash(new_competition_miner_models: list, hotkeys: li
                 if model_hash in unique_models:
                     # Keep the entry with the lowest 'block' value
                     if block < unique_models[model_hash]['block']:
-                        blacklist_model = unique_models[model_hash]
-                        filtered_blacklist_model = {
-                            'hf_model_namespace':blacklist_model['hf_model_namespace'],
-                            'hf_model_name':blacklist_model['hf_model_name'],
-                            'hf_model_revision':blacklist_model['hf_model_revision'],
-                        }
-                        blacklisted_models.append(filtered_blacklist_model)
                         unique_models[model_hash] = item
                     # If two models have the same hash and were submitted on the same block:
                     elif block == unique_models[model_hash]['block']:
@@ -454,32 +596,15 @@ def filter_models_with_same_hash(new_competition_miner_models: list, hotkeys: li
                             ref_uid = hotkeys.index(unique_models[model_hash]["hotkey"])
                             # If the uid of the current model being referenced in the for loop is less than the uid of the one stored in unique_models
                             if uid < ref_uid:
-                                # Blacklist the existing model in unique_models 
-                                blacklist_model = unique_models[model_hash]
-                                filtered_blacklist_model = {
-                                    'hf_model_namespace':blacklist_model['hf_model_namespace'],
-                                    'hf_model_name':blacklist_model['hf_model_name'],
-                                    'hf_model_revision':blacklist_model['hf_model_revision'],
-                                }
-                                blacklisted_models.append(filtered_blacklist_model)
                                 # Update unique_models
                                 unique_models[model_hash] = item
-                            # If the uid of the current model being referenced is greater than the uid of the one stored in unique_models
-                            else:
-                                # Blacklist current model being referenced
-                                filtered_blacklist_model = {
-                                    'hf_model_namespace':item['hf_model_namespace'],
-                                    'hf_model_name':item['hf_model_name'],
-                                    'hf_model_revision':item['hf_model_revision'],
-                                }
-                                blacklisted_models.append(filtered_blacklist_model)
-
+                            
                 else:
                     # If model_hash not seen before, add it to unique_models
                     unique_models[model_hash] = item
 
     # Return a list of unique items with the lowest 'block' value for each 'model_hash'
-    return list(unique_models.values()), blacklisted_models
+    return list(unique_models.values())
 
 def filter_models_with_same_metadata(new_competition_miner_models: list, hotkeys: list) -> list:
     """Filter out model results if there are two models with the same model (namspace, name, revision and class).
