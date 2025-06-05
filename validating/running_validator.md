@@ -18,15 +18,15 @@ Running a validator the in Subnet requires **a subnet stake-weight of at least 1
 ### 1. Virtual machine deployment
 The subnet requires **Ubuntu 24.04**, **Python 3.12** with at least the following hardware configuration:
 
-- 16 GB VRAM
-- 23 GB RAM
-- 512 GB storage (1000 IOPS)
+- 48 GB VRAM
+- 60 GB RAM
+- 500 GB storage (1000 IOPS)
 - 5 gbit/s network bandwidth
-- 6 vCPU 
+- 10 CPU 
 
 **CUDA 12.6** is also highly recommended.
 
-When running the subnet validator, we are highly recommending that you run the subnet validator with DataCrunch.io using the **1x Tesla V100** instance type with **Ubuntu 24.04** and **CUDA 12.6**. 
+When running the subnet validator, we are highly recommending that you run the subnet validator with DataCrunch.io using the **1x RTX A6000** instance type with **Ubuntu 24.04** and **CUDA 12.6**. 
 
 This is the setup we are performing our testing and development with; as a result, they are being used as the performance baseline for the subnet validators.
 
@@ -71,6 +71,17 @@ You should see this in your output:
 ```
 nvidia.com/gpu=all
 nvidia.com/gpu=0
+```
+
+#### 2.4 Configure pm2 logrotate
+
+pm2-logrotate is highly recommended for the validator. The commands below cover installation alongside the recommended settings.
+
+```
+pm2 install pm2-logrotate
+pm2 set pm2-logrotate:max_size 5G
+pm2 set pm2-logrotate:compress true
+pm2 set pm2-logrotate:retain 7
 ```
 
 ### 3. Preparation
@@ -214,4 +225,11 @@ curl http://127.0.0.1:6000/healthcheck/competition_scores | jq
 This endpoint offers insight into the previous overall miner scores. It can be queried with:
 ```
 curl http://127.0.0.1:6000/healthcheck/scores | jq
+```
+
+#### 6.8 Next Competition Timestamp
+
+This endpoint offers insight into the next competition timestamp. It can be queried with:
+```
+curl http://127.0.0.1:6000/healthcheck/next_competition | jq
 ```
