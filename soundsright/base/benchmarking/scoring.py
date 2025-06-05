@@ -203,7 +203,7 @@ def assign_remainder_scores(
                 model_uid = metagraph.hotkeys.index(model_hotkey)
                 model_tracker["uid"] = model_uid
                 model_metrics = model_benchmark.get("metrics", None)
-                if model_metrics:
+                if model_metrics and isinstance(model_metrics, dict):
                     model_avg = model_benchmark["metrics"][metric].get("average", None)
 
                     if model_hotkey and model_hotkey != best_model_hotkey and model_avg:
