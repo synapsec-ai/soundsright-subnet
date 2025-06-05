@@ -235,6 +235,11 @@ def assign_remainder_scores(
                 score = score_ratio * remainder_score
                 uid = m["uid"]
                 competition_scores[uid] += score
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"Assigning remainder score of {score} to uid: {uid} for competition: {competition} and metric: {metric}",
+                    log_level=log_level
+                )
 
         Utils.subnet_logger(
             severity="TRACE",
