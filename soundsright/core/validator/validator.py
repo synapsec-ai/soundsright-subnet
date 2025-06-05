@@ -66,12 +66,7 @@ class SubnetValidator(Base.BaseNeuron):
         self.cycle = (t := int(time.time())) - (t % self.interval)
         self.trusted_uids = []
         self.trusted_validators_filepath = os.path.join(self.base_path, "trusted_validators.txt")
-        self.default_trusted_validators = [
-            "5FFApaS75bv5pJHfAp2FVLBj9ZaXuFDjEypsaBNc1wCfe52v",
-            "5E6ozeDck55s5a71SQCMP2LP5SnkDRhu3cdrCuEVDayZiE4T",
-            "5F2CsUDVbRbVMXTh9fAzF9GacjVX7UapvRxidrxe7z8BYckQ",
-            "5GpNucZ8ydwoFaQ8FE9TNKPcqbu5gSuBdDLQvf5bJAwBcDLG",
-        ]
+        self.default_trusted_validators = []
         
         # Benchmarking / Scoring Object Init
         self.scores = None
