@@ -53,7 +53,6 @@ validator = [
     "torchaudio==2.5.1",
     "pystoi==0.4.1",
     "huggingface-hub==0.31.4",
-    "substrate-interface==1.7.11",
 ]
 testing = [
     "pytest==8.3.3",
