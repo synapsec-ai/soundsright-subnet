@@ -639,6 +639,16 @@ class SubnetValidator(Base.BaseNeuron):
             self.scores = np.concatenate((self.scores, additional_zeros))
             for competition in self.competition_scores: 
                 self.competition_scores[competition] = np.concatenate((self.competition_scores[competition], additional_zeros))
+        
+        if metagraph_len > len(self.scores):
+            additional_zeros = np.zeros(
+                    (metagraph_len-state_len),
+                    dtype=np.float32,
+                )
+
+            self.scores = np.concatenate((self.scores, additional_zeros))
+            for competition in self.competition_scores: 
+                self.competition_scores[competition] = np.concatenate((self.competition_scores[competition], additional_zeros))
 
     async def send_competition_synapse(self, uid_to_query: int, sample_rate: int, task: str, timeout: int = 5) -> List[bt.synapse]:
         """
