@@ -12,7 +12,6 @@ import asyncio
 import sys
 import logging
 import pickle
-from substrateinterface.utils.ss58 import is_valid_ss58_address
 from math import sqrt
 
 # Import custom modules
@@ -450,10 +449,6 @@ class SubnetValidator(Base.BaseNeuron):
     def _validate_value(self, value) -> bool:
         # Must be uint16
         return isinstance(value, int) and 0 < value <= 100000
-
-    def _validate_hotkey(self, hotkey) -> bool:
-        # Must be valid ss58_address
-        return is_valid_ss58_address(hotkey)
     
     def _validate_commit_data(self, trusted_uids: list) -> bool:
         # Must be a list with less than max_uids entries
