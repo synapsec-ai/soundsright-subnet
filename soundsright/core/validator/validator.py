@@ -633,7 +633,7 @@ class SubnetValidator(Base.BaseNeuron):
 
         self.neuron_logger(
             severity="TRACE",
-            message=f"Checking if score lenghts need to be adjusted to fit metagraph length."
+            message=f"Checking if score length: {len(self.scores)} needs to be adjusted to fit metagraph length: {metagraph_len}"
         )
         
         if metagraph_len > len(self.scores):
