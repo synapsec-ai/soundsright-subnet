@@ -1629,7 +1629,7 @@ class SubnetValidator(Base.BaseNeuron):
             for model in self.model_cache[competition]:
 
                 uid = model.get("uid", None)
-                if uid and isinstance(uid, int) and uid <= (len(self.metagraph.coldkeys) - 1):
+                if isinstance(uid, int) and 0 <= uid < len(self.metagraph.coldkeys):
 
                     ck = self.metagraph.coldkeys[uid]
                     
