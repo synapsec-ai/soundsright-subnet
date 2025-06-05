@@ -225,21 +225,31 @@ def assign_remainder_scores(
         except:
             continue
 
-    if model_tracker_list:
-        ratio_sum = sum([m["performance_ratio"] for m in model_tracker_list])
-        remainder_key = f"{competition}_remainder"
-        remainder_score = competition_max_scores[remainder_key] * metric_proportions[competition][metric]
-        for m in model_tracker_list:
-            score_ratio = (m["performance_ratio"] / ratio_sum) 
-            score = score_ratio * remainder_score
-            uid = m["uid"]
-            competition_scores[uid] += score
+    try:
+        if model_tracker_list:
+            ratio_sum = sum([m["performance_ratio"] for m in model_tracker_list])
+            remainder_key = f"{competition}_remainder"
+            remainder_score = competition_max_scores[remainder_key] * metric_proportions[competition][metric]
+            for m in model_tracker_list:
+                score_ratio = (m["performance_ratio"] / ratio_sum) 
+                score = score_ratio * remainder_score
+                uid = m["uid"]
+                competition_scores[uid] += score
 
-    Utils.subnet_logger(
-        severity="TRACE",
-        message=f"Scores for competition: {competition} for metric: {metric} after assigning remainder: {competition_scores}"
-    )
-    
+        Utils.subnet_logger(
+            severity="TRACE",
+            message=f"Scores for competition: {competition} for metric: {metric} after assigning remainder: {competition_scores}",
+            log_level=log_level
+        )
+
+        return competition_scores
+        
+    except Exception as e:
+        Utils.subnet_logger(
+            severity="ERROR",
+            message=f"Error when calculating remainder scores for competition: {competition} for metric: {metric}: {e}"
+        )
+        
     return competition_scores
 
 def determine_competition_scores(
