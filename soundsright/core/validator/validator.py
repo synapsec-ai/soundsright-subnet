@@ -57,6 +57,7 @@ class SubnetValidator(Base.BaseNeuron):
         self.cuda_directory = ""
         self.avg_model_eval_time = 5400
         self.first_run_through_of_the_day = True
+        self.tried_accessing_old_cache = False
 
         # WC Prevention
         self.algorithm = 1
@@ -479,6 +480,9 @@ class SubnetValidator(Base.BaseNeuron):
     
     def _clear_miner_nonces(self):
         self.miner_nonces = {}
+
+    def is_valid_ss58_address(self, hotkey):
+        return True
     
     def resolve_trusted_uids(self) -> list:
         # Reads distrusted validators from file.
@@ -491,7 +495,7 @@ class SubnetValidator(Base.BaseNeuron):
         with open(self.trusted_validators_filepath, 'r') as f:
             for line in f:
                 hotkey = line.strip()
-                if is_valid_ss58_address(hotkey):
+                if self.is_valid_ss58_address(hotkey):
                     for neuron in neurons:
                         if neuron.hotkey == hotkey:
                             self.neuron_logger(
@@ -912,6 +916,9 @@ class SubnetValidator(Base.BaseNeuron):
 
         # Load the state of the validator from file.
         state_path = os.path.join(self.cache_path, "state.npz")
+        old_score_version = str(int(self.__score_version__) - 1)
+        old_cache_path = os.path.join(self.base_path, "cache", self.wallet.name, self.wallet.hotkey, str(self.neuron_config.netuid), self.profile, old_score_version)
+        possible_old_state_path = os.path.join(old_cache_path, "state.npz")
 
         if os.path.exists(state_path):
             try:
@@ -964,6 +971,7 @@ class SubnetValidator(Base.BaseNeuron):
                     severity="INFOX",
                     message=f"Next competition timestamp loaded from file: {self.next_competition_timestamp}"
                 )
+                self.tried_accessing_old_cache = True
                 
             except Exception as e:
                 self.neuron_logger(
@@ -971,6 +979,38 @@ class SubnetValidator(Base.BaseNeuron):
                     message=f"Validator state reset because an exception occurred: {e}"
                 )
                 self.reset_validator_state(state_path=state_path)
+        
+        elif not os.path.exists(state_path) and os.path.exists(possible_old_state_path) and not self.tried_accessing_old_cache:
+            try:
+                self.neuron_logger(
+                    severity="INFO",
+                    message="Attempting to load old state in case of cache reset."
+                )
+                state = np.load(state_path, allow_pickle=True)
+                self.neuron_logger(
+                    severity="DEBUG",
+                    message=f"Loaded the following old state from file: {state}"
+                )
+                scores = state["scores"]
+
+                self.init_default_scores()
+
+                self.scores = scores
+
+            except Exception as e:
+
+                self.neuron_logger(
+                    severity="DEBUG",
+                    message="Old cache could not be accessed. Initializing validator with defaults."
+                )
+                self.init_default_scores()
+                self.step = 0
+                self.last_updated_block = 0
+                self.hotkeys = None
+                self.next_competition_timestamp = self.get_next_competition_timestamp()
+
+            self.tried_accessing_old_cache = True            
+        
         else:
             self.init_default_scores()
             self.step = 0
