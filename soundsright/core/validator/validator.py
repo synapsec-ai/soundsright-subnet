@@ -982,6 +982,9 @@ class SubnetValidator(Base.BaseNeuron):
         
         elif not os.path.exists(state_path) and os.path.exists(possible_old_state_path) and not self.tried_accessing_old_cache:
             try:
+
+                self.init_default_scores()
+
                 self.neuron_logger(
                     severity="INFO",
                     message="Attempting to load old state in case of cache reset."
@@ -991,11 +994,7 @@ class SubnetValidator(Base.BaseNeuron):
                     severity="DEBUG",
                     message=f"Loaded the following old state from file: {state}"
                 )
-                scores = state["scores"]
-
-                self.init_default_scores()
-
-                self.scores = scores
+                self.scores = state["scores"]
 
             except Exception as e:
 
