@@ -921,7 +921,9 @@ class SubnetValidator(Base.BaseNeuron):
             message=f"Cache path: {self.cache_path}. State path: {state_path}"
         )
         old_score_version = str(int(self.score_version) - 1)
-        old_cache_path = os.path.join(self.base_path, "cache", self.wallet.name, self.wallet.hotkey, str(self.neuron_config.netuid), self.profile, old_score_version)
+        parts = self.cache_path.split(os.sep)
+        parts[-1] = old_score_version
+        old_cache_path = os.sep.join(parts)
         possible_old_state_path = os.path.join(old_cache_path, "state.npz")
         self.neuron_logger(
             severity="TRACE",
