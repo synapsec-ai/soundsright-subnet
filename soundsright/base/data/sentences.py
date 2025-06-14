@@ -21,6 +21,12 @@ from typing import (
     Iterator,
 )
 
+from soundsright.base.templates import (
+    VERBS,
+    NOUNS,
+    ADJECTIVES
+)
+
 class NoWordsToChooseFrom(Exception):
     """NoWordsToChooseFrom is raised when there is an attempt to access more
     words than exist. This exception may be raised if the amount of random
@@ -49,10 +55,10 @@ class Defaults(enum.Enum):
 
     """
 
-    NOUNS = "nounlist.txt"
-    VERBS = "verblist.txt"
-    ADJECTIVES = "adjectivelist.txt"
-    PROFANITIES = "profanitylist.txt"
+    NOUNS = NOUNS
+    VERBS = VERBS
+    ADJECTIVES = ADJECTIVES
+    PROFANITIES = []
 
 VOWELS = ["a", "e", "i", "o", "u"]
 WordList = List[str]

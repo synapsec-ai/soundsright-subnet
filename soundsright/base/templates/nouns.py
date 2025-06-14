@@ -1,4 +1,4 @@
-NOUNS = {
+NOUNS = [
     "ATM",
     "CD",
     "SUV",
@@ -6781,4 +6781,4 @@ NOUNS = {
     "zoology",
     "zoot-suit",
     "zucchini",
-}
+]

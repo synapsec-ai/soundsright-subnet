@@ -1,4 +1,4 @@
-ADJECTIVES = {
+ADJECTIVES = [
     "quizzical",
     "highfalutin",
     "dynamic",
@@ -911,4 +911,4 @@ ADJECTIVES = {
     "fresh",
     "hushed",
     "rural",
-}
+]

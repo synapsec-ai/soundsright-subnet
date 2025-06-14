@@ -1,4 +1,4 @@
-VERBS = {
+VERBS = [
     "abide",
     "accelerate",
     "accept",
@@ -1041,4 +1041,4 @@ VERBS = {
     "yell",
     "zip",
     "zoom"
-}
+]
