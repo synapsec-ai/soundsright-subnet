@@ -185,7 +185,7 @@ def _obtain_random_noise_from_wham(wham_dir_path: str) -> str:
         ValueError: If no .wav files are found in the directory.
     """
     # List all files in the directory
-    files_in_directory = os.listdir(wham_dir_path)
+    files_in_directory = sorted(os.listdir(wham_dir_path))
     
     # Filter out only .wav files
     wav_files = [file for file in files_in_directory if file.lower().endswith('.wav')]
@@ -319,7 +319,9 @@ def create_noise_and_reverb_data_for_all_sampling_rates(
     wham_dir_path: str, 
     noise_base_path: str, 
     tasks: List[str],
-    log_level: str) -> None:
+    log_level: str,
+    seed: int
+) -> None:
     """Takes TTS dataset and applies noise and/or reverb 
     to generate noise and/or reverb datasets.
 
@@ -334,9 +336,12 @@ def create_noise_and_reverb_data_for_all_sampling_rates(
     Returns:
         None
     """
+
+    random.seed(seed)
+    np.random.seed(seed)
     
     # Iterate through each sub-directory in the TTS base path
-    for dir_name in os.listdir(tts_base_path):
+    for dir_name in sorted(os.listdir(tts_base_path)):
         tts_dir_path = os.path.join(tts_base_path, dir_name)
         
         # Ensure it is a directory

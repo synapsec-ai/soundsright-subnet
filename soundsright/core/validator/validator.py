@@ -7,6 +7,8 @@ import traceback
 import secrets
 import time
 import bittensor as bt
+from async_substrate_interface import AsyncSubstrateInterface
+import hashlib
 import numpy as np
 import asyncio
 import sys
@@ -43,6 +45,7 @@ class SubnetValidator(Base.BaseNeuron):
         self.subtensor = None
         self.dendrite = None
         self.metagraph: bt.metagraph | None = None
+        self.async_substrate = None
 
         # Validator Params
         self.version = Utils.config["module_version"]
@@ -58,6 +61,7 @@ class SubnetValidator(Base.BaseNeuron):
         self.avg_model_eval_time = 5400
         self.first_run_through_of_the_day = True
         self.tried_accessing_old_cache = False
+        self.seed = 1
 
         # WC Prevention
         self.algorithm = 1
@@ -158,6 +162,8 @@ class SubnetValidator(Base.BaseNeuron):
         )
         if not dataset_download_outcome: 
             sys.exit()
+
+        self.seed = asyncio.run(self.get_seed())
         
         self.generate_new_dataset(override=False)
         
@@ -196,7 +202,7 @@ class SubnetValidator(Base.BaseNeuron):
             )
 
             # Generate new TTS data
-            self.TTSHandler.create_openai_tts_dataset_for_all_sample_rates(n=self.dataset_size)
+            self.TTSHandler.create_openai_tts_dataset_for_all_sample_rates(n=self.dataset_size, seed=self.seed)
             
             tts_16000 = os.path.join(self.tts_path, "16000")
             tts_files_16000 = [f for f in os.listdir(tts_16000)]
@@ -215,6 +221,7 @@ class SubnetValidator(Base.BaseNeuron):
                 noise_base_path=self.noise_path,
                 tasks=self.tasks,
                 log_level=self.log_level,
+                seed=self.seed
             )
 
             noise_16000 = os.path.join(self.noise_path, "16000")
@@ -370,6 +377,11 @@ class SubnetValidator(Base.BaseNeuron):
         self.neuron_logger(
             severity="INFO",
             message=f"Initializing validator for subnet: {self.neuron_config.netuid} on network: {self.neuron_config.subtensor.chain_endpoint} with config: {self.neuron_config}"
+        )
+
+        # Init async substrate interface
+        self.async_substrate = AsyncSubstrateInterface(
+            url=self.neuron_config.subtensor.chain_endpoint
         )
 
         # Setup the bittensor objects
@@ -585,6 +597,27 @@ class SubnetValidator(Base.BaseNeuron):
 
     def _parse_args(self, parser) -> argparse.Namespace:
         return parser.parse_args()
+    
+    async def get_seed(self) -> int:
+        """
+        Obtains a seed based on a hash of the extrinsics the most 
+        recent block with a block number divisible by 100.
+        """
+
+        current_block = self.subtensor.get_current_block()
+        remainder = current_block % 100
+        query_block = current_block - remainder
+        async with self.async_substrate:
+            block_data = await self.async_substrate.get_block(block_number=query_block)
+            block_extrinsics = block_data["extrinsics"]
+            extrinsics_string = "".join([str(extrinsic) for extrinsic in block_extrinsics])
+            hash_obj = hashlib.sha256(extrinsics_string.encode("utf-8"))
+            seed = int(hash_obj.hexdigest(), 16)
+            self.neuron_logger(
+                severity="TRACE",
+                message=f"Obtained new seed: {seed}"
+            )
+            return seed
 
     def check_hotkeys(self) -> None:
         """Checks if some hotkeys have been replaced in the metagraph"""
@@ -1845,6 +1878,8 @@ class SubnetValidator(Base.BaseNeuron):
 
                 # Check if it's time for a new competition 
                 if int(time.time()) >= self.next_competition_timestamp or self.debug_mode:
+
+                    self.seed = asyncio.run(self.get_seed())
 
                     self.neuron_logger(
                         severity="INFO",
