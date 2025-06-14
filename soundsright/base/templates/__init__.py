@@ -1,3 +1,3 @@
-from .nouns import NOUNS
-from .verbs import VERBS
-from .adjectives import ADJECTIVES
+from .nouns import NOUNS_LIST
+from .verbs import VERBS_LIST
+from .adjectives import ADJECTIVES_LIST

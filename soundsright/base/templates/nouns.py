@@ -1,4 +1,4 @@
-NOUNS = [
+NOUNS_LIST = [
     "ATM",
     "CD",
     "SUV",

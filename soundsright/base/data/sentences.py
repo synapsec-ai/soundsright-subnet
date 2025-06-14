@@ -22,9 +22,9 @@ from typing import (
 )
 
 from soundsright.base.templates import (
-    VERBS,
-    NOUNS,
-    ADJECTIVES
+    VERBS_LIST,
+    NOUNS_LIST,
+    ADJECTIVES_LIST,
 )
 
 class NoWordsToChooseFrom(Exception):
@@ -55,51 +55,21 @@ class Defaults(enum.Enum):
 
     """
 
-    NOUNS = NOUNS
-    VERBS = VERBS
-    ADJECTIVES = ADJECTIVES
+    NOUNS = NOUNS_LIST
+    VERBS = VERBS_LIST
+    ADJECTIVES = ADJECTIVES_LIST
     PROFANITIES = []
 
 VOWELS = ["a", "e", "i", "o", "u"]
 WordList = List[str]
 
-def _obtain_resource(
-    package: Union[str, ModuleType], resource: str
-) -> Union[IO[str], TextIO]:
-    """Load a file object from a package, ensuring compatibility with supported Python versions."""
-    try:
-        # Introduced in Python 3.9
-        from importlib.resources import files  # type: ignore
-
-        return files(package).joinpath(resource).open("r")
-    except ImportError:
-        # Required for Python 3.8, but emits a DeprecationWarning on Python 3.11
-        from importlib.resources import open_text
-
-        return open_text(package, resource)
-
-
-def _get_words_from_text_file(word_file: str) -> WordList:
-    """Read a file found in static/ where each line has a word, and return
-    all words as a list
-    """
-    with _obtain_resource(assets, word_file) as f:
-        words = f.readlines()
-    return [word.rstrip() for word in words]
-
-
-def _load_default_categories(
-    default_categories: Type[Defaults],
-) -> Dict[Defaults, WordList]:
-    """Load all the default word lists"""
-    out = {}
-    for category in default_categories:
-        out[category] = _get_words_from_text_file(category.value)
-    return out
-
-
 # A dictionary where each key representing a category like 'nouns' corresponds to a list of words.
-_DEFAULT_CATEGORIES: Dict[Defaults, WordList] = _load_default_categories(Defaults)
+_DEFAULT_CATEGORIES: Dict[Defaults, WordList] = {
+    "NOUNS":NOUNS_LIST,
+    "VERBS":VERBS_LIST,
+    "ADJECTIVES":ADJECTIVES_LIST,
+    "PROFANITIES":[],
+}
 
 
 def is_profanity(word: str) -> bool:
@@ -108,7 +78,7 @@ def is_profanity(word: str) -> bool:
     :param word: The word to check
     :return: Whether the word was found in the profanity list
     """
-    return word.lower().strip() in _DEFAULT_CATEGORIES[Defaults.PROFANITIES]
+    return False
 
 
 def filter_profanity(words: Iterable[str]) -> Iterator[str]:
@@ -125,10 +95,7 @@ def filter_profanity(words: Iterable[str]) -> Iterator[str]:
     :param words: Iterable of words to filter
     :return: An iterable of the filtered result
     """
-    return filter(
-        lambda w: not is_profanity(w),
-        words,
-    )
+    return words
 
 def _present_tense(verb: str) -> str:
     """Convert a verb from the infinitive to the present tense 3rd person
@@ -507,14 +474,6 @@ class RandomWord:
             regex=regex,
             exclude_with_spaces=exclude_with_spaces,
         )[0]
-
-    @staticmethod
-    def read_words(word_file: str) -> WordList:
-        """Will soon be deprecated. This method isn't meant to be public, but
-        will remain for backwards compatibility. Developers: use
-        _get_words_from_text_file internally instead.
-        """
-        return _get_words_from_text_file(word_file)
 
     def _validate_lengths(
         self, word_min_length: Any, word_max_length: Any

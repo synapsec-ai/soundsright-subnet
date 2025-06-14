@@ -1,4 +1,4 @@
-VERBS = [
+VERBS_LIST = [
     "abide",
     "accelerate",
     "accept",

@@ -1,4 +1,4 @@
-ADJECTIVES = [
+ADJECTIVES_LIST = [
     "quizzical",
     "highfalutin",
     "dynamic",
