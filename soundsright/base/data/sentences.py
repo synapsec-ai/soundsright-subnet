@@ -5,6 +5,7 @@ import random
 import re
 import enum
 from types import ModuleType
+from dataclasses import dataclass
 from typing import (
     Union,
     Optional,
@@ -138,14 +139,13 @@ def _present_tense(verb: str) -> str:
     return verb
 
 
-def _with_article(word: str) -> str:
-    (article,) = random.choices(["the", "a", ""], weights=[5, 3, 2])
+def _with_article(word: str, rng: random.Random) -> str:
+    (article,) = rng.choices(["the", "a", ""], weights=[5, 3, 2])
     if article == "a" and word[0] in VOWELS:
         article = "an"
     if article:
         article += " "
     return f"{article}{word}"
-
 
 ### RandomWord adaptation
 
@@ -187,15 +187,14 @@ class RandomWord:
     """
 
     def __init__(
-        self, enhanced_prefixes: bool = True, rng=None, **kwargs: Union[WordList, Defaults]
+        self, rng=None, **kwargs: Union[WordList, Defaults]
     ):
         # A dictionary where lists of words organized into named categories
         self._categories: Dict[str, WordList]
         # If enhanced prefixes are enabled, these tries represent all the words known to the generator in forward and
         # reverse. If disabled, this is just None.
-        self._tries: Union[Tuple[_trie.Trie, _trie.Trie], None]
         # Random number generator.
-        self._generator: Random = rng or Random()
+        self._generator: random.Random = rng or random.Random()
         # Kept for backwards compatibility. Same as self._categories
         self.parts_of_speech: Dict[str, WordList]
 
@@ -216,18 +215,7 @@ class RandomWord:
                 }
             )
 
-        if enhanced_prefixes:
-            # Two tries. One trie data structure is generated from
-            # the words, while the second one is generated from the
-            # words in reverse to deal with starts_with and ends_with
-            # respectively.
-            self._tries = (_trie.Trie(), _trie.Trie())
-            for _, category in self._categories.items():
-                for word in category:
-                    self._tries[0].insert(word)
-                    self._tries[1].insert(word[::-1])
-        else:
-            self._tries = None
+        self._tries = None
 
         self.parts_of_speech = self._categories
 
@@ -657,8 +645,8 @@ class RandomSentence:
         noun = nouns or Defaults.NOUNS
         verb = verbs or Defaults.VERBS
         adjective = adjectives or Defaults.ADJECTIVES
-        self.seed = seed
-        self.gen = RandomWord(noun=noun, verb=verb, adjective=adjective)
+        self._rng = random.Random(seed)
+        self.gen = RandomWord(noun=noun, verb=verb, adjective=adjective, rng=self._rng)
 
     # Randomly generate bare bone sentences
     def bare_bone_sentence(self) -> str:
@@ -674,7 +662,7 @@ class RandomSentence:
             randomly generated
         :rtype: str
         """
-        the_noun = _with_article(self.gen.word(include_categories=["noun"]))
+        the_noun = _with_article(self.gen.word(include_categories=["noun"]), self._rng)
         the_verb = _present_tense(self.gen.word(include_categories=["verb"]))
 
         return f"{the_noun.capitalize()} {the_verb}."
@@ -712,7 +700,7 @@ class RandomSentence:
         """
         the_noun = self.gen.word(include_categories=["noun"])
         the_verb = _present_tense(self.gen.word(include_categories=["verb"]))
-        the_adjective = _with_article(self.gen.word(include_categories=["adjective"]))
+        the_adjective = _with_article(self.gen.word(include_categories=["adjective"]), self._rng)
 
         return f"{the_adjective.capitalize()} {the_noun} {the_verb}."
 
