@@ -617,7 +617,7 @@ class RandomSentence:
 
     def __init__(
         self,
-        seed: int,
+        rng: random.Random = None,
         nouns: Optional[List[str]] = None,
         verbs: Optional[List[str]] = None,
         adjectives: Optional[List[str]] = None,
@@ -625,7 +625,7 @@ class RandomSentence:
         noun = nouns or Defaults.NOUNS
         verb = verbs or Defaults.VERBS
         adjective = adjectives or Defaults.ADJECTIVES
-        self._rng = random.Random(seed)
+        self._rng = rng or random.Random()
         self.gen = RandomWord(noun=noun, verb=verb, adjective=adjective, rng=self._rng)
 
     # Randomly generate bare bone sentences
@@ -713,13 +713,20 @@ class TTSHandler:
         self.openai_client = OpenAI(api_key=api_key)
         self.openai_voices = ['alloy','echo','fable','onyx','nova','shimmer']
         self.log_level = log_level
-        self.rs = RandomSentence()
+        self.rng = random.Random()
+        self.rs = RandomSentence(rng=self.rng)
 
     # Generates unique sentences for TTS 
     def _generate_random_sentence(self, n: int=8) -> str:
         output = ""
         for _ in range(0,2):
-            output += self.rs.sentence() + " "
+            choice = self.rng.randint(0,3)
+            if choice == 0:
+                output += self.rs.simple_sentence() + " "
+            elif choice == 1:
+                output += self.rs.bare_bone_with_adjective() + " "
+            else:
+                output += self.rs.sentence() + " "
         return output
         
     # Generates one output TTS file at correct sample rate
@@ -793,7 +800,11 @@ class TTSHandler:
     # Create TTS dataset of length n for all sample rates
     def create_openai_tts_dataset_for_all_sample_rates(self, n:int, seed:int):
 
-        random.seed(seed)
+        self.rng = random.Random(seed)
+
+        self.rs = RandomSentence(
+            rng=self.rng
+        )
             
         for sample_rate in self.sample_rates: 
             self.create_openai_tts_dataset(
