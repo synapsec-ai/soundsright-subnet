@@ -1718,7 +1718,6 @@ class SubnetValidator(Base.BaseNeuron):
         for competition in self.model_cache.keys():
             
             filtered_models = []
-            unique_models = {}
 
             for model in self.model_cache[competition]:
 
