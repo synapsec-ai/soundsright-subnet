@@ -29,10 +29,6 @@ from soundsright.base.templates import (
     ADJECTIVES_LIST,
 )
 from soundsright.base.utils import subnet_logger 
-from soundsright.base.templates import (
-    TOPICS,
-    EMOTIONS
-)
 
 from dotenv import load_dotenv 
 load_dotenv() 
