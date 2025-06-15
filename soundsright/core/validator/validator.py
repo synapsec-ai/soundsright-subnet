@@ -1708,9 +1708,41 @@ class SubnetValidator(Base.BaseNeuron):
             message=f"Pre-filter model cache: {self.model_cache}"
         )
         if not self.debug_mode:
-            self.filter_cache()
+            self.filter_cache_by_validity()
+            self.filter_cache_by_ck()
 
-    def filter_cache(self):
+    def filter_cache_by_validity(self):
+        """Makes sure repo and revision exists, and revision is a commit hash."""
+        new_model_cache = {}
+
+        for competition in self.model_cache.keys():
+            
+            filtered_models = []
+            unique_models = {}
+
+            for model in self.model_cache[competition]:
+
+                response_data = model.get("response_data", None)
+
+                if response_data:
+
+                    namespace = response_data.get("hf_model_namespace", None)
+                    name = response_data.get("hf_model_name", None)
+                    revision = response_data.get("hf_model_revision", None)
+                    
+                    if namespace and name and revision and Models.validate_repo_and_revision(
+                        namespace=namespace,
+                        name=name,
+                        revision=revision,
+                    ):
+
+                        filtered_models.append(model)
+            
+            new_model_cache[competition] = filtered_models    
+
+        self.model_cache = new_model_cache     
+
+    def filter_cache_by_ck(self):
         """One model per competition per coldkey"""
         new_model_cache = {}
 
@@ -1827,6 +1859,9 @@ class SubnetValidator(Base.BaseNeuron):
         """
         Aggregate of all the things to reset each competition
         """
+        # Update timestamp to next day's 9AM (GMT)
+        self.update_next_competition_timestamp()
+
         # Reset evaluated model cache
         for comp in self.models_evaluated_today.keys():
             self.models_evaluated_today[comp] = []
@@ -1869,12 +1904,6 @@ class SubnetValidator(Base.BaseNeuron):
 
                 # Save validator state
                 self.save_state()
-                
-                # Query miners 
-                self.query_competitions(sample_rates=self.sample_rates, tasks=self.tasks)
-                
-                # Benchmark models
-                self.run_competitions(sample_rates=self.sample_rates, tasks=self.tasks)
 
                 # Check if it's time for a new competition 
                 if int(time.time()) >= self.next_competition_timestamp or self.debug_mode:
@@ -1919,11 +1948,14 @@ class SubnetValidator(Base.BaseNeuron):
                         message=f"Overall miner scores: {self.scores}"
                     )
 
+                    # Reset validator values for new competition
+                    self.reset_for_new_competition()
+
+                    # Query for the next competititon
+                    self.query_competitions(sample_rates=self.sample_rates, tasks=self.tasks)
+
                     # Send feedback synapses to miners
                     self.send_feedback_synapses()
-
-                    # Update timestamp to next day's 9AM (GMT)
-                    self.update_next_competition_timestamp()
 
                     # Update HealthCheck API
                     self.healthcheck_api.update_competition_scores(self.competition_scores)
@@ -1932,12 +1964,12 @@ class SubnetValidator(Base.BaseNeuron):
 
                     # Update dataset for next day's competition
                     self.generate_new_dataset()
+
+                    # Benchmark models
+                    self.run_competitions(sample_rates=self.sample_rates, tasks=self.tasks)
                     
                     # Benchmark SGMSE+ for new dataset as a comparison for miner models
                     self.benchmark_sgmse_for_all_competitions()
-
-                    # Reset validator values for new competition
-                    self.reset_for_new_competition()
 
                 # Handle setting of weights
                 self.handle_weight_setting()
@@ -1969,9 +2001,9 @@ class SubnetValidator(Base.BaseNeuron):
                 # Sleep for a duration equivalent to 1/3 of the block time (i.e., time between successive blocks).
                 self.neuron_logger(
                     severity="DEBUG", 
-                    message=f"Sleeping for: {bt.BLOCKTIME/3} seconds"
+                    message=f"Sleeping for: {100} seconds"
                 )
-                time.sleep(bt.BLOCKTIME / 3)
+                time.sleep(100)
 
             # If we encounter an unexpected error, log it for debugging.
             except RuntimeError as e:
