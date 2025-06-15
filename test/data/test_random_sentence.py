@@ -36,3 +36,26 @@ def test_seeded_random_sentence():
         assert rs1.bare_bone_with_adjective() == rs2.bare_bone_with_adjective()
         assert rs1.bare_bone_sentence() == rs2.bare_bone_sentence()
 
+def functionality():
+
+    seed = asyncio.run(get_seed())
+    rs1 = Data.RandomSentence(rng=random.Random(seed))
+    rs2 = Data.RandomSentence(rng=random.Random(seed))
+
+    for i in range(0,2):
+
+        print(rs1.simple_sentence()) 
+        print(rs2.simple_sentence())
+        print()
+        print(rs1.sentence())
+        print(rs2.sentence())
+        print()
+        print(rs1.bare_bone_with_adjective())
+        print(rs2.bare_bone_with_adjective())
+        print()
+        print(rs1.bare_bone_sentence())
+        print(rs2.bare_bone_sentence())
+        print()
+
+if __name__ == "__main__":
+    functionality()
