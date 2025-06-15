@@ -76,10 +76,10 @@ WordList = List[str]
 
 # A dictionary where each key representing a category like 'nouns' corresponds to a list of words.
 _DEFAULT_CATEGORIES: Dict[Defaults, WordList] = {
-    "NOUNS":NOUNS_LIST,
-    "VERBS":VERBS_LIST,
-    "ADJECTIVES":ADJECTIVES_LIST,
-    "PROFANITIES":[],
+    Defaults.NOUNS: NOUNS_LIST,
+    Defaults.VERBS: VERBS_LIST,
+    Defaults.ADJECTIVES: ADJECTIVES_LIST,
+    Defaults.PROFANITIES: [],
 }
 
 def is_profanity(word: str) -> bool:
