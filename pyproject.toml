@@ -45,6 +45,7 @@ validator = [
     "requests==2.32.3", 
     "librosa==0.10.2.post1",
     "scipy==1.14.1",
+    "GitPython==3.1.43",
     "soundfile==0.12.1",
     "pyloudnorm==0.1.1",
     "openai==1.54.5",
