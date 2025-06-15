@@ -39,6 +39,9 @@ def test_seeded_random_sentence():
 def functionality():
 
     seed = asyncio.run(get_seed())
+
+    print(f"seed: {seed}")
+
     rs1 = Data.RandomSentence(rng=random.Random(seed))
     rs2 = Data.RandomSentence(rng=random.Random(seed))
 
