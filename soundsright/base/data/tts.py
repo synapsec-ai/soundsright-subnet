@@ -86,7 +86,6 @@ _DEFAULT_CATEGORIES: Dict[Defaults, WordList] = {
     "PROFANITIES":[],
 }
 
-
 def is_profanity(word: str) -> bool:
     """See if a word matches one of the words in the profanity list.
 
@@ -717,9 +716,9 @@ class TTSHandler:
         self.rs = RandomSentence(rng=self.rng)
 
     # Generates unique sentences for TTS 
-    def _generate_random_sentence(self, n: int=8) -> str:
+    def _generate_random_sentence(self) -> str:
         output = ""
-        for _ in range(0,2):
+        for _ in range(0,3):
             choice = self.rng.randint(0,3)
             if choice == 0:
                 output += self.rs.simple_sentence() + " "
