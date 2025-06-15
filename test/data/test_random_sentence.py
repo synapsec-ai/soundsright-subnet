@@ -29,8 +29,10 @@ def test_seeded_random_sentence():
     rs1 = Data.RandomSentence(rng=random.Random(seed))
     rs2 = Data.RandomSentence(rng=random.Random(seed))
 
-    assert rs1.simple_sentence() == rs2.simple_sentence()
-    assert rs1.sentence() == rs2.sentence()
-    assert rs1.bare_bone_with_adjective() == rs2.bare_bone_with_adjective()
-    assert rs1.bare_bone_sentence() == rs2.bare_bone_sentence()
-    
+    for i in range(0,10):
+
+        assert rs1.simple_sentence() == rs2.simple_sentence()
+        assert rs1.sentence() == rs2.sentence()
+        assert rs1.bare_bone_with_adjective() == rs2.bare_bone_with_adjective()
+        assert rs1.bare_bone_sentence() == rs2.bare_bone_sentence()
+
