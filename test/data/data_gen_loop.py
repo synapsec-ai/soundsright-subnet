@@ -27,7 +27,8 @@ print("TTSHandler initialized")
 for sr in sample_rates:
     print("Creating TTS dataset")
     tts_handler.create_openai_tts_dataset_for_all_sample_rates(
-        n=10
+        n=10,
+        seed=10000000000000000000
     )
 
 create_noise_and_reverb_data_for_all_sampling_rates(

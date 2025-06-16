@@ -793,9 +793,10 @@ class TTSHandler:
             )
 
     # Create TTS dataset of length n for all sample rates
-    def create_openai_tts_dataset_for_all_sample_rates(self, n:int, seed:int):
+    def create_openai_tts_dataset_for_all_sample_rates(self, n:int, seed:int = None):
 
-        self.rng = random.Random(seed)
+        if seed:
+            self.rng = random.Random(seed)
 
         self.rs = RandomSentence(
             rng=self.rng
