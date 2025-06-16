@@ -1709,7 +1709,6 @@ class SubnetValidator(Base.BaseNeuron):
         )
         if not self.debug_mode:
             self.filter_cache_by_validity()
-            self.filter_cache_by_ck()
 
     def filter_cache_by_validity(self):
         """Makes sure repo and revision exists, and revision is a commit hash."""
