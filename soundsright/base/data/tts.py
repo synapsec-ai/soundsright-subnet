@@ -714,7 +714,7 @@ class TTSHandler:
     # Generates unique sentences for TTS 
     def _generate_random_sentence(self) -> str:
         output = ""
-        for _ in range(0,3):
+        for _ in range(0,4):
             choice = self.rng.randint(0,3)
             if choice == 0:
                 output += self.rs.simple_sentence() + " "
@@ -728,7 +728,7 @@ class TTSHandler:
     def _do_single_openai_tts_query(self, tts_file_path: str, sample_rate: int, voice: str = 'random'):
         # voice control
         if voice == 'random' or voice not in self.openai_voices:
-            voice = random.choice(self.openai_voices)
+            voice = self.rng.choice(self.openai_voices)
         # define openai call params
         params = {
             'model':'tts-1-hd',
