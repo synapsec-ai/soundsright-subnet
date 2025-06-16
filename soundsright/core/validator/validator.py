@@ -1957,8 +1957,9 @@ class SubnetValidator(Base.BaseNeuron):
                     # Query for the next competititon
                     self.query_competitions(sample_rates=self.sample_rates, tasks=self.tasks)
 
-                    # Send feedback synapses to miners
-                    self.send_feedback_synapses()
+                    if not self.validator_just_started_running:
+                        # Send feedback synapses to miners
+                        self.send_feedback_synapses()
 
                     # Update HealthCheck API
                     self.healthcheck_api.update_competition_scores(self.competition_scores)
