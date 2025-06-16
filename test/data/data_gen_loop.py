@@ -28,7 +28,7 @@ for sr in sample_rates:
     print("Creating TTS dataset")
     tts_handler.create_openai_tts_dataset_for_all_sample_rates(
         n=10,
-        seed=10000000000000000000
+        seed=100
     )
 
 create_noise_and_reverb_data_for_all_sampling_rates(
@@ -39,6 +39,7 @@ create_noise_and_reverb_data_for_all_sampling_rates(
     noise_base_path=noise_base_path,
     tasks=['DENOISING', 'DEREVERBERATION'],
     log_level="TRACE",
+    seed=100
 )
 
 remove=input("remove all files? y/n")
