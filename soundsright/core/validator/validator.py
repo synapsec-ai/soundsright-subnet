@@ -609,6 +609,12 @@ class SubnetValidator(Base.BaseNeuron):
         current_block = self.subtensor.get_current_block()
         remainder = current_block % self.seed_interval
         query_block = current_block - remainder
+
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Determining seed based on block with seed interval: {self.seed_interval}. Current block: {current_block}. Remainider: {remainder}. Block to query for extrinsics: {query_block}"
+        )
+
         async with self.async_substrate:
             block_data = await self.async_substrate.get_block(block_number=query_block)
             block_extrinsics = block_data["extrinsics"]
