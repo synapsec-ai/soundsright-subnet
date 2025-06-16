@@ -22,7 +22,7 @@ if False:
     print("Downloading datasets")
     dataset_download(wham_path=wham_path, arni_path=arni_path, partial=True)
 
-tts_handler = TTSHandler(tts_base_path=tts_base_path, sample_rates=sample_rates)
+tts_handler = TTSHandler(tts_base_path=tts_base_path, sample_rates=sample_rates, print_text=True)
 print("TTSHandler initialized")
 for sr in sample_rates:
     print("Creating TTS dataset")

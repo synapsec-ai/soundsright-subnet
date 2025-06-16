@@ -701,7 +701,8 @@ class RandomSentence:
 # Handles all TTS-related operations
 class TTSHandler:
     
-    def __init__(self, tts_base_path: str, sample_rates: List[int], log_level: str = "INFO"):
+    def __init__(self, tts_base_path: str, sample_rates: List[int], log_level: str = "INFO", print_text: bool=False):
+        self.print_text=print_text
         self.tts_base_path = tts_base_path
         self.sample_rates = sample_rates
         api_key = os.getenv("OPENAI_API_KEY")
@@ -722,6 +723,9 @@ class TTSHandler:
                 output += self.rs.bare_bone_with_adjective() + " "
             else:
                 output += self.rs.sentence() + " "
+
+        if self.print_text:
+            print(output)
         return output
         
     # Generates one output TTS file at correct sample rate
