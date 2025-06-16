@@ -1881,14 +1881,15 @@ class SubnetValidator(Base.BaseNeuron):
         )
         self.healthcheck_api.append_metric(metric_name="neuron_running", value=True)
 
+        # Update knowledge of metagraph and save state before going onto operations
+        # First, sync metagraph
+        self.handle_metagraph_sync()
+
+        # Then, check that hotkey knowledge matches
+        self.check_hotkeys()
+
         while True: 
             try: 
-                # Update knowledge of metagraph and save state before going onto a new competition
-                # First, sync metagraph
-                self.handle_metagraph_sync()
-
-                # Then, check that hotkey knowledge matches
-                self.check_hotkeys()
 
                 # Check to see if validator is still registered on metagraph
                 if self.wallet.hotkey.ss58_address not in self.metagraph.hotkeys:
@@ -1901,8 +1902,8 @@ class SubnetValidator(Base.BaseNeuron):
                 if self.wc_prevention_protcool:
                     self.handle_trusted_validators()
 
-                # Save validator state
-                self.save_state()
+                # Handle setting of weights
+                self.handle_weight_setting()
 
                 # Check if it's time for a new competition 
                 if int(time.time()) >= self.next_competition_timestamp or self.debug_mode:
@@ -1970,39 +1971,32 @@ class SubnetValidator(Base.BaseNeuron):
                     # Benchmark SGMSE+ for new dataset as a comparison for miner models
                     self.benchmark_sgmse_for_all_competitions()
 
-                # Handle setting of weights
-                self.handle_weight_setting()
-                
-                # Handle remote logging 
-                self.handle_remote_logging()
+                    # Save validator state
+                    self.save_state()
 
-                self.neuron_logger(
-                    severity="TRACE",
-                    message=f"Updating HealthCheck API."
-                )
+                    # Handle remote logging 
+                    self.handle_remote_logging()
 
-                # Update metrics in healthcheck API at end of each iteration
-                self.healthcheck_api.update_current_models(self.miner_models)
-                self.healthcheck_api.update_best_models(self.best_miner_models)
-                self.healthcheck_api.append_metric(metric_name='iterations', value=1)
-                self.healthcheck_api.update_rates()
-                
-                self.neuron_logger(
-                    severity="DEBUG",
-                    message=f"Competition scores: {self.competition_scores}. Scores: {self.scores}"
-                )
+                    self.neuron_logger(
+                        severity="TRACE",
+                        message=f"Updating HealthCheck API."
+                    )
 
-                self.neuron_logger(
-                    severity="TRACE",
-                    message=f"Best miner models: {self.best_miner_models}"
-                )
+                    # Update metrics in healthcheck API at end of each iteration
+                    self.healthcheck_api.update_current_models(self.miner_models)
+                    self.healthcheck_api.update_best_models(self.best_miner_models)
+                    self.healthcheck_api.append_metric(metric_name='iterations', value=1)
+                    self.healthcheck_api.update_rates()
 
-                # Sleep for a duration equivalent to 1/3 of the block time (i.e., time between successive blocks).
-                self.neuron_logger(
-                    severity="DEBUG", 
-                    message=f"Sleeping for: {100} seconds"
-                )
-                time.sleep(100)
+                    self.neuron_logger(
+                        severity="DEBUG",
+                        message=f"Competition scores: {self.competition_scores}. Scores: {self.scores}"
+                    )
+
+                    self.neuron_logger(
+                        severity="TRACE",
+                        message=f"Best miner models: {self.best_miner_models}"
+                    )
 
             # If we encounter an unexpected error, log it for debugging.
             except RuntimeError as e:
