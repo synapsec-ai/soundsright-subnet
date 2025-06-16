@@ -62,6 +62,7 @@ class SubnetValidator(Base.BaseNeuron):
         self.first_run_through_of_the_day = True
         self.tried_accessing_old_cache = False
         self.seed = 1
+        self.validator_just_started_running = True
 
         # WC Prevention
         self.algorithm = 1
@@ -1905,42 +1906,45 @@ class SubnetValidator(Base.BaseNeuron):
                 self.handle_weight_setting()
 
                 # Check if it's time for a new competition 
-                if int(time.time()) >= self.next_competition_timestamp or self.debug_mode:
+                if int(time.time()) >= self.next_competition_timestamp or self.debug_mode or self.validator_just_started_running:
 
-                    self.seed = asyncio.run(self.get_seed())
+                    if not self.validator_just_started_running:
+                        self.seed = asyncio.run(self.get_seed())
 
                     self.neuron_logger(
                         severity="INFO",
                         message="Starting new competition."
                     )
-                    
-                    # First, sync metagraph
+
+                    if not self.validator_just_started_running:
+
+                        # First reset competition scores and overall scores so that we can re-calculate them from validator model data
+                        self.init_default_scores()
+
+                        # Calculate scores for each competition
+                        self.best_miner_models, self.competition_scores = Benchmarking.determine_competition_scores(
+                            competition_scores = self.competition_scores,
+                            competition_max_scores = self.competition_max_scores,
+                            metric_proportions = self.metric_proportions,
+                            sgmse_benchmarks=self.sgmse_benchmarks,
+                            best_miner_models = self.best_miner_models,
+                            miner_models = self.miner_models,
+                            metagraph = self.metagraph,
+                            log_level = self.log_level,
+                        )
+
+                        # Update validator.scores 
+                        self.scores = Benchmarking.calculate_overall_scores(
+                            competition_scores = self.competition_scores,
+                            scores = self.scores,
+                            log_level = self.log_level,
+                        )
+
+                    # Sync metagraph
                     self.handle_metagraph_sync()
 
                     # Then, check that hotkey knowledge matches
                     self.check_hotkeys()
-
-                    # First reset competition scores and overall scores so that we can re-calculate them from validator model data
-                    self.init_default_scores()
-
-                    # Calculate scores for each competition
-                    self.best_miner_models, self.competition_scores = Benchmarking.determine_competition_scores(
-                        competition_scores = self.competition_scores,
-                        competition_max_scores = self.competition_max_scores,
-                        metric_proportions = self.metric_proportions,
-                        sgmse_benchmarks=self.sgmse_benchmarks,
-                        best_miner_models = self.best_miner_models,
-                        miner_models = self.miner_models,
-                        metagraph = self.metagraph,
-                        log_level = self.log_level,
-                    )
-
-                    # Update validator.scores 
-                    self.scores = Benchmarking.calculate_overall_scores(
-                        competition_scores = self.competition_scores,
-                        scores = self.scores,
-                        log_level = self.log_level,
-                    )
                     
                     self.neuron_logger(
                         severity="INFO",
@@ -1973,9 +1977,6 @@ class SubnetValidator(Base.BaseNeuron):
                     # Save validator state
                     self.save_state()
 
-                    # Handle remote logging 
-                    self.handle_remote_logging()
-
                     self.neuron_logger(
                         severity="TRACE",
                         message=f"Updating HealthCheck API."
@@ -1996,6 +1997,11 @@ class SubnetValidator(Base.BaseNeuron):
                         severity="TRACE",
                         message=f"Best miner models: {self.best_miner_models}"
                     )
+
+                    self.validator_just_started_running=False
+
+                # Handle remote logging 
+                self.handle_remote_logging()
 
             # If we encounter an unexpected error, log it for debugging.
             except RuntimeError as e:
