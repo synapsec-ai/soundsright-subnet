@@ -62,6 +62,7 @@ class SubnetValidator(Base.BaseNeuron):
         self.first_run_through_of_the_day = True
         self.tried_accessing_old_cache = False
         self.seed = 1
+        self.seed_interval = 3
         self.validator_just_started_running = True
 
         # WC Prevention
@@ -606,7 +607,7 @@ class SubnetValidator(Base.BaseNeuron):
         """
 
         current_block = self.subtensor.get_current_block()
-        remainder = current_block % 100
+        remainder = current_block % self.seed_interval
         query_block = current_block - remainder
         async with self.async_substrate:
             block_data = await self.async_substrate.get_block(block_number=query_block)
