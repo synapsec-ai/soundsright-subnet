@@ -58,7 +58,7 @@ class SubnetValidator(Base.BaseNeuron):
         self.dataset_size = 30
         self.log_level="INFO" # Init log level
         self.cuda_directory = ""
-        self.avg_model_eval_time = 1265
+        self.avg_model_eval_time = 2000
         self.first_run_through_of_the_day = True
         self.tried_accessing_old_cache = False
         self.seed = 10
@@ -1777,6 +1777,7 @@ class SubnetValidator(Base.BaseNeuron):
         )
         if not self.debug_mode:
             self.filter_cache_by_validity()
+            self.filter_cache_by_ck()
 
     def filter_cache_by_validity(self):
         """Makes sure repo and revision exists, and revision is a commit hash."""
@@ -1958,30 +1959,41 @@ class SubnetValidator(Base.BaseNeuron):
         while True: 
             try: 
 
-                # Check to see if validator is still registered on metagraph
-                if self.wallet.hotkey.ss58_address not in self.metagraph.hotkeys:
-                    self.neuron_logger(
-                        severity="ERROR",
-                        message=f"Hotkey is not registered on metagraph: {self.wallet.hotkey.ss58_address}."
-                    )
+                if int(time.time()) + 600 >= self.next_competition_timestamp:
 
-                # Update metadata about trusted validators if need be
-                if self.wc_prevention_protcool:
-                    self.handle_trusted_validators()
+                    # Check to see if validator is still registered on metagraph
+                    if self.wallet.hotkey.ss58_address not in self.metagraph.hotkeys:
+                        self.neuron_logger(
+                            severity="ERROR",
+                            message=f"Hotkey is not registered on metagraph: {self.wallet.hotkey.ss58_address}."
+                        )
 
-                # Handle setting of weights
-                self.handle_weight_setting()
+                    # Update metadata about trusted validators if need be
+                    if self.wc_prevention_protcool:
+                        self.handle_trusted_validators()
+
+                    # Handle setting of weights
+                    self.handle_weight_setting()
+
+                    # Query for competition 
+                    self.query_competitions(sample_rates=self.sample_rates, tasks=self.tasks)
+
+                    # Run competition
+                    self.run_competitions(sample_rates=self.sample_rates, tasks=self.tasks)
+
+                    # Handle remote logging 
+                    self.handle_remote_logging()
 
                 # Check if it's time for a new competition 
                 if int(time.time()) >= self.next_competition_timestamp or self.debug_mode or self.validator_just_started_running:
-
-                    if not self.validator_just_started_running:
-                        self.handle_update_seed()
 
                     self.neuron_logger(
                         severity="INFO",
                         message="Starting new competition."
                     )
+
+                    if not self.validator_just_started_running:
+                        self.handle_update_seed()
 
                     if not self.validator_just_started_running:
 
@@ -2068,8 +2080,8 @@ class SubnetValidator(Base.BaseNeuron):
 
                     self.validator_just_started_running=False
 
-                # Handle remote logging 
-                self.handle_remote_logging()
+                    # Handle remote logging 
+                    self.handle_remote_logging()
 
             # If we encounter an unexpected error, log it for debugging.
             except RuntimeError as e:
