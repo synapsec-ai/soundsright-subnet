@@ -33,6 +33,7 @@ class ModelEvaluationHandler:
         miner_models: List[dict],
         cuda_directory: str,
         historical_block: int | None,
+        seed_reference_block: int | float,
     ):
         """Initializes ModelEvaluationHandler
 
@@ -71,6 +72,7 @@ class ModelEvaluationHandler:
         self.hf_model_id = f"{hf_model_namespace}/{hf_model_name}"
         self.hf_model_revision = hf_model_revision
         self.historical_block = historical_block # This is used for logging the historical value of the block 
+        self.seed_reference_block = seed_reference_block
         self.hf_model_block = None
         self.model_hash = ''
         self.forbidden_model_hashes = [
@@ -175,6 +177,10 @@ class ModelEvaluationHandler:
                 message=f"Model: {self.hf_model_id} metadata could not be validated with on-chain metadata. Exiting model evaluation.",
                 log_level=self.log_level
             )
+            return False
+        
+        # Check to make sure that the submitted block is not larger than the seed reference block
+        if self.hf_model_block >= self.seed_reference_block:
             return False
         
         # Check to make sure that namespace, name and revision are unique among submitted models and if not, that it was submitted first

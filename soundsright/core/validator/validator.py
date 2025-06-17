@@ -62,7 +62,8 @@ class SubnetValidator(Base.BaseNeuron):
         self.first_run_through_of_the_day = True
         self.tried_accessing_old_cache = False
         self.seed = 10
-        self.seed_interval = 50
+        self.seed_interval = 100
+        self.seed_reference_block = float("inf")
         self.validator_just_started_running = True
 
         # WC Prevention
@@ -626,9 +627,9 @@ class SubnetValidator(Base.BaseNeuron):
             seed = int(hash_obj.hexdigest(), 16)
             self.neuron_logger(
                 severity="TRACE",
-                message=f"Obtained new seed: {seed}"
+                message=f"Obtained new seed: {seed} for block: {query_block}"
             )
-            return seed
+            return seed, query_block
         
     async def get_seed_with_backup_method(self) -> int:
         """
@@ -656,17 +657,17 @@ class SubnetValidator(Base.BaseNeuron):
             block_extrinsics = block_data["extrinsics"]
             extrinsics_string = "".join([str(extrinsic) for extrinsic in block_extrinsics])
             hash_obj = hashlib.sha256(extrinsics_string.encode("utf-8"))
-            seed = int(hash_obj.hexdigest(), 16)
+            seed = int(hash_obj.hexdigest()[:8], 16)
             self.neuron_logger(
                 severity="TRACE",
-                message=f"Obtained new seed: {seed}"
+                message=f"Obtained new seed: {seed} for block: {query_block}"
             )
-            return seed
+            return seed, query_block
         
     def handle_update_seed(self):
         use_backup = False
         try:
-            self.seed = asyncio.run(self.get_seed())
+            self.seed, self.seed_reference_block = asyncio.run(self.get_seed())
         except Exception as e:
             self.neuron_logger(
                 severity="INFO",
@@ -676,13 +677,14 @@ class SubnetValidator(Base.BaseNeuron):
         
         if use_backup:
             try:
-                self.seed = asyncio.run(self.get_seed_with_backup_method())
+                self.seed, self.seed_reference_block = asyncio.run(self.get_seed_with_backup_method())
             except Exception as e:
                 self.neuron_logger(
                     severity="INFO",
                     message=f"Backup endpoint failed to obtain seed based on block extrinsic because: {e} Resorting to default seed."
                 )
                 self.seed = 10
+                self.seed_reference_block = float("inf")
 
     def check_hotkeys(self) -> None:
         """Checks if some hotkeys have been replaced in the metagraph"""
@@ -1558,6 +1560,7 @@ class SubnetValidator(Base.BaseNeuron):
                 miner_models=self.miner_models[f'{task}_{sample_rate}HZ'],
                 cuda_directory=self.cuda_directory,
                 historical_block=block,
+                seed_reference_block=self.seed_reference_block,
             )
             
             metrics_dict, model_hash, model_block = eval_handler.download_run_and_evaluate()
