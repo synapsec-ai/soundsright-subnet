@@ -259,7 +259,7 @@ def start_container(directory, log_level, cuda_directory) -> bool:
         result0 = subprocess.run(
             ["podman", "build", "-t", "modelapi", "--file", dockerfile_path], 
             check=True,
-            timeout=900,
+            timeout=600,
         )
         if result0.returncode != 0:
             return False
@@ -267,7 +267,7 @@ def start_container(directory, log_level, cuda_directory) -> bool:
         result1 = subprocess.run(
             ["podman", "run", "-d", "--device", "nvidia.com/gpu=all", "--volume", cuda_insert, "--user", "10002:10002", "--name", "modelapi", "-p", "6500:6500", "modelapi"], 
             check=True,
-            timeout=60
+            timeout=30
         )
         if result1.returncode != 0:
             return False
@@ -322,7 +322,7 @@ def check_container_status(log_level, timeout=5) -> bool:
         )
         return False
 
-def upload_audio(noisy_dir, log_level, timeout=500,) -> bool:
+def upload_audio(noisy_dir, log_level, timeout=10,) -> bool:
     """
     Upload audio files to the API.
 
@@ -373,7 +373,7 @@ def upload_audio(noisy_dir, log_level, timeout=500,) -> bool:
         )
         return False
     
-def prepare(log_level, timeout=300) -> bool:
+def prepare(log_level, timeout=10) -> bool:
     
     url = f"http://127.0.0.1:6500/prepare/"
     try:
@@ -390,7 +390,7 @@ def prepare(log_level, timeout=300) -> bool:
         )
         return False
 
-def enhance_audio(log_level, timeout=900) -> bool:
+def enhance_audio(log_level, timeout=600) -> bool:
     """
     Trigger audio enhancement on the API.
 
@@ -419,7 +419,7 @@ def enhance_audio(log_level, timeout=900) -> bool:
         )
         return False
 
-def download_enhanced(enhanced_dir, log_level, timeout=500) -> bool:
+def download_enhanced(enhanced_dir, log_level, timeout=10) -> bool:
     """
     Download the zip file containing enhanced audio files, extract its contents, 
     and remove the zip file.

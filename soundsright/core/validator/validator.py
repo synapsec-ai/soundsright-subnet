@@ -58,7 +58,7 @@ class SubnetValidator(Base.BaseNeuron):
         self.dataset_size = 30
         self.log_level="INFO" # Init log level
         self.cuda_directory = ""
-        self.avg_model_eval_time = 1800
+        self.avg_model_eval_time = 1265
         self.first_run_through_of_the_day = True
         self.tried_accessing_old_cache = False
         self.seed = 10
