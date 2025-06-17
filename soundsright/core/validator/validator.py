@@ -1959,7 +1959,7 @@ class SubnetValidator(Base.BaseNeuron):
         while True: 
             try: 
 
-                if int(time.time()) + 600 >= self.next_competition_timestamp:
+                if int(time.time()) + 600 < self.next_competition_timestamp and not self.validator_just_started_running():
 
                     # Check to see if validator is still registered on metagraph
                     if self.wallet.hotkey.ss58_address not in self.metagraph.hotkeys:
@@ -1972,8 +1972,11 @@ class SubnetValidator(Base.BaseNeuron):
                     if self.wc_prevention_protcool:
                         self.handle_trusted_validators()
 
-                    # Handle setting of weights
-                    self.handle_weight_setting()
+                    # Sync metagraph
+                    self.handle_metagraph_sync()
+
+                    # Then, check that hotkey knowledge matches
+                    self.check_hotkeys()
 
                     # Query for competition 
                     self.query_competitions(sample_rates=self.sample_rates, tasks=self.tasks)
@@ -1984,8 +1987,22 @@ class SubnetValidator(Base.BaseNeuron):
                     # Handle remote logging 
                     self.handle_remote_logging()
 
+                    # Save validator state
+                    self.save_state()
+
+                    self.neuron_logger(
+                        severity="TRACE",
+                        message=f"Updating HealthCheck API."
+                    )
+
+                    # Update metrics in healthcheck API at end of each iteration
+                    self.healthcheck_api.update_current_models(self.miner_models)
+                    self.healthcheck_api.update_best_models(self.best_miner_models)
+                    self.healthcheck_api.append_metric(metric_name='iterations', value=1)
+                    self.healthcheck_api.update_rates()
+
                 # Check if it's time for a new competition 
-                if int(time.time()) >= self.next_competition_timestamp or self.debug_mode or self.validator_just_started_running:
+                if time.time() >= self.next_competition_timestamp or self.debug_mode or self.validator_just_started_running:
 
                     self.neuron_logger(
                         severity="INFO",
@@ -2024,6 +2041,16 @@ class SubnetValidator(Base.BaseNeuron):
 
                     # Then, check that hotkey knowledge matches
                     self.check_hotkeys()
+
+                    self.neuron_logger(
+                        severity="DEBUG",
+                        message=f"Competition scores: {self.competition_scores}. Scores: {self.scores}"
+                    )
+
+                    self.neuron_logger(
+                        severity="TRACE",
+                        message=f"Best miner models: {self.best_miner_models}"
+                    )
                     
                     self.neuron_logger(
                         severity="INFO",
@@ -2032,9 +2059,6 @@ class SubnetValidator(Base.BaseNeuron):
 
                     # Reset validator values for new competition
                     self.reset_for_new_competition()
-
-                    # Query for the next competititon
-                    self.query_competitions(sample_rates=self.sample_rates, tasks=self.tasks)
 
                     if not self.validator_just_started_running:
                         # Send feedback synapses to miners
@@ -2047,9 +2071,6 @@ class SubnetValidator(Base.BaseNeuron):
 
                     # Update dataset for next day's competition
                     self.generate_new_dataset()
-
-                    # Benchmark models
-                    self.run_competitions(sample_rates=self.sample_rates, tasks=self.tasks)
                     
                     # Benchmark SGMSE+ for new dataset as a comparison for miner models
                     self.benchmark_sgmse_for_all_competitions()
@@ -2057,32 +2078,18 @@ class SubnetValidator(Base.BaseNeuron):
                     # Save validator state
                     self.save_state()
 
-                    self.neuron_logger(
-                        severity="TRACE",
-                        message=f"Updating HealthCheck API."
-                    )
-
-                    # Update metrics in healthcheck API at end of each iteration
-                    self.healthcheck_api.update_current_models(self.miner_models)
-                    self.healthcheck_api.update_best_models(self.best_miner_models)
-                    self.healthcheck_api.append_metric(metric_name='iterations', value=1)
-                    self.healthcheck_api.update_rates()
-
-                    self.neuron_logger(
-                        severity="DEBUG",
-                        message=f"Competition scores: {self.competition_scores}. Scores: {self.scores}"
-                    )
-
-                    self.neuron_logger(
-                        severity="TRACE",
-                        message=f"Best miner models: {self.best_miner_models}"
-                    )
-
                     self.validator_just_started_running=False
 
-                    # Handle remote logging 
-                    self.handle_remote_logging()
+                # Handle setting of weights
+                self.handle_weight_setting()
 
+                # Sleep for a duration equivalent to 1/3 of the block time (i.e., time between successive blocks).
+                self.neuron_logger(
+                    severity="DEBUG", 
+                    message=f"Sleeping for: {bt.BLOCKTIME} seconds"
+                )
+                time.sleep(bt.BLOCKTIME)
+                
             # If we encounter an unexpected error, log it for debugging.
             except RuntimeError as e:
                 self.neuron_logger(
