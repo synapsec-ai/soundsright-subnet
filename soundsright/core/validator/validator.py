@@ -61,7 +61,7 @@ class SubnetValidator(Base.BaseNeuron):
         self.avg_model_eval_time = 1800
         self.first_run_through_of_the_day = True
         self.tried_accessing_old_cache = False
-        self.seed = 1
+        self.seed = 10
         self.seed_interval = 3
         self.validator_just_started_running = True
 
@@ -165,7 +165,7 @@ class SubnetValidator(Base.BaseNeuron):
         if not dataset_download_outcome: 
             sys.exit()
 
-        self.seed = asyncio.run(self.get_seed())
+        self.handle_update_seed()
         
         self.generate_new_dataset(override=False)
         
@@ -385,6 +385,9 @@ class SubnetValidator(Base.BaseNeuron):
         self.async_substrate = AsyncSubstrateInterface(
             url=self.neuron_config.subtensor.chain_endpoint
         )
+        self.backup_async_substrate = AsyncSubstrateInterface(
+            url="wss://entrypoint-finney.opentensor.ai:443"
+        )
 
         # Setup the bittensor objects
         self.setup_bittensor_objects(self.neuron_config)
@@ -603,7 +606,7 @@ class SubnetValidator(Base.BaseNeuron):
     async def get_seed(self) -> int:
         """
         Obtains a seed based on a hash of the extrinsics the most 
-        recent block with a block number divisible by 100.
+        recent block with a block number divisible by 50.
         """
 
         current_block = self.subtensor.get_current_block()
@@ -626,6 +629,60 @@ class SubnetValidator(Base.BaseNeuron):
                 message=f"Obtained new seed: {seed}"
             )
             return seed
+        
+    async def get_seed_with_backup_method(self) -> int:
+        """
+        Obtains a seed based on a hash of the extrinsics the most 
+        recent block with a block number divisible by 50. This is a backup
+        that uses the default subtensor endpoint in case the first operation
+        fails.
+        """
+
+        temp_subtensor = bt.subtensor(network="finney")
+        temp_async_substrate = AsyncSubstrateInterface(
+            url=""
+        )
+        current_block = temp_subtensor.get_current_block()
+        remainder = current_block % self.seed_interval
+        query_block = current_block - remainder
+
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Determining seed with backup method based on block with seed interval: {self.seed_interval}. Current block: {current_block}. Remainider: {remainder}. Block to query for extrinsics: {query_block}"
+        )
+
+        async with self.backup_async_substrate:
+            block_data = await self.backup_async_substrate.get_block(block_number=query_block)
+            block_extrinsics = block_data["extrinsics"]
+            extrinsics_string = "".join([str(extrinsic) for extrinsic in block_extrinsics])
+            hash_obj = hashlib.sha256(extrinsics_string.encode("utf-8"))
+            seed = int(hash_obj.hexdigest(), 16)
+            self.neuron_logger(
+                severity="TRACE",
+                message=f"Obtained new seed: {seed}"
+            )
+            return seed
+        
+    def handle_update_seed(self):
+        use_backup = False
+        try:
+            self.seed = asyncio.run(self.get_seed())
+        except Exception as e:
+            self.neuron_logger(
+                severity="INFO",
+                message=f"Default endpoint failed to obtain seed based on block extrinsic because: {e} Resorting to default endpoint."
+            )
+            use_backup=True
+        
+        if use_backup:
+            try:
+                self.seed = asyncio.run(self.get_seed_with_backup_method())
+            except Exception as e:
+                self.neuron_logger(
+                    severity="INFO",
+                    message=f"Backup endpoint failed to obtain seed based on block extrinsic because: {e} Resorting to default seed."
+                )
+                self.seed = 10
 
     def check_hotkeys(self) -> None:
         """Checks if some hotkeys have been replaced in the metagraph"""
@@ -1916,7 +1973,7 @@ class SubnetValidator(Base.BaseNeuron):
                 if int(time.time()) >= self.next_competition_timestamp or self.debug_mode or self.validator_just_started_running:
 
                     if not self.validator_just_started_running:
-                        self.seed = asyncio.run(self.get_seed())
+                        self.handle_update_seed()
 
                     self.neuron_logger(
                         severity="INFO",

@@ -256,15 +256,30 @@ def start_container(directory, log_level, cuda_directory) -> bool:
         return False
 
     try:
-        result0 = subprocess.run(["podman", "build", "-t", "modelapi", "--file", dockerfile_path], check=True)
+        result0 = subprocess.run(
+            ["podman", "build", "-t", "modelapi", "--file", dockerfile_path], 
+            check=True,
+            timeout=900,
+        )
         if result0.returncode != 0:
             return False
         cuda_insert = f"{cuda_directory}:{cuda_directory}"
-        result1 = subprocess.run(["podman", "run", "-d", "--device", "nvidia.com/gpu=all", "--volume", cuda_insert, "--user", "10002:10002", "--name", "modelapi", "-p", "6500:6500", "modelapi"], check=True)
+        result1 = subprocess.run(
+            ["podman", "run", "-d", "--device", "nvidia.com/gpu=all", "--volume", cuda_insert, "--user", "10002:10002", "--name", "modelapi", "-p", "6500:6500", "modelapi"], 
+            check=True,
+            timeout=60
+        )
         if result1.returncode != 0:
             return False
         return True
         
+    except subprocess.TimeoutExpired as e:
+        Utils.subnet_logger(
+            severity="ERROR",
+            message=f"Container operation timed out: {e}",
+            log_level=log_level,
+        )
+        return False
     except subprocess.CalledProcessError as e:
         Utils.subnet_logger(
             severity="ERROR",
