@@ -259,9 +259,7 @@ def start_container(directory, log_level, cuda_directory) -> bool:
         result0 = subprocess.run(
             [
                 "podman", "network", "create", 
-                "--driver", "bridge", 
                 "--internal", 
-                "--disable-dns",
                 "restricted-internal",
             ], 
             check=True,
@@ -288,7 +286,7 @@ def start_container(directory, log_level, cuda_directory) -> bool:
                 "-d", 
                 "--device", "nvidia.com/gpu=all", 
                 "--volume", cuda_insert, 
-                "--network", "none", 
+                "--network", "restricted-internal", 
                 "--user", "10002:10002", 
                 "--name", "modelapi", 
                 "-p", "127.0.0.1:6500:6500", 
