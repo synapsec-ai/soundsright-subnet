@@ -181,6 +181,11 @@ class ModelEvaluationHandler:
         
         # Check to make sure that the submitted block is not larger than the seed reference block
         if self.hf_model_block >= self.seed_reference_block:
+            Utils.subnet_logger(
+                severity="INFO",
+                message=f"Model: {self.hf_model_id} was submitted on block: {self.hf_model_block} which is greater than the seed reference block: {self.seed_reference_block}. Exiting model evaluation.",
+                log_level=self.log_level
+            )
             return False
         
         # Check to make sure that namespace, name and revision are unique among submitted models and if not, that it was submitted first
