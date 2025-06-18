@@ -258,6 +258,18 @@ def start_container(directory, log_level, cuda_directory) -> bool:
     try:
         result0 = subprocess.run(
             [
+                "podman", "network", "create", 
+                "--driver", "bridge", 
+                "--internal", "restricted-internal"
+            ], 
+            check=True,
+            timeout=600,
+        )
+        if result0.returncode != 0:
+            return False
+
+        result1 = subprocess.run(
+            [
                 "podman", "build", 
                 "-t", "modelapi", 
                 "--file", dockerfile_path
@@ -265,16 +277,16 @@ def start_container(directory, log_level, cuda_directory) -> bool:
             check=True,
             timeout=600,
         )
-        if result0.returncode != 0:
+        if result1.returncode != 0:
             return False
         cuda_insert = f"{cuda_directory}:{cuda_directory}"
-        result1 = subprocess.run(
+        result2 = subprocess.run(
             [
                 "podman", "run", 
                 "-d", 
                 "--device", "nvidia.com/gpu=all", 
                 "--volume", cuda_insert, 
-                "--network", "none", 
+                "--network", "restricted-internal", 
                 "--user", "10002:10002", 
                 "--name", "modelapi", 
                 "-p", "6500:6500", 
@@ -283,7 +295,7 @@ def start_container(directory, log_level, cuda_directory) -> bool:
             check=True,
             timeout=30
         )
-        if result1.returncode != 0:
+        if result2.returncode != 0:
             return False
         return True
         
