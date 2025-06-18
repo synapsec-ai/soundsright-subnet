@@ -289,7 +289,7 @@ def start_container(directory, log_level, cuda_directory) -> bool:
                 "--network", "restricted-internal", 
                 "--user", "10002:10002", 
                 "--name", "modelapi", 
-                "-p", "6500:6500", 
+                "-p", "127.0.0.1:6500:6500", 
                 "modelapi"
             ], 
             check=True,
