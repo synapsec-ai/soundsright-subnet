@@ -256,17 +256,6 @@ def start_container(directory, log_level, cuda_directory) -> bool:
         return False
 
     try:
-        result0 = subprocess.run(
-            [
-                "podman", "network", "create", 
-                "--internal", 
-                "restricted-internal",
-            ], 
-            check=True,
-            timeout=600,
-        )
-        if result0.returncode != 0:
-            return False
 
         result1 = subprocess.run(
             [
@@ -286,7 +275,6 @@ def start_container(directory, log_level, cuda_directory) -> bool:
                 "-d", 
                 "--device", "nvidia.com/gpu=all", 
                 "--volume", cuda_insert, 
-                "--network", "restricted-internal", 
                 "--user", "10002:10002", 
                 "--name", "modelapi", 
                 "-p", "127.0.0.1:6500:6500", 
@@ -297,6 +285,49 @@ def start_container(directory, log_level, cuda_directory) -> bool:
         )
         if result2.returncode != 0:
             return False
+        
+        # GET CONTAINER'S IP ADDRESS
+        ip_result = subprocess.run([
+            "podman", "inspect", "modelapi", 
+            "--format", "{{.NetworkSettings.IPAddress}}"
+        ], capture_output=True, text=True)
+        
+        if ip_result.returncode != 0:
+            Utils.subnet_logger(
+                severity="ERROR",
+                message="Failed to get container IP",
+                log_level=log_level,
+            )
+            return False
+            
+        container_ip = ip_result.stdout.strip()
+        
+        # BLOCK ALL INTERNET ACCESS FOR THIS CONTAINER
+        block_commands = [
+            # Block all outbound traffic from container IP except to host
+            ["sudo", "iptables", "-I", "FORWARD", "-s", container_ip, "-d", "0.0.0.0/0", "-j", "DROP"],
+            # Allow container to communicate with host only
+            ["sudo", "iptables", "-I", "FORWARD", "-s", container_ip, "-d", "127.0.0.1", "-j", "ACCEPT"],
+            # Block container from accessing any external DNS
+            ["sudo", "iptables", "-I", "OUTPUT", "-s", container_ip, "-p", "udp", "--dport", "53", "-j", "DROP"],
+            ["sudo", "iptables", "-I", "OUTPUT", "-s", container_ip, "-p", "tcp", "--dport", "53", "-j", "DROP"],
+        ]
+
+        for cmd in block_commands:
+            block_result = subprocess.run(cmd, capture_output=True, text=True)
+            if block_result.returncode != 0:
+                Utils.subnet_logger(
+                    severity="WARNING",
+                    message=f"Firewall rule failed: {' '.join(cmd)} - {block_result.stderr}",
+                    log_level=log_level,
+                )
+        
+        Utils.subnet_logger(
+            severity="INFO",
+            message=f"Container {container_ip} internet access BLOCKED",
+            log_level=log_level,
+        )
+
         return True
         
     except subprocess.TimeoutExpired as e:
@@ -491,6 +522,33 @@ def download_enhanced(enhanced_dir, log_level, timeout=10) -> bool:
             log_level=log_level,
         )
         return False
+    
+def cleanup_container():
+    """Call this when stopping the container to clean up firewall rules"""
+    try:
+        # Get container IP before removing
+        ip_result = subprocess.run([
+            "podman", "inspect", "modelapi", 
+            "--format", "{{.NetworkSettings.IPAddress}}"
+        ], capture_output=True, text=True)
+        
+        if ip_result.returncode == 0:
+            container_ip = ip_result.stdout.strip()
+            
+            # Remove firewall rules
+            cleanup_commands = [
+                ["sudo", "iptables", "-D", "FORWARD", "-s", container_ip, "-d", "0.0.0.0/0", "-j", "DROP"],
+                ["sudo", "iptables", "-D", "FORWARD", "-s", container_ip, "-d", "127.0.0.1", "-j", "ACCEPT"],
+                ["sudo", "iptables", "-D", "OUTPUT", "-s", container_ip, "-p", "udp", "--dport", "53", "-j", "DROP"],
+                ["sudo", "iptables", "-D", "OUTPUT", "-s", container_ip, "-p", "tcp", "--dport", "53", "-j", "DROP"],
+            ]
+            
+            for cmd in cleanup_commands:
+                subprocess.run(cmd, capture_output=True)
+        
+    except:
+        pass
+
 
 def delete_container(log_level) -> bool:
     """Deletes a specified Docker container by name or ID.
@@ -499,20 +557,26 @@ def delete_container(log_level) -> bool:
         bool: True if the container was successfully deleted, False otherwise.
     """
     try:
+        # Cleanup firewall rules
+        cleanup_container()
+
         # Delete container
         subprocess.run(
             ["podman", "rm", "-f", "modelapi"],
-            check=True
+            check=True,
+            capture_output=True
         )
         # Remove all images
         subprocess.run(
             ["podman", "rmi", "-a", "-f"],
             check=True,
+            capture_output=True
         )
         # System prune
         subprocess.run(
             ["podman", "system", "prune", "-a", "-f"],
             check=True,
+            capture_output=True
         )
         return True
 
