@@ -301,6 +301,12 @@ def start_container(directory, log_level, cuda_directory) -> bool:
             return False
             
         container_ip = ip_result.stdout.strip()
+
+        Utils.subnet_logger(
+            severity="TRACE",
+            message=f"Obtained container ip: {container_ip}",
+            log_level=log_level
+        )
         
         # BLOCK ALL INTERNET ACCESS FOR THIS CONTAINER
         block_commands = [
@@ -319,6 +325,13 @@ def start_container(directory, log_level, cuda_directory) -> bool:
                 Utils.subnet_logger(
                     severity="WARNING",
                     message=f"Firewall rule failed: {' '.join(cmd)} - {block_result.stderr}",
+                    log_level=log_level,
+                )
+            
+            else:
+                Utils.subnet_logger(
+                    severity="WARNING",
+                    message=f"Firewall rule successful: {' '.join(cmd)} - {block_result.stderr}",
                     log_level=log_level,
                 )
         
@@ -548,7 +561,6 @@ def cleanup_container():
         
     except:
         pass
-
 
 def delete_container(log_level) -> bool:
     """Deletes a specified Docker container by name or ID.
