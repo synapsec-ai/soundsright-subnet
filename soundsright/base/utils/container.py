@@ -311,9 +311,9 @@ def start_container(directory, log_level, cuda_directory) -> bool:
         # BLOCK ALL INTERNET ACCESS FOR THIS CONTAINER
         block_commands = [
             # Block all outbound traffic from container IP except to host
-            ["sudo", "iptables", "-I", "FORWARD", "-s", container_ip, "-d", "0.0.0.0/0", "-j", "DROP"],
+            ["sudo", "iptables", "-I", "INPUT", "-s", container_ip, "-d", "0.0.0.0/0", "-j", "DROP"],
             # Allow container to communicate with host only
-            ["sudo", "iptables", "-I", "FORWARD", "-s", container_ip, "-d", "127.0.0.1", "-j", "ACCEPT"],
+            ["sudo", "iptables", "-I", "INPUT", "-s", container_ip, "-d", "127.0.0.1", "-j", "ACCEPT"],
             # Block container from accessing any external DNS
             ["sudo", "iptables", "-I", "OUTPUT", "-s", container_ip, "-p", "udp", "--dport", "53", "-j", "DROP"],
             ["sudo", "iptables", "-I", "OUTPUT", "-s", container_ip, "-p", "tcp", "--dport", "53", "-j", "DROP"],
