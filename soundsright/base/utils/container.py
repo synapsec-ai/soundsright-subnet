@@ -330,7 +330,7 @@ def start_container(directory, log_level, cuda_directory) -> bool:
             
             else:
                 Utils.subnet_logger(
-                    severity="WARNING",
+                    severity="TRACE",
                     message=f"Firewall rule successful: {' '.join(cmd)} - {block_result.stderr}",
                     log_level=log_level,
                 )
