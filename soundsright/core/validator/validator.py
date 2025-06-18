@@ -1959,7 +1959,7 @@ class SubnetValidator(Base.BaseNeuron):
         while True: 
             try: 
 
-                if int(time.time()) + 600 < self.next_competition_timestamp and not self.validator_just_started_running():
+                if int(time.time()) + 600 < self.next_competition_timestamp and not self.validator_just_started_running:
 
                     # Check to see if validator is still registered on metagraph
                     if self.wallet.hotkey.ss58_address not in self.metagraph.hotkeys:
