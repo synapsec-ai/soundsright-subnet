@@ -165,8 +165,6 @@ class SubnetValidator(Base.BaseNeuron):
         )
         if not dataset_download_outcome: 
             sys.exit()
-
-        self.handle_update_seed()
         
         self.generate_new_dataset(override=False)
         
