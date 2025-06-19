@@ -277,7 +277,7 @@ def validate_repo_and_revision(namespace: str, name: str, revision: str, log_lev
     
     Utils.subnet_logger(
         severity="TRACE",
-        message=f"Revision: {revision} is in valid commit hash format.",
+        message=f"Revision: {revision} is valid commit hash.",
         log_level=log_level
     )
     
