@@ -637,9 +637,6 @@ class SubnetValidator(Base.BaseNeuron):
         """
 
         temp_subtensor = bt.subtensor(network="finney")
-        temp_async_substrate = AsyncSubstrateInterface(
-            url=""
-        )
         current_block = temp_subtensor.get_current_block()
         remainder = current_block % self.seed_interval
         query_block = current_block - remainder
