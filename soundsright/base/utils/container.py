@@ -286,28 +286,6 @@ def start_container(directory, log_level, cuda_directory) -> bool:
         if result2.returncode != 0:
             return False
         
-        # GET CONTAINER'S IP ADDRESS
-        ip_result = subprocess.run([
-            "podman", "inspect", "modelapi", 
-            "--format", "{{.NetworkSettings.IPAddress}}"
-        ], capture_output=True, text=True)
-        
-        if ip_result.returncode != 0:
-            Utils.subnet_logger(
-                severity="ERROR",
-                message="Failed to get container IP",
-                log_level=log_level,
-            )
-            return False
-            
-        container_ip = ip_result.stdout.strip()
-
-        Utils.subnet_logger(
-            severity="TRACE",
-            message=f"Obtained container ip: {container_ip}",
-            log_level=log_level
-        )
-        
         # BLOCK ALL INTERNET ACCESS FOR THIS CONTAINER
         block_commands = [
             ["sudo", "iptables", "-P", "INPUT", "DROP"],
@@ -339,7 +317,7 @@ def start_container(directory, log_level, cuda_directory) -> bool:
         
         Utils.subnet_logger(
             severity="INFO",
-            message=f"Container {container_ip} internet access BLOCKED",
+            message=f"Container internet access BLOCKED",
             log_level=log_level,
         )
 
