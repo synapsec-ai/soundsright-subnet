@@ -2101,9 +2101,9 @@ class SubnetValidator(Base.BaseNeuron):
                 # Sleep for a duration equivalent to 1/3 of the block time (i.e., time between successive blocks).
                 self.neuron_logger(
                     severity="DEBUG", 
-                    message=f"Sleeping for: {bt.BLOCKTIME} seconds"
+                    message=f"Sleeping for: {0.1} second"
                 )
-                time.sleep(bt.BLOCKTIME)
+                time.sleep(0.1)
                 
             # If we encounter an unexpected error, log it for debugging.
             except RuntimeError as e:
