@@ -310,13 +310,15 @@ def start_container(directory, log_level, cuda_directory) -> bool:
         
         # BLOCK ALL INTERNET ACCESS FOR THIS CONTAINER
         block_commands = [
-            # Block all outbound traffic from container IP except to host
-            ["sudo", "iptables", "-I", "INPUT", "-s", container_ip, "-d", "0.0.0.0/0", "-j", "DROP"],
-            # Allow container to communicate with host only
-            ["sudo", "iptables", "-I", "INPUT", "-s", container_ip, "-d", "127.0.0.1", "-j", "ACCEPT"],
-            # Block container from accessing any external DNS
-            ["sudo", "iptables", "-I", "OUTPUT", "-s", container_ip, "-p", "udp", "--dport", "53", "-j", "DROP"],
-            ["sudo", "iptables", "-I", "OUTPUT", "-s", container_ip, "-p", "tcp", "--dport", "53", "-j", "DROP"],
+            ["sudo", "iptables", "-P", "INPUT", "DROP"],
+            ["sudo", "iptables", "-P", "FORWARD", "DROP"],
+            ["sudo", "iptables", "-P", "OUTPUT", "DROP"],
+            ["sudo", "iptables", "-A", "INPUT", "-i", "lo", "-j", "ACCEPT"],
+            ["sudo", "iptables", "-A", "OUTPUT", "-o", "lo", "-j", "ACCEPT"],
+            ["sudo", "iptables", "-A", "INPUT", "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "-j", "ACCEPT"],
+            ["sudo", "iptables", "-A", "OUTPUT", "-m", "conntrack", "--ctstate", "ESTABLISHED", "-j", "ACCEPT"],
+            ["sudo", "iptables", "-A", "INPUT", "-p", "tcp", "--dport", "6500", "-m", "conntrack", "--ctstate", "NEW,ESTABLISHED", "-j", "ACCEPT"],
+            ["sudo", "iptables", "-A", "INPUT", "-p", "tcp", "--dport", "6000", "-m", "conntrack", "--ctstate", "NEW,ESTABLISHED", "-j", "ACCEPT"]
         ]
 
         for cmd in block_commands:
@@ -536,28 +538,22 @@ def download_enhanced(enhanced_dir, log_level, timeout=10) -> bool:
         )
         return False
     
-def cleanup_container():
+def cleanup_iptables():
     """Call this when stopping the container to clean up firewall rules"""
     try:
-        # Get container IP before removing
-        ip_result = subprocess.run([
-            "podman", "inspect", "modelapi", 
-            "--format", "{{.NetworkSettings.IPAddress}}"
-        ], capture_output=True, text=True)
+            
+        # Remove firewall rules
+        cleanup_commands = [
+            ["sudo", "iptables", "-F"],  # Flush all rules from all chains
+            ["sudo", "iptables", "-X"],  # Delete all user-defined chains
+            ["sudo", "iptables", "-Z"],  # Zero the packet and byte counters
+            ["sudo", "iptables", "-P", "INPUT", "ACCEPT"],     # Reset default policy
+            ["sudo", "iptables", "-P", "FORWARD", "ACCEPT"],
+            ["sudo", "iptables", "-P", "OUTPUT", "ACCEPT"]
+        ]
         
-        if ip_result.returncode == 0:
-            container_ip = ip_result.stdout.strip()
-            
-            # Remove firewall rules
-            cleanup_commands = [
-                ["sudo", "iptables", "-D", "FORWARD", "-s", container_ip, "-d", "0.0.0.0/0", "-j", "DROP"],
-                ["sudo", "iptables", "-D", "FORWARD", "-s", container_ip, "-d", "127.0.0.1", "-j", "ACCEPT"],
-                ["sudo", "iptables", "-D", "OUTPUT", "-s", container_ip, "-p", "udp", "--dport", "53", "-j", "DROP"],
-                ["sudo", "iptables", "-D", "OUTPUT", "-s", container_ip, "-p", "tcp", "--dport", "53", "-j", "DROP"],
-            ]
-            
-            for cmd in cleanup_commands:
-                subprocess.run(cmd, capture_output=True)
+        for cmd in cleanup_commands:
+            subprocess.run(cmd, capture_output=True)
         
     except:
         pass
@@ -570,7 +566,7 @@ def delete_container(log_level) -> bool:
     """
     try:
         # Cleanup firewall rules
-        cleanup_container()
+        cleanup_iptables()
 
         # Delete container
         subprocess.run(
