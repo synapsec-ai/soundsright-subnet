@@ -64,7 +64,6 @@ class SubnetValidator(Base.BaseNeuron):
         self.seed = 10
         self.seed_interval = 100
         self.seed_reference_block = float("inf")
-        self.validator_just_started_running = True
 
         # WC Prevention
         self.algorithm = 1
@@ -1957,7 +1956,7 @@ class SubnetValidator(Base.BaseNeuron):
         while True: 
             try: 
 
-                if int(time.time()) + 600 < self.next_competition_timestamp and not self.validator_just_started_running:
+                if int(time.time()) + 600 < self.next_competition_timestamp:
 
                     # Check to see if validator is still registered on metagraph
                     if self.wallet.hotkey.ss58_address not in self.metagraph.hotkeys:
@@ -2000,39 +1999,37 @@ class SubnetValidator(Base.BaseNeuron):
                     self.healthcheck_api.update_rates()
 
                 # Check if it's time for a new competition 
-                if time.time() >= self.next_competition_timestamp or self.debug_mode or self.validator_just_started_running:
+                if time.time() >= self.next_competition_timestamp or self.debug_mode:
 
                     self.neuron_logger(
                         severity="INFO",
                         message="Starting new competition."
                     )
 
-                    if not self.validator_just_started_running:
+                    # Determine new seed
+                    self.handle_update_seed()
 
-                        # Determine new seed
-                        self.handle_update_seed()
+                    # First reset competition scores and overall scores so that we can re-calculate them from validator model data
+                    self.init_default_scores()
 
-                        # First reset competition scores and overall scores so that we can re-calculate them from validator model data
-                        self.init_default_scores()
+                    # Calculate scores for each competition
+                    self.best_miner_models, self.competition_scores = Benchmarking.determine_competition_scores(
+                        competition_scores = self.competition_scores,
+                        competition_max_scores = self.competition_max_scores,
+                        metric_proportions = self.metric_proportions,
+                        sgmse_benchmarks=self.sgmse_benchmarks,
+                        best_miner_models = self.best_miner_models,
+                        miner_models = self.miner_models,
+                        metagraph = self.metagraph,
+                        log_level = self.log_level,
+                    )
 
-                        # Calculate scores for each competition
-                        self.best_miner_models, self.competition_scores = Benchmarking.determine_competition_scores(
-                            competition_scores = self.competition_scores,
-                            competition_max_scores = self.competition_max_scores,
-                            metric_proportions = self.metric_proportions,
-                            sgmse_benchmarks=self.sgmse_benchmarks,
-                            best_miner_models = self.best_miner_models,
-                            miner_models = self.miner_models,
-                            metagraph = self.metagraph,
-                            log_level = self.log_level,
-                        )
-
-                        # Update validator.scores 
-                        self.scores = Benchmarking.calculate_overall_scores(
-                            competition_scores = self.competition_scores,
-                            scores = self.scores,
-                            log_level = self.log_level,
-                        )
+                    # Update validator.scores 
+                    self.scores = Benchmarking.calculate_overall_scores(
+                        competition_scores = self.competition_scores,
+                        scores = self.scores,
+                        log_level = self.log_level,
+                    )
 
                     # Sync metagraph
                     self.handle_metagraph_sync()
@@ -2057,10 +2054,9 @@ class SubnetValidator(Base.BaseNeuron):
 
                     # Reset validator values for new competition
                     self.reset_for_new_competition()
-
-                    if not self.validator_just_started_running:
-                        # Send feedback synapses to miners
-                        self.send_feedback_synapses()
+                    
+                    # Send feedback synapses to miners
+                    self.send_feedback_synapses()
 
                     # Update HealthCheck API
                     self.healthcheck_api.update_competition_scores(self.competition_scores)
@@ -2075,8 +2071,6 @@ class SubnetValidator(Base.BaseNeuron):
 
                     # Save validator state
                     self.save_state()
-
-                    self.validator_just_started_running=False
 
                 # Handle setting of weights
                 self.handle_weight_setting()
