@@ -621,7 +621,7 @@ class SubnetValidator(Base.BaseNeuron):
             block_extrinsics = block_data["extrinsics"]
             extrinsics_string = "".join([str(extrinsic) for extrinsic in block_extrinsics])
             hash_obj = hashlib.sha256(extrinsics_string.encode("utf-8"))
-            seed = int(hash_obj.hexdigest(), 16)
+            seed = int(hash_obj.hexdigest()[:8], 16)
             self.neuron_logger(
                 severity="TRACE",
                 message=f"Obtained new seed: {seed} for block: {query_block}"
