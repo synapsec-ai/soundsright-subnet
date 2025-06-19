@@ -187,6 +187,12 @@ class ModelEvaluationHandler:
                 log_level=self.log_level
             )
             return False
+        else:
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Model: {self.hf_model_id} was submitted on block: {self.hf_model_block} which is smaller than the seed reference block: {self.seed_reference_block}.",
+                log_level=self.log_level
+            )
         
         # Check to make sure that namespace, name and revision are unique among submitted models and if not, that it was submitted first
         for model_dict in self.miner_models:
