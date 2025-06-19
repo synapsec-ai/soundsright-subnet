@@ -220,7 +220,7 @@ def is_valid_commit_hash_format(revision: str) -> bool:
     commit_hash_pattern = r'^[a-f0-9]{40}$'
     return bool(re.match(commit_hash_pattern, revision))
 
-def validate_repo_and_revision(namespace: str, name: str, revision: str) -> tuple[bool, bool]:
+def validate_repo_and_revision(namespace: str, name: str, revision: str, log_level: str) -> tuple[bool, bool]:
     """
     Validate both repository existence and revision format.
     
@@ -234,12 +234,51 @@ def validate_repo_and_revision(namespace: str, name: str, revision: str) -> tupl
     """
 
     if not is_valid_commit_hash_format(revision):
+
+        Utils.subnet_logger(
+            severity="TRACE",
+            message=f"Revision: {revision} did not pass simple commit hash regex check.",
+            log_level=log_level
+        )
+
         return False
+    
+    Utils.subnet_logger(
+        severity="TRACE",
+        message=f"Revision: {revision} passed simple commit hash regex check.",
+        log_level=log_level
+    )
 
     if not check_repo_exists(namespace, name, revision):
+        
+        Utils.subnet_logger(
+            severity="TRACE",
+            message=f"Repo: {namespace}/{name} with revision: {revision} does not exist.",
+            log_level=log_level
+        )
+
         return False
+    
+    Utils.subnet_logger(
+        severity="TRACE",
+        message=f"Repo: {namespace}/{name} with revision: {revision} exists.",
+        log_level=log_level
+    )
 
     if not is_commit_hash(namespace, name, revision):
+
+        Utils.subnet_logger(
+            severity="TRACE",
+            message=f"Revision: {revision} is not in valid commit hash format.",
+            log_level=log_level
+        )
+
         return False
+    
+    Utils.subnet_logger(
+        severity="TRACE",
+        message=f"Revision: {revision} is in valid commit hash format.",
+        log_level=log_level
+    )
     
     return True
