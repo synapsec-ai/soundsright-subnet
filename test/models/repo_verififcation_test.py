@@ -11,4 +11,4 @@ import pytest
 ])
 def test_repo_verification(namespace, name, revision, outcome):
 
-    assert Models.validate_repo_and_revision(namespace=namespace, name=name, revision=revision) == outcome
+    assert Models.validate_repo_and_revision(namespace=namespace, name=name, revision=revision, log_level="TRACE") == outcome

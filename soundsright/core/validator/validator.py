@@ -1773,8 +1773,30 @@ class SubnetValidator(Base.BaseNeuron):
             message=f"Pre-filter model cache: {self.model_cache}"
         )
         if not self.debug_mode:
+
+            self.neuron_logger(
+                severity="TRACE",
+                message="Filtering model cache by validity.",
+            )
+
             self.filter_cache_by_validity()
+
+            self.neuron_logger(
+                severity="TRACE",
+                message=f"Filtered model cache by validity: {self.model_cache}",
+            )
+
+            self.neuron_logger(
+                severity="TRACE",
+                message="Filtering model cache by coldkey.",
+            )
+
             self.filter_cache_by_ck()
+
+            self.neuron_logger(
+                severity="TRACE",
+                message=f"Filtered model cache by coldkey: {self.model_cache}",
+            )
 
     def filter_cache_by_validity(self):
         """Makes sure repo and revision exists, and revision is a commit hash."""
@@ -1798,6 +1820,7 @@ class SubnetValidator(Base.BaseNeuron):
                         namespace=namespace,
                         name=name,
                         revision=revision,
+                        log_level=self.log_level,
                     ):
 
                         filtered_models.append(model)
