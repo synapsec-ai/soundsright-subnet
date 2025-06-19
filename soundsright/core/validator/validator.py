@@ -2010,9 +2010,9 @@ class SubnetValidator(Base.BaseNeuron):
                     )
 
                     if not self.validator_just_started_running:
-                        self.handle_update_seed()
 
-                    if not self.validator_just_started_running:
+                        # Determine new seed
+                        self.handle_update_seed()
 
                         # First reset competition scores and overall scores so that we can re-calculate them from validator model data
                         self.init_default_scores()
