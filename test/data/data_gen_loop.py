@@ -22,12 +22,13 @@ if False:
     print("Downloading datasets")
     dataset_download(wham_path=wham_path, arni_path=arni_path, partial=True)
 
-tts_handler = TTSHandler(tts_base_path=tts_base_path, sample_rates=sample_rates)
+tts_handler = TTSHandler(tts_base_path=tts_base_path, sample_rates=sample_rates, print_text=True)
 print("TTSHandler initialized")
 for sr in sample_rates:
     print("Creating TTS dataset")
     tts_handler.create_openai_tts_dataset_for_all_sample_rates(
-        n=10
+        n=10,
+        seed=100
     )
 
 create_noise_and_reverb_data_for_all_sampling_rates(
@@ -38,6 +39,7 @@ create_noise_and_reverb_data_for_all_sampling_rates(
     noise_base_path=noise_base_path,
     tasks=['DENOISING', 'DEREVERBERATION'],
     log_level="TRACE",
+    seed=100
 )
 
 remove=input("remove all files? y/n")

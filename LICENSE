@@ -39,3 +39,7 @@ Portions of this software are derived from code in the following project(s):
 - ears_benchmark by sp-uhh
   - Repository: https://github.com/sp-uhh/ears_benchmark/tree/main
   - Licensed under the CC-NC 4.0 International License (included in the `THIRD_PARTY_LICENSES` file)
+
+- wonderwords by mrmaxguns
+  - Repository: https://github.com/mrmaxguns/wonderwordsmodule/tree/master
+  - Licensed under the MIT License (included in the `THIRD_PARTY_LICENSES` file)

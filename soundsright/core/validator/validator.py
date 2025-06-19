@@ -7,6 +7,8 @@ import traceback
 import secrets
 import time
 import bittensor as bt
+from async_substrate_interface import AsyncSubstrateInterface
+import hashlib
 import numpy as np
 import asyncio
 import sys
@@ -43,6 +45,7 @@ class SubnetValidator(Base.BaseNeuron):
         self.subtensor = None
         self.dendrite = None
         self.metagraph: bt.metagraph | None = None
+        self.async_substrate = None
 
         # Validator Params
         self.version = Utils.config["module_version"]
@@ -52,11 +55,15 @@ class SubnetValidator(Base.BaseNeuron):
         self.query = None
         self.debug_mode = False
         self.skip_sgmse = False
-        self.dataset_size = 300
+        self.dataset_size = 30
         self.log_level="INFO" # Init log level
         self.cuda_directory = ""
-        self.avg_model_eval_time = 5400
+        self.avg_model_eval_time = 2000
         self.first_run_through_of_the_day = True
+        self.tried_accessing_old_cache = False
+        self.seed = 10
+        self.seed_interval = 100
+        self.seed_reference_block = float("inf")
 
         # WC Prevention
         self.algorithm = 1
@@ -195,7 +202,7 @@ class SubnetValidator(Base.BaseNeuron):
             )
 
             # Generate new TTS data
-            self.TTSHandler.create_openai_tts_dataset_for_all_sample_rates(n=self.dataset_size)
+            self.TTSHandler.create_openai_tts_dataset_for_all_sample_rates(n=self.dataset_size, seed=self.seed)
             
             tts_16000 = os.path.join(self.tts_path, "16000")
             tts_files_16000 = [f for f in os.listdir(tts_16000)]
@@ -214,6 +221,7 @@ class SubnetValidator(Base.BaseNeuron):
                 noise_base_path=self.noise_path,
                 tasks=self.tasks,
                 log_level=self.log_level,
+                seed=self.seed
             )
 
             noise_16000 = os.path.join(self.noise_path, "16000")
@@ -371,6 +379,14 @@ class SubnetValidator(Base.BaseNeuron):
             message=f"Initializing validator for subnet: {self.neuron_config.netuid} on network: {self.neuron_config.subtensor.chain_endpoint} with config: {self.neuron_config}"
         )
 
+        # Init async substrate interface
+        self.async_substrate = AsyncSubstrateInterface(
+            url=self.neuron_config.subtensor.chain_endpoint
+        )
+        self.backup_async_substrate = AsyncSubstrateInterface(
+            url="wss://entrypoint-finney.opentensor.ai:443"
+        )
+
         # Setup the bittensor objects
         self.setup_bittensor_objects(self.neuron_config)
 
@@ -479,6 +495,9 @@ class SubnetValidator(Base.BaseNeuron):
     
     def _clear_miner_nonces(self):
         self.miner_nonces = {}
+
+    def is_valid_ss58_address(self, hotkey):
+        return True
     
     def resolve_trusted_uids(self) -> list:
         # Reads distrusted validators from file.
@@ -491,7 +510,7 @@ class SubnetValidator(Base.BaseNeuron):
         with open(self.trusted_validators_filepath, 'r') as f:
             for line in f:
                 hotkey = line.strip()
-                if is_valid_ss58_address(hotkey):
+                if self.is_valid_ss58_address(hotkey):
                     for neuron in neurons:
                         if neuron.hotkey == hotkey:
                             self.neuron_logger(
@@ -581,6 +600,85 @@ class SubnetValidator(Base.BaseNeuron):
 
     def _parse_args(self, parser) -> argparse.Namespace:
         return parser.parse_args()
+    
+    async def get_seed(self) -> int:
+        """
+        Obtains a seed based on a hash of the extrinsics the most 
+        recent block with a block number divisible by 50.
+        """
+
+        current_block = self.subtensor.get_current_block()
+        remainder = current_block % self.seed_interval
+        query_block = current_block - remainder
+
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Determining seed based on block with seed interval: {self.seed_interval}. Current block: {current_block}. Remainider: {remainder}. Block to query for extrinsics: {query_block}"
+        )
+
+        async with self.async_substrate:
+            block_data = await self.async_substrate.get_block(block_number=query_block)
+            block_extrinsics = block_data["extrinsics"]
+            extrinsics_string = "".join([str(extrinsic) for extrinsic in block_extrinsics])
+            hash_obj = hashlib.sha256(extrinsics_string.encode("utf-8"))
+            seed = int(hash_obj.hexdigest()[:8], 16)
+            self.neuron_logger(
+                severity="TRACE",
+                message=f"Obtained new seed: {seed} for block: {query_block}"
+            )
+            return seed, query_block
+        
+    async def get_seed_with_backup_method(self) -> int:
+        """
+        Obtains a seed based on a hash of the extrinsics the most 
+        recent block with a block number divisible by 50. This is a backup
+        that uses the default subtensor endpoint in case the first operation
+        fails.
+        """
+
+        temp_subtensor = bt.subtensor(network="finney")
+        current_block = temp_subtensor.get_current_block()
+        remainder = current_block % self.seed_interval
+        query_block = current_block - remainder
+
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Determining seed with backup method based on block with seed interval: {self.seed_interval}. Current block: {current_block}. Remainider: {remainder}. Block to query for extrinsics: {query_block}"
+        )
+
+        async with self.backup_async_substrate:
+            block_data = await self.backup_async_substrate.get_block(block_number=query_block)
+            block_extrinsics = block_data["extrinsics"]
+            extrinsics_string = "".join([str(extrinsic) for extrinsic in block_extrinsics])
+            hash_obj = hashlib.sha256(extrinsics_string.encode("utf-8"))
+            seed = int(hash_obj.hexdigest()[:8], 16)
+            self.neuron_logger(
+                severity="TRACE",
+                message=f"Obtained new seed: {seed} for block: {query_block}"
+            )
+            return seed, query_block
+        
+    def handle_update_seed(self):
+        use_backup = False
+        try:
+            self.seed, self.seed_reference_block = asyncio.run(self.get_seed())
+        except Exception as e:
+            self.neuron_logger(
+                severity="INFO",
+                message=f"Default endpoint failed to obtain seed based on block extrinsic because: {e} Resorting to default endpoint."
+            )
+            use_backup=True
+        
+        if use_backup:
+            try:
+                self.seed, self.seed_reference_block = asyncio.run(self.get_seed_with_backup_method())
+            except Exception as e:
+                self.neuron_logger(
+                    severity="INFO",
+                    message=f"Backup endpoint failed to obtain seed based on block extrinsic because: {e} Resorting to default seed."
+                )
+                self.seed = 10
+                self.seed_reference_block = float("inf")
 
     def check_hotkeys(self) -> None:
         """Checks if some hotkeys have been replaced in the metagraph"""
@@ -912,6 +1010,19 @@ class SubnetValidator(Base.BaseNeuron):
 
         # Load the state of the validator from file.
         state_path = os.path.join(self.cache_path, "state.npz")
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Cache path: {self.cache_path}. State path: {state_path}"
+        )
+        old_score_version = str(int(self.score_version) - 1)
+        parts = self.cache_path.split(os.sep)
+        parts[-1] = old_score_version
+        old_cache_path = os.sep.join(parts)
+        possible_old_state_path = os.path.join(old_cache_path, "state.npz")
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Possible old state path: {possible_old_state_path}"
+        )
 
         if os.path.exists(state_path):
             try:
@@ -964,6 +1075,7 @@ class SubnetValidator(Base.BaseNeuron):
                     severity="INFOX",
                     message=f"Next competition timestamp loaded from file: {self.next_competition_timestamp}"
                 )
+                self.tried_accessing_old_cache = True
                 
             except Exception as e:
                 self.neuron_logger(
@@ -971,6 +1083,37 @@ class SubnetValidator(Base.BaseNeuron):
                     message=f"Validator state reset because an exception occurred: {e}"
                 )
                 self.reset_validator_state(state_path=state_path)
+        
+        elif not os.path.exists(state_path) and os.path.exists(possible_old_state_path) and not self.tried_accessing_old_cache:
+            try:
+
+                self.init_default_scores()
+
+                self.neuron_logger(
+                    severity="INFO",
+                    message="Attempting to load old state in case of cache reset."
+                )
+                state = np.load(state_path, allow_pickle=True)
+                self.neuron_logger(
+                    severity="DEBUG",
+                    message=f"Loaded the following old state from file: {state}"
+                )
+                self.scores = state["scores"]
+
+            except Exception as e:
+
+                self.neuron_logger(
+                    severity="DEBUG",
+                    message="Old cache could not be accessed. Initializing validator with defaults."
+                )
+                self.init_default_scores()
+                self.step = 0
+                self.last_updated_block = 0
+                self.hotkeys = None
+                self.next_competition_timestamp = self.get_next_competition_timestamp()
+
+            self.tried_accessing_old_cache = True            
+        
         else:
             self.init_default_scores()
             self.step = 0
@@ -1411,6 +1554,7 @@ class SubnetValidator(Base.BaseNeuron):
                 miner_models=self.miner_models[f'{task}_{sample_rate}HZ'],
                 cuda_directory=self.cuda_directory,
                 historical_block=block,
+                seed_reference_block=self.seed_reference_block,
             )
             
             metrics_dict, model_hash, model_block = eval_handler.download_run_and_evaluate()
@@ -1626,9 +1770,63 @@ class SubnetValidator(Base.BaseNeuron):
             message=f"Pre-filter model cache: {self.model_cache}"
         )
         if not self.debug_mode:
-            self.filter_cache()
 
-    def filter_cache(self):
+            self.neuron_logger(
+                severity="TRACE",
+                message="Filtering model cache by validity.",
+            )
+
+            self.filter_cache_by_validity()
+
+            self.neuron_logger(
+                severity="TRACE",
+                message=f"Filtered model cache by validity: {self.model_cache}",
+            )
+
+            self.neuron_logger(
+                severity="TRACE",
+                message="Filtering model cache by coldkey.",
+            )
+
+            self.filter_cache_by_ck()
+
+            self.neuron_logger(
+                severity="TRACE",
+                message=f"Filtered model cache by coldkey: {self.model_cache}",
+            )
+
+    def filter_cache_by_validity(self):
+        """Makes sure repo and revision exists, and revision is a commit hash."""
+        new_model_cache = {}
+
+        for competition in self.model_cache.keys():
+            
+            filtered_models = []
+
+            for model in self.model_cache[competition]:
+
+                response_data = model.get("response_data", None)
+
+                if response_data:
+
+                    namespace = response_data.get("hf_model_namespace", None)
+                    name = response_data.get("hf_model_name", None)
+                    revision = response_data.get("hf_model_revision", None)
+                    
+                    if namespace and name and revision and Models.validate_repo_and_revision(
+                        namespace=namespace,
+                        name=name,
+                        revision=revision,
+                        log_level=self.log_level,
+                    ):
+
+                        filtered_models.append(model)
+            
+            new_model_cache[competition] = filtered_models    
+
+        self.model_cache = new_model_cache     
+
+    def filter_cache_by_ck(self):
         """One model per competition per coldkey"""
         new_model_cache = {}
 
@@ -1745,6 +1943,9 @@ class SubnetValidator(Base.BaseNeuron):
         """
         Aggregate of all the things to reset each competition
         """
+        # Update timestamp to next day's 9AM (GMT)
+        self.update_next_competition_timestamp()
+
         # Reset evaluated model cache
         for comp in self.models_evaluated_today.keys():
             self.models_evaluated_today[comp] = []
@@ -1765,48 +1966,68 @@ class SubnetValidator(Base.BaseNeuron):
         )
         self.healthcheck_api.append_metric(metric_name="neuron_running", value=True)
 
+        # Update knowledge of metagraph and save state before going onto operations
+        # First, sync metagraph
+        self.handle_metagraph_sync()
+
+        # Then, check that hotkey knowledge matches
+        self.check_hotkeys()
+
         while True: 
             try: 
-                # Update knowledge of metagraph and save state before going onto a new competition
-                # First, sync metagraph
-                self.handle_metagraph_sync()
 
-                # Then, check that hotkey knowledge matches
-                self.check_hotkeys()
+                if int(time.time()) + 600 < self.next_competition_timestamp:
 
-                # Check to see if validator is still registered on metagraph
-                if self.wallet.hotkey.ss58_address not in self.metagraph.hotkeys:
+                    # Check to see if validator is still registered on metagraph
+                    if self.wallet.hotkey.ss58_address not in self.metagraph.hotkeys:
+                        self.neuron_logger(
+                            severity="ERROR",
+                            message=f"Hotkey is not registered on metagraph: {self.wallet.hotkey.ss58_address}."
+                        )
+
+                    # Update metadata about trusted validators if need be
+                    if self.wc_prevention_protcool:
+                        self.handle_trusted_validators()
+
+                    # Sync metagraph
+                    self.handle_metagraph_sync()
+
+                    # Then, check that hotkey knowledge matches
+                    self.check_hotkeys()
+
+                    # Query for competition 
+                    self.query_competitions(sample_rates=self.sample_rates, tasks=self.tasks)
+
+                    # Run competition
+                    self.run_competitions(sample_rates=self.sample_rates, tasks=self.tasks)
+
+                    # Handle remote logging 
+                    self.handle_remote_logging()
+
+                    # Save validator state
+                    self.save_state()
+
                     self.neuron_logger(
-                        severity="ERROR",
-                        message=f"Hotkey is not registered on metagraph: {self.wallet.hotkey.ss58_address}."
+                        severity="TRACE",
+                        message=f"Updating HealthCheck API."
                     )
 
-                # Update metadata about trusted validators if need be
-                if self.wc_prevention_protcool:
-                    self.handle_trusted_validators()
-
-                # Save validator state
-                self.save_state()
-                
-                # Query miners 
-                self.query_competitions(sample_rates=self.sample_rates, tasks=self.tasks)
-                
-                # Benchmark models
-                self.run_competitions(sample_rates=self.sample_rates, tasks=self.tasks)
+                    # Update metrics in healthcheck API at end of each iteration
+                    self.healthcheck_api.update_current_models(self.miner_models)
+                    self.healthcheck_api.update_best_models(self.best_miner_models)
+                    self.healthcheck_api.append_metric(metric_name='iterations', value=1)
+                    self.healthcheck_api.update_rates()
 
                 # Check if it's time for a new competition 
-                if int(time.time()) >= self.next_competition_timestamp or self.debug_mode:
+                if time.time() >= self.next_competition_timestamp or self.debug_mode:
 
                     self.neuron_logger(
                         severity="INFO",
                         message="Starting new competition."
                     )
-                    
-                    # First, sync metagraph
-                    self.handle_metagraph_sync()
 
-                    # Then, check that hotkey knowledge matches
-                    self.check_hotkeys()
+                    # Determine new seed
+                    self.handle_update_seed()
 
                     # First reset competition scores and overall scores so that we can re-calculate them from validator model data
                     self.init_default_scores()
@@ -1829,17 +2050,33 @@ class SubnetValidator(Base.BaseNeuron):
                         scores = self.scores,
                         log_level = self.log_level,
                     )
+
+                    # Sync metagraph
+                    self.handle_metagraph_sync()
+
+                    # Then, check that hotkey knowledge matches
+                    self.check_hotkeys()
+
+                    self.neuron_logger(
+                        severity="DEBUG",
+                        message=f"Competition scores: {self.competition_scores}. Scores: {self.scores}"
+                    )
+
+                    self.neuron_logger(
+                        severity="TRACE",
+                        message=f"Best miner models: {self.best_miner_models}"
+                    )
                     
                     self.neuron_logger(
                         severity="INFO",
                         message=f"Overall miner scores: {self.scores}"
                     )
 
+                    # Reset validator values for new competition
+                    self.reset_for_new_competition()
+                    
                     # Send feedback synapses to miners
                     self.send_feedback_synapses()
-
-                    # Update timestamp to next day's 9AM (GMT)
-                    self.update_next_competition_timestamp()
 
                     # Update HealthCheck API
                     self.healthcheck_api.update_competition_scores(self.competition_scores)
@@ -1852,43 +2089,19 @@ class SubnetValidator(Base.BaseNeuron):
                     # Benchmark SGMSE+ for new dataset as a comparison for miner models
                     self.benchmark_sgmse_for_all_competitions()
 
-                    # Reset validator values for new competition
-                    self.reset_for_new_competition()
+                    # Save validator state
+                    self.save_state()
 
                 # Handle setting of weights
                 self.handle_weight_setting()
-                
-                # Handle remote logging 
-                self.handle_remote_logging()
-
-                self.neuron_logger(
-                    severity="TRACE",
-                    message=f"Updating HealthCheck API."
-                )
-
-                # Update metrics in healthcheck API at end of each iteration
-                self.healthcheck_api.update_current_models(self.miner_models)
-                self.healthcheck_api.update_best_models(self.best_miner_models)
-                self.healthcheck_api.append_metric(metric_name='iterations', value=1)
-                self.healthcheck_api.update_rates()
-                
-                self.neuron_logger(
-                    severity="DEBUG",
-                    message=f"Competition scores: {self.competition_scores}. Scores: {self.scores}"
-                )
-
-                self.neuron_logger(
-                    severity="TRACE",
-                    message=f"Best miner models: {self.best_miner_models}"
-                )
 
                 # Sleep for a duration equivalent to 1/3 of the block time (i.e., time between successive blocks).
                 self.neuron_logger(
                     severity="DEBUG", 
-                    message=f"Sleeping for: {bt.BLOCKTIME/3} seconds"
+                    message=f"Sleeping for: {0.1} second"
                 )
-                time.sleep(bt.BLOCKTIME / 3)
-
+                time.sleep(0.1)
+                
             # If we encounter an unexpected error, log it for debugging.
             except RuntimeError as e:
                 self.neuron_logger(

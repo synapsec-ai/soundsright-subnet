@@ -21,7 +21,7 @@ def _obtain_random_rir_from_arni(arni_dir_path: str) -> str:
         str: Path to .wav file in ARNI dataset.
     """
     # Get all .wav files in the ARNI directory (including subdirectories if needed)
-    wav_files = [os.path.join(root, f) for root, dirs, files in os.walk(arni_dir_path) for f in files if f.endswith('.wav')]
+    wav_files = sorted([os.path.join(root, f) for root, dirs, files in os.walk(arni_dir_path) for f in files if f.endswith('.wav')])
     
     # Raise an error if no .wav files are found
     if not wav_files:
@@ -122,7 +122,7 @@ def _convolve_tts_with_random_rir(
         rir, sr = sf.read(rir_file, always_2d=True)
         
         # Take random channel if file is multi-channel
-        channel = np.random.randint(0, rir.shape[1])
+        channel = random.randint(0, rir.shape[1]-1)
         rir = rir[:,channel]
         assert sr == 44100
         rir = librosa.resample(rir, orig_sr=sr, target_sr=tts_sr)
@@ -167,7 +167,7 @@ def convolve_all_tts_with_random_rir(tts_dir_path: str, arni_dir_path: str, reve
     Returns:
         None
     """
-    tts_paths = [os.path.join(tts_dir_path, f) for f in os.listdir(tts_dir_path) if f.endswith('.wav')]
+    tts_paths = sorted([os.path.join(tts_dir_path, f) for f in os.listdir(tts_dir_path) if f.endswith('.wav')])
     for tts_path in tts_paths:
         _convolve_tts_with_random_rir(tts_path=tts_path, arni_dir_path=arni_dir_path, reverb_dir_path=reverb_dir_path)
 
@@ -185,7 +185,7 @@ def _obtain_random_noise_from_wham(wham_dir_path: str) -> str:
         ValueError: If no .wav files are found in the directory.
     """
     # List all files in the directory
-    files_in_directory = os.listdir(wham_dir_path)
+    files_in_directory = sorted(os.listdir(wham_dir_path))
     
     # Filter out only .wav files
     wav_files = [file for file in files_in_directory if file.lower().endswith('.wav')]
@@ -245,7 +245,7 @@ def _add_random_wham_noise_to_tts(
     # If noise is longer than the TTS audio, select a random segment
     if len(noise_audio) > len(tts_audio):
         max_start = len(noise_audio) - len(tts_audio)
-        start_idx = np.random.randint(0, max_start)
+        start_idx = random.randint(0, max_start-1)
         noise_audio = noise_audio[start_idx:start_idx + len(tts_audio)]
     else:
         # Ensure noise is the same length as the TTS audio (loop if necessary)
@@ -308,7 +308,7 @@ def add_random_wham_noise_to_all_tts(tts_dir_path: str, wham_dir_path: str, nois
     Returns:
         None
     """
-    tts_paths = [os.path.join(tts_dir_path, f) for f in os.listdir(tts_dir_path) if f.endswith('.wav')]
+    tts_paths = sorted([os.path.join(tts_dir_path, f) for f in os.listdir(tts_dir_path) if f.endswith('.wav')])
     for tts_path in tts_paths:
         _add_random_wham_noise_to_tts(tts_path=tts_path, wham_dir_path=wham_dir_path, noise_dir_path=noise_dir_path)
             
@@ -319,7 +319,9 @@ def create_noise_and_reverb_data_for_all_sampling_rates(
     wham_dir_path: str, 
     noise_base_path: str, 
     tasks: List[str],
-    log_level: str) -> None:
+    log_level: str,
+    seed: int
+) -> None:
     """Takes TTS dataset and applies noise and/or reverb 
     to generate noise and/or reverb datasets.
 
@@ -334,9 +336,11 @@ def create_noise_and_reverb_data_for_all_sampling_rates(
     Returns:
         None
     """
+
+    random.seed(seed)
     
     # Iterate through each sub-directory in the TTS base path
-    for dir_name in os.listdir(tts_base_path):
+    for dir_name in sorted(os.listdir(tts_base_path)):
         tts_dir_path = os.path.join(tts_base_path, dir_name)
         
         # Ensure it is a directory

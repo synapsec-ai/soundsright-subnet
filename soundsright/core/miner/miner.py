@@ -347,10 +347,12 @@ class SubnetMiner(Base.BaseNeuron):
         if upload_outcome: 
             # Update miner model data so it can be saved
             self.miner_model_data = new_miner_model_data
+
+            current_block = self.subtensor.get_current_block()
             
             self.neuron_logger(
                 severity="INFO",
-                message=f"New model data has been uploaded to chain: {self.miner_model_data}. Sleeping for 60 seconds before starting miner operations."
+                message=f"New model data has been uploaded to chain: {self.miner_model_data} on block: {current_block}. Sleeping for 60 seconds before starting miner operations."
             )
             
             # Sleep for a minute to guarantee that model metadata is uploaded to chain before the miner responds to validators

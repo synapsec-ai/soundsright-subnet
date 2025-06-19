@@ -256,15 +256,80 @@ def start_container(directory, log_level, cuda_directory) -> bool:
         return False
 
     try:
-        result0 = subprocess.run(["podman", "build", "-t", "modelapi", "--file", dockerfile_path], check=True)
-        if result0.returncode != 0:
-            return False
-        cuda_insert = f"{cuda_directory}:{cuda_directory}"
-        result1 = subprocess.run(["podman", "run", "-d", "--device", "nvidia.com/gpu=all", "--volume", cuda_insert, "--user", "10002:10002", "--name", "modelapi", "-p", "6500:6500", "modelapi"], check=True)
+
+        result1 = subprocess.run(
+            [
+                "podman", "build", 
+                "-t", "modelapi", 
+                "--file", dockerfile_path
+            ], 
+            check=True,
+            timeout=600,
+        )
         if result1.returncode != 0:
             return False
+        cuda_insert = f"{cuda_directory}:{cuda_directory}"
+        result2 = subprocess.run(
+            [
+                "podman", "run", 
+                "-d", 
+                "--device", "nvidia.com/gpu=all", 
+                "--volume", cuda_insert, 
+                "--user", "10002:10002", 
+                "--name", "modelapi", 
+                "-p", "127.0.0.1:6500:6500", 
+                "modelapi"
+            ], 
+            check=True,
+            timeout=30
+        )
+        if result2.returncode != 0:
+            return False
+        
+        # BLOCK ALL INTERNET ACCESS FOR THIS CONTAINER
+        block_commands = [
+            ["sudo", "iptables", "-P", "INPUT", "DROP"],
+            ["sudo", "iptables", "-P", "FORWARD", "DROP"],
+            ["sudo", "iptables", "-P", "OUTPUT", "DROP"],
+            ["sudo", "iptables", "-A", "INPUT", "-i", "lo", "-j", "ACCEPT"],
+            ["sudo", "iptables", "-A", "OUTPUT", "-o", "lo", "-j", "ACCEPT"],
+            ["sudo", "iptables", "-A", "INPUT", "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "-j", "ACCEPT"],
+            ["sudo", "iptables", "-A", "OUTPUT", "-m", "conntrack", "--ctstate", "ESTABLISHED", "-j", "ACCEPT"],
+            ["sudo", "iptables", "-A", "INPUT", "-p", "tcp", "--dport", "6500", "-m", "conntrack", "--ctstate", "NEW,ESTABLISHED", "-j", "ACCEPT"],
+            ["sudo", "iptables", "-A", "INPUT", "-p", "tcp", "--dport", "6000", "-m", "conntrack", "--ctstate", "NEW,ESTABLISHED", "-j", "ACCEPT"]
+        ]
+
+        for cmd in block_commands:
+            block_result = subprocess.run(cmd, capture_output=True, text=True)
+            if block_result.returncode != 0:
+                Utils.subnet_logger(
+                    severity="WARNING",
+                    message=f"Firewall rule failed: {' '.join(cmd)} - {block_result.stderr}",
+                    log_level=log_level,
+                )
+            
+            else:
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"Firewall rule successful: {' '.join(cmd)} - {block_result.stderr}",
+                    log_level=log_level,
+                )
+        
+        Utils.subnet_logger(
+            severity="INFO",
+            message=f"Container internet access BLOCKED",
+            log_level=log_level,
+        )
+
         return True
         
+    except subprocess.TimeoutExpired as e:
+        Utils.subnet_logger(
+            severity="ERROR",
+            message=f"Container operation timed out: {e}",
+            log_level=log_level,
+        )
+        return False
     except subprocess.CalledProcessError as e:
         Utils.subnet_logger(
             severity="ERROR",
@@ -307,7 +372,7 @@ def check_container_status(log_level, timeout=5) -> bool:
         )
         return False
 
-def upload_audio(noisy_dir, log_level, timeout=500,) -> bool:
+def upload_audio(noisy_dir, log_level, timeout=10,) -> bool:
     """
     Upload audio files to the API.
 
@@ -358,7 +423,7 @@ def upload_audio(noisy_dir, log_level, timeout=500,) -> bool:
         )
         return False
     
-def prepare(log_level, timeout=300) -> bool:
+def prepare(log_level, timeout=10) -> bool:
     
     url = f"http://127.0.0.1:6500/prepare/"
     try:
@@ -375,7 +440,7 @@ def prepare(log_level, timeout=300) -> bool:
         )
         return False
 
-def enhance_audio(log_level, timeout=5400) -> bool:
+def enhance_audio(log_level, timeout=600) -> bool:
     """
     Trigger audio enhancement on the API.
 
@@ -404,7 +469,7 @@ def enhance_audio(log_level, timeout=5400) -> bool:
         )
         return False
 
-def download_enhanced(enhanced_dir, log_level, timeout=500) -> bool:
+def download_enhanced(enhanced_dir, log_level, timeout=10) -> bool:
     """
     Download the zip file containing enhanced audio files, extract its contents, 
     and remove the zip file.
@@ -450,6 +515,26 @@ def download_enhanced(enhanced_dir, log_level, timeout=500) -> bool:
             log_level=log_level,
         )
         return False
+    
+def cleanup_iptables():
+    """Call this when stopping the container to clean up firewall rules"""
+    try:
+            
+        # Remove firewall rules
+        cleanup_commands = [
+            ["sudo", "iptables", "-F"],  # Flush all rules from all chains
+            ["sudo", "iptables", "-X"],  # Delete all user-defined chains
+            ["sudo", "iptables", "-Z"],  # Zero the packet and byte counters
+            ["sudo", "iptables", "-P", "INPUT", "ACCEPT"],     # Reset default policy
+            ["sudo", "iptables", "-P", "FORWARD", "ACCEPT"],
+            ["sudo", "iptables", "-P", "OUTPUT", "ACCEPT"]
+        ]
+        
+        for cmd in cleanup_commands:
+            subprocess.run(cmd, capture_output=True)
+        
+    except:
+        pass
 
 def delete_container(log_level) -> bool:
     """Deletes a specified Docker container by name or ID.
@@ -458,20 +543,26 @@ def delete_container(log_level) -> bool:
         bool: True if the container was successfully deleted, False otherwise.
     """
     try:
+        # Cleanup firewall rules
+        cleanup_iptables()
+
         # Delete container
         subprocess.run(
             ["podman", "rm", "-f", "modelapi"],
-            check=True
+            check=True,
+            capture_output=True
         )
         # Remove all images
         subprocess.run(
             ["podman", "rmi", "-a", "-f"],
             check=True,
+            capture_output=True
         )
         # System prune
         subprocess.run(
             ["podman", "system", "prune", "-a", "-f"],
             check=True,
+            capture_output=True
         )
         return True
 

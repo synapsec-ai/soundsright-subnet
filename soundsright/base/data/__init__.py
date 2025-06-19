@@ -4,7 +4,7 @@ from .download import (
     download_wham,
 )
 
-from .tts import TTSHandler
+from .tts import TTSHandler, RandomWord, RandomSentence
 
 from .generate import (
     reset_all_data_directories,

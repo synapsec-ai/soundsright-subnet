@@ -33,6 +33,7 @@ class ModelEvaluationHandler:
         miner_models: List[dict],
         cuda_directory: str,
         historical_block: int | None,
+        seed_reference_block: int | float,
     ):
         """Initializes ModelEvaluationHandler
 
@@ -71,6 +72,7 @@ class ModelEvaluationHandler:
         self.hf_model_id = f"{hf_model_namespace}/{hf_model_name}"
         self.hf_model_revision = hf_model_revision
         self.historical_block = historical_block # This is used for logging the historical value of the block 
+        self.seed_reference_block = seed_reference_block
         self.hf_model_block = None
         self.model_hash = ''
         self.forbidden_model_hashes = [
@@ -176,6 +178,21 @@ class ModelEvaluationHandler:
                 log_level=self.log_level
             )
             return False
+        
+        # Check to make sure that the submitted block is not larger than the seed reference block
+        if self.hf_model_block >= self.seed_reference_block:
+            Utils.subnet_logger(
+                severity="INFO",
+                message=f"Model: {self.hf_model_id} was submitted on block: {self.hf_model_block} which is greater than the seed reference block: {self.seed_reference_block}. Exiting model evaluation.",
+                log_level=self.log_level
+            )
+            return False
+        else:
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Model: {self.hf_model_id} was submitted on block: {self.hf_model_block} which is smaller than the seed reference block: {self.seed_reference_block}.",
+                log_level=self.log_level
+            )
         
         # Check to make sure that namespace, name and revision are unique among submitted models and if not, that it was submitted first
         for model_dict in self.miner_models:
