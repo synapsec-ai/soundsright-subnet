@@ -12,6 +12,15 @@ The `main` branch of this template is what should be modified by miners to creat
 
 For detailed instructions on how to format your model, please reference the `README.md` in the `main` branch of the model template.
 
+# Model Submission
+
+When you are ready to submit your model to be benchmarked by validators, run the miner with the .env file updated with the model metadata.
+
+There are a couple things to note:
+
+1. Model metadata must be uploaded to the chain before the start of a competition.
+2. Model revision must be specified as a commit hash.
+
 # Model Suggestions
 
 If you are looking for an existing model to fine-tune, here are a few suggestions:

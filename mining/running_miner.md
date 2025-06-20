@@ -98,13 +98,15 @@ The contents of the .env file must then be adjusted. The following variables app
 
 In addition to this, the model being submitted to the competition must be specified in the .env file. Specifically, the model namespace, name, and revision must be specified in the .env for the particular competition being entered in by the miner. 
 
-For example, if we want to submit the `main` branch of the HuggingFace model `synapsecai/my_speech_enhancement_model` to be evalauted, we designate the following: 
+> **Note that the revision MUST be a commit hash. Your model will not be accepted otherwise!**
+
+For example, if we want to submit the commit with hash: `6bab4cf9116d72c1bc4f8e857e7cd5c40795a882` of the HuggingFace model `synapsecai/my_speech_enhancement_model` to be evalauted, we designate the following: 
 
 | Variable | Designation |
 | :------: | :-----: |
 | HF_MODEL_NAMESPACE | synapsecai |
 | HF_MODEL_NAME | my_speech_enhancement_model |
-| HF_MODEL_REVISION | main |
+| HF_MODEL_REVISION | 6bab4cf9116d72c1bc4f8e857e7cd5c40795a882 |
 
 .env example:
 ```
@@ -126,7 +128,7 @@ OPENAI_API_KEY=
 # 16kHz Sample Rate, Denoising Task
 DENOISING_16000HZ_HF_MODEL_NAMESPACE=synapsecai
 DENOISING_16000HZ_HF_MODEL_NAME=mymodel
-DENOISING_16000HZ_HF_MODEL_REVISION=main
+DENOISING_16000HZ_HF_MODEL_REVISION=6bab4cf9116d72c1bc4f8e857e7cd5c40795a882
 
 # 16kHz Sample Rate, Dereverberation Task
 DEREVERBERATION_16000HZ_HF_MODEL_NAMESPACE=
@@ -137,6 +139,8 @@ DEREVERBERATION_16000HZ_HF_MODEL_REVISION=
 HEALTHCHECK_API_HOST=0.0.0.0
 HEALTHCHECK_API_PORT=6000
 ```
+
+Also, note that model metadata must be uploaded to the chain before the start of a competition. Otherwise, you will have to wait until the competition ends for your model to begin evaluation by validators.
 
 ### 4. Running the Miner
 
