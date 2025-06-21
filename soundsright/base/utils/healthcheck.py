@@ -51,7 +51,7 @@ class HealthCheckResponse(BaseModel):
     timestamp: str
 
 class HealthCheckDataResponse(BaseModel):
-    data: Dict | None | bool | list | str
+    data: Dict | None | bool | list | str | int
     timestamp: str
     
 class HealthCheckScoreResponse(BaseModel):
