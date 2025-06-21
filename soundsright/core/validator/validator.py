@@ -1533,7 +1533,7 @@ class SubnetValidator(Base.BaseNeuron):
 
         try:
 
-            if self.check_if_time_to_benchmark() and not self.first_run_through_of_the_day:
+            if not self.check_if_time_to_benchmark() and not self.first_run_through_of_the_day:
                 self.neuron_logger(
                     severity="DEBUG",
                     message=f"Not enough time in current competition to benchmark model for hotkey: {hotkey}."
