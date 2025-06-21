@@ -167,8 +167,7 @@ class SubnetValidator(Base.BaseNeuron):
         
         self.generate_new_dataset(override=False)
         
-        if not self.check_wav_files():
-            self.benchmark_sgmse_for_all_competitions()
+        self.benchmark_sgmse_for_all_competitions()
 
     def check_wav_files(self):
         directories = [self.tts_path, self.reverb_path, self.noise_path]
@@ -262,7 +261,7 @@ class SubnetValidator(Base.BaseNeuron):
 
         self.neuron_logger(
             severity="INFO",
-            message=f"Next competition will be at {next_competition}"
+            message=f"Next competition will be at {next_competition}. In Unix time: {int(next_competition.timestamp())}"
         )
         return int(next_competition.timestamp())
 
@@ -1976,7 +1975,18 @@ class SubnetValidator(Base.BaseNeuron):
         while True: 
             try: 
 
-                if int(time.time()) + 600 < self.next_competition_timestamp:
+                timestamp1 = int(time.time()) + 600
+                self.neuron_logger(
+                    severity="TRACE",
+                    message=f"Checking if current time: {int(time.time())} plus 600 seconds: {timestamp1} is less than next competition timestamp: {self.next_competition_timestamp} for main validator loop."
+                )
+
+                if timestamp1 < self.next_competition_timestamp:
+
+                    self.neuron_logger(
+                        severity="TRACE",
+                        message="Executing main validator loop."
+                    )
 
                     # Check to see if validator is still registered on metagraph
                     if self.wallet.hotkey.ss58_address not in self.metagraph.hotkeys:
@@ -2019,7 +2029,13 @@ class SubnetValidator(Base.BaseNeuron):
                     self.healthcheck_api.update_rates()
 
                 # Check if it's time for a new competition 
-                if time.time() >= self.next_competition_timestamp or self.debug_mode:
+                timestamp2 = int(time.time())
+                self.neuron_logger(
+                    severity="TRACE",
+                    message=f"Checking if current time: {timestamp2} is greater than next competition timestamp: {self.next_competition_timestamp} for starting next competition."
+                )
+
+                if timestamp2 >= self.next_competition_timestamp or self.debug_mode:
 
                     self.neuron_logger(
                         severity="INFO",
