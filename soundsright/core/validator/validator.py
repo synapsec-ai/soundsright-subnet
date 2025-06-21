@@ -1071,11 +1071,6 @@ class SubnetValidator(Base.BaseNeuron):
                     message=f"Last updated block loaded from file: {self.last_updated_block}"
                 )
                 
-                self.next_competition_timestamp = state['next_competition_timestamp']
-                self.neuron_logger(
-                    severity="INFOX",
-                    message=f"Next competition timestamp loaded from file: {self.next_competition_timestamp}"
-                )
                 self.tried_accessing_old_cache = True
                 
             except Exception as e:
@@ -1497,6 +1492,29 @@ class SubnetValidator(Base.BaseNeuron):
             severity="INFO",
             message=f"SGMSE+ benchmarks: {self.sgmse_benchmarks}"
         )
+
+    def check_if_time_to_benchmark(self) -> bool:
+        """
+        Checks if there is time to evaluate a new model in the current competition.
+        """
+        current_time = int(time.time())
+        cache_length = 0
+        cache_eval_time = 0
+        if Utils.validate_model_cache(model_cache=self.model_cache):
+            for comp_models in self.model_cache.values():
+                cache_eval_time += len(comp_models) * self.avg_model_eval_time
+                cache_length += 1
+
+        expected_eval_time = current_time + cache_eval_time
+
+        Utils.subnet_logger(
+            severity="TRACE",
+            message=f"Checking if there is enough time to benchmark. Current time: {current_time}. Cache eval time is: {cache_eval_time} for cache length: {cache_length}. Expected timestamp of evaluation end is: {expected_eval_time}. Next competition is at: {self.next_competition_timestamp}"
+        )
+
+        if expected_eval_time >= self.next_competition_timestamp:
+            return False 
+        return True
     
     def benchmark_model(self, model_metadata: dict, sample_rate: int, task: str, hotkey: str, block: int) -> dict:
         """Runs benchmarking for miner-submitted model using Models.ModelEvaluationHandler 
@@ -1515,11 +1533,7 @@ class SubnetValidator(Base.BaseNeuron):
 
         try:
 
-            if not self.first_run_through_of_the_day and Utils.check_if_time_to_benchmark(
-                next_competition_timestamp=self.next_competition_timestamp,
-                avg_model_eval_time=self.avg_model_eval_time,
-                model_cache=self.model_cache
-            ):
+            if not self.first_run_through_of_the_day and self.check_if_time_to_benchmark():
                 self.neuron_logger(
                     severity="DEBUG",
                     message=f"Not enough time in current competition to benchmark model for hotkey: {hotkey}."

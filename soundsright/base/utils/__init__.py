@@ -12,6 +12,7 @@ from .utils import (
     validate_miner_response,
     validate_model_benchmark,
     validate_model_feedback,
+    validate_model_cache,
     sign_data,
     dict_in_list,
     extract_metadata,
