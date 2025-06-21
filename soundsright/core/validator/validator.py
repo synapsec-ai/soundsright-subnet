@@ -433,7 +433,7 @@ class SubnetValidator(Base.BaseNeuron):
         
         # Healthcheck API 
         self.healthcheck_api = Utils.HealthCheckAPI(
-            host=args.healthcheck_host, port=args.healthcheck_port, is_validator = True, current_models=self.miner_models, best_models=self.best_miner_models
+            host=args.healthcheck_host, port=args.healthcheck_port, is_validator = True, seed=self.seed, current_models=self.miner_models, best_models=self.best_miner_models
         )
 
         # Run healthcheck API
@@ -678,6 +678,8 @@ class SubnetValidator(Base.BaseNeuron):
                 )
                 self.seed = 10
                 self.seed_reference_block = float("inf")
+
+        self.healthcheck_api.update_seed(self.seed)
 
     def check_hotkeys(self) -> None:
         """Checks if some hotkeys have been replaced in the metagraph"""
