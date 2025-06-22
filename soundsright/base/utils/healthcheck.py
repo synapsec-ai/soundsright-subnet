@@ -30,6 +30,8 @@ Validator Endpoints:
         Returns information about current overall miner scores
     /healthcheck/next_competition
         Returns timestamp of next competition time
+    /healthcheck/seed
+        Returns current seed used for dataset generation
 
 Port and host can be controlled with --healthcheck_port and
 --healthcheck_host parameters.
@@ -49,7 +51,7 @@ class HealthCheckResponse(BaseModel):
     timestamp: str
 
 class HealthCheckDataResponse(BaseModel):
-    data: Dict | None | bool | list | str
+    data: Dict | None | bool | list | str | int
     timestamp: str
     
 class HealthCheckScoreResponse(BaseModel):
@@ -58,7 +60,15 @@ class HealthCheckScoreResponse(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 class HealthCheckAPI:
-    def __init__(self, host: str, port: int, is_validator: bool, current_models: dict | None = None, best_models: dict | None = None):
+    def __init__(
+            self, 
+            host: str, 
+            port: int, 
+            is_validator: bool, 
+            seed: int | None = None, 
+            current_models: dict | None = None, 
+            best_models: dict | None = None
+        ):
 
         # Variables
         self.host = host
@@ -70,6 +80,7 @@ class HealthCheckAPI:
         self.competition_scores = None
         self.scores = None
         self.next_competition_timestamp = None
+        self.seed = seed
         
         # Status variables
         self.health_metrics = {
@@ -151,6 +162,11 @@ class HealthCheckAPI:
             self._healthcheck_next_competition,
             response_model=HealthCheckDataResponse,
         )
+        self.app.add_api_route(
+            "/healthcheck/seed",
+            self._healthcheck_seed,
+            response_model=HealthCheckDataResponse,
+        )
 
     def _healthcheck_metrics(self):
         try:
@@ -227,6 +243,15 @@ class HealthCheckAPI:
             formatted_timestamp = dt.strftime('%Y-%m-%d %H:%M:%S GMT')
             return {
                 "data":formatted_timestamp,
+                "timestamp": str(datetime.datetime.now()),
+            }
+        except Exception:
+            return {"data": None, "timestamp": str(datetime.datetime.now())}
+        
+    def _healthcheck_seed(self):
+        try:
+            return {
+                "data":self.seed,
                 "timestamp": str(datetime.datetime.now()),
             }
         except Exception:
@@ -336,3 +361,6 @@ class HealthCheckAPI:
 
     def update_next_competition_timestamp(self, next_competition_timestamp):
         self.next_competition_timestamp = next_competition_timestamp
+
+    def update_seed(self, seed):
+        self.seed = seed

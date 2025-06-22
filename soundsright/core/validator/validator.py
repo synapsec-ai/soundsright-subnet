@@ -165,28 +165,14 @@ class SubnetValidator(Base.BaseNeuron):
         if not dataset_download_outcome: 
             sys.exit()
         
-        self.generate_new_dataset(override=False)
-        
-        if not self.check_wav_files():
-            self.benchmark_sgmse_for_all_competitions()
+        self.generate_new_dataset()
 
-    def check_wav_files(self):
-        directories = [self.tts_path, self.reverb_path, self.noise_path]
-        
-        for dir_path in directories:
-            if not os.path.isdir(dir_path):
-                return False
-            
-            wav_files = [f for f in os.listdir(dir_path) if f.endswith('.wav')]
-            if not wav_files:
-                return False
-
-        return True
+        self.benchmark_sgmse_for_all_competitions()
 
     def generate_new_dataset(self, override=True) -> None:
 
         # Check to see if we need to generate a new dataset
-        if override or not self.check_wav_files():
+        if override:
 
             self.neuron_logger(
                 severity="INFO",
@@ -262,7 +248,7 @@ class SubnetValidator(Base.BaseNeuron):
 
         self.neuron_logger(
             severity="INFO",
-            message=f"Next competition will be at {next_competition}"
+            message=f"Next competition will be at {next_competition}. In Unix time: {int(next_competition.timestamp())}"
         )
         return int(next_competition.timestamp())
 
@@ -434,7 +420,7 @@ class SubnetValidator(Base.BaseNeuron):
         
         # Healthcheck API 
         self.healthcheck_api = Utils.HealthCheckAPI(
-            host=args.healthcheck_host, port=args.healthcheck_port, is_validator = True, current_models=self.miner_models, best_models=self.best_miner_models
+            host=args.healthcheck_host, port=args.healthcheck_port, is_validator = True, seed=self.seed, current_models=self.miner_models, best_models=self.best_miner_models
         )
 
         # Run healthcheck API
@@ -679,6 +665,8 @@ class SubnetValidator(Base.BaseNeuron):
                 )
                 self.seed = 10
                 self.seed_reference_block = float("inf")
+
+        self.healthcheck_api.update_seed(self.seed)
 
     def check_hotkeys(self) -> None:
         """Checks if some hotkeys have been replaced in the metagraph"""
@@ -1070,11 +1058,6 @@ class SubnetValidator(Base.BaseNeuron):
                     message=f"Last updated block loaded from file: {self.last_updated_block}"
                 )
                 
-                self.next_competition_timestamp = state['next_competition_timestamp']
-                self.neuron_logger(
-                    severity="INFOX",
-                    message=f"Next competition timestamp loaded from file: {self.next_competition_timestamp}"
-                )
                 self.tried_accessing_old_cache = True
                 
             except Exception as e:
@@ -1496,6 +1479,29 @@ class SubnetValidator(Base.BaseNeuron):
             severity="INFO",
             message=f"SGMSE+ benchmarks: {self.sgmse_benchmarks}"
         )
+
+    def check_if_time_to_benchmark(self) -> bool:
+        """
+        Checks if there is time to evaluate a new model in the current competition.
+        """
+        current_time = int(time.time())
+        cache_length = 0
+        cache_eval_time = 0
+        if Utils.validate_model_cache(model_cache=self.model_cache):
+            for comp_models in self.model_cache.values():
+                cache_eval_time += len(comp_models) * self.avg_model_eval_time
+                cache_length += len(comp_models)
+
+        expected_eval_time = current_time + cache_eval_time
+
+        Utils.subnet_logger(
+            severity="TRACE",
+            message=f"Checking if there is enough time to benchmark. Current time: {current_time}. Cache eval time is: {cache_eval_time} for cache length: {cache_length}. Expected timestamp of evaluation end is: {expected_eval_time}. Next competition is at: {self.next_competition_timestamp}"
+        )
+
+        if expected_eval_time >= self.next_competition_timestamp:
+            return False 
+        return True
     
     def benchmark_model(self, model_metadata: dict, sample_rate: int, task: str, hotkey: str, block: int) -> dict:
         """Runs benchmarking for miner-submitted model using Models.ModelEvaluationHandler 
@@ -1514,11 +1520,7 @@ class SubnetValidator(Base.BaseNeuron):
 
         try:
 
-            if not self.first_run_through_of_the_day and Utils.check_if_time_to_benchmark(
-                next_competition_timestamp=self.next_competition_timestamp,
-                avg_model_eval_time=self.avg_model_eval_time,
-                model_cache=self.model_cache
-            ):
+            if not self.check_if_time_to_benchmark() and not self.first_run_through_of_the_day:
                 self.neuron_logger(
                     severity="DEBUG",
                     message=f"Not enough time in current competition to benchmark model for hotkey: {hotkey}."
@@ -1976,7 +1978,18 @@ class SubnetValidator(Base.BaseNeuron):
         while True: 
             try: 
 
-                if int(time.time()) + 600 < self.next_competition_timestamp:
+                timestamp1 = int(time.time()) + 600
+                self.neuron_logger(
+                    severity="TRACE",
+                    message=f"Checking if current time: {int(time.time())} plus 600 seconds: {timestamp1} is less than next competition timestamp: {self.next_competition_timestamp} for main validator loop."
+                )
+
+                if timestamp1 < self.next_competition_timestamp:
+
+                    self.neuron_logger(
+                        severity="TRACE",
+                        message="Executing main validator loop."
+                    )
 
                     # Check to see if validator is still registered on metagraph
                     if self.wallet.hotkey.ss58_address not in self.metagraph.hotkeys:
@@ -2019,7 +2032,13 @@ class SubnetValidator(Base.BaseNeuron):
                     self.healthcheck_api.update_rates()
 
                 # Check if it's time for a new competition 
-                if time.time() >= self.next_competition_timestamp or self.debug_mode:
+                timestamp2 = int(time.time())
+                self.neuron_logger(
+                    severity="TRACE",
+                    message=f"Checking if current time: {timestamp2} is greater than next competition timestamp: {self.next_competition_timestamp} for starting next competition."
+                )
+
+                if timestamp2 >= self.next_competition_timestamp or self.debug_mode:
 
                     self.neuron_logger(
                         severity="INFO",
