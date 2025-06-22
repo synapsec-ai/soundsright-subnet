@@ -166,8 +166,6 @@ class SubnetValidator(Base.BaseNeuron):
             sys.exit()
         
         self.generate_new_dataset(override=False)
-        
-        self.benchmark_sgmse_for_all_competitions()
 
     def check_wav_files(self):
         directories = [self.tts_path, self.reverb_path, self.noise_path]
