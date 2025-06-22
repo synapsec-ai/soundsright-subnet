@@ -165,27 +165,14 @@ class SubnetValidator(Base.BaseNeuron):
         if not dataset_download_outcome: 
             sys.exit()
         
-        self.generate_new_dataset(override=False)
-        
+        self.generate_new_dataset()
+
         self.benchmark_sgmse_for_all_competitions()
-
-    def check_wav_files(self):
-        directories = [self.tts_path, self.reverb_path, self.noise_path]
-        
-        for dir_path in directories:
-            if not os.path.isdir(dir_path):
-                return False
-            
-            wav_files = [f for f in os.listdir(dir_path) if f.endswith('.wav')]
-            if not wav_files:
-                return False
-
-        return True
 
     def generate_new_dataset(self, override=True) -> None:
 
         # Check to see if we need to generate a new dataset
-        if override or not self.check_wav_files():
+        if override:
 
             self.neuron_logger(
                 severity="INFO",
