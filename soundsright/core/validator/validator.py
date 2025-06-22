@@ -1503,7 +1503,7 @@ class SubnetValidator(Base.BaseNeuron):
         if Utils.validate_model_cache(model_cache=self.model_cache):
             for comp_models in self.model_cache.values():
                 cache_eval_time += len(comp_models) * self.avg_model_eval_time
-                cache_length += 1
+                cache_length += len(comp_models)
 
         expected_eval_time = current_time + cache_eval_time
 
