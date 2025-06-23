@@ -1,4 +1,6 @@
 import bittensor as bt
+import asyncio
+import hashlib
 from math import floor
 
 import soundsright.base.utils as Utils
@@ -20,6 +22,7 @@ class ModelBuilder:
         subtensor: bt.subtensor,
         subnet_netuid: int,
         hotkeys: list,
+        miner_models: dict,
         log_level: str,
     ):
 
@@ -47,6 +50,7 @@ class ModelBuilder:
             "ENZIdw0H8Vbb79lXDQKBqqReXIj2ycgOX1Ob0QoexAU=",
             "Mbx0++bk5q6n+rdVlUblElnturj/zRobTk61WFVHmgg=",
         ]
+        self.miner_models = miner_models
         self.model_cache = model_cache
         self.eval_cache = {}
 
@@ -67,7 +71,10 @@ class ModelBuilder:
 
                 if counter < self.max_image_count:
                 
-                    if self.validate_model(model_data=model_data):
+                    if self.validate_model(
+                        model_data=model_data,
+                        competition=competition,
+                    ):
 
                         self.eval_cache[competition].append(model_data)
 
@@ -79,7 +86,113 @@ class ModelBuilder:
 
         return remainder_cache
 
-    def validate_model(self, model_data):
+    def validate_model(self, model_data: dict, competition: str):
+        """
+        Model validation includes:
+        
+        1. Verifying model data structure 
+        2. Verifying on-chain model metadata
+        3. Verifying upload block is before seed determination
+        4. Downloading and verifying model repository content
+        
+        """
+        try:
+            # 1. Verifying model data structure
+            if not isinstance(model_data, dict):
+                return False 
+
+            uid = model_data.get("uid", None)
+            model_metadata = model_data.get("response_data", None)
+
+            if not uid or not model_metadata or not isinstance(uid, int) or not isinstance(model_metadata, dict):
+                return False 
+            
+            hotkey = self.hotkeys[uid]
+            namespace = model_metadata.get("hf_model_namespace", None)
+            name = model_metadata.get("hf_model_name", None)
+            revision = model_metadata.get("hf_model_revision", None)
+            historical_block = model_data.get("block", None)
+
+            if not namespace or not name or not revision:
+                return False
+            
+            if not isinstance(namespace, str) or not isinstance(name, str) or not isinstance(revision, str):
+                return False 
+                    
+            # 2. Verify on-chain metadata
+            model_metadata, model_block = asyncio.run(self.metadata_handler.directly_obtain_model_metadata_from_chain(hotkey=hotkey))
+
+            if not model_metadata or not model_block or model_block == 0:
+                return False 
+            
+            # Update model upload block if necessary
+            if isinstance(historical_block, int) and historical_block < model_block:
+                models_block = historical_block
+
+            # Obtain competition id from model and miner data
+            competition_id = self.metadata_handler.get_competition_id_from_competition_name(competition)
+            
+            # Determine miner metadata
+            metadata_str = f"{namespace}:{name}:{revision}:{hotkey}:{competition_id}"
+
+            if hashlib.sha256(metadata_str.encode()).hexdigest() != model_metadata:
+                Utils.subnet_logger(
+                    severity="INFO",
+                    message=f"Model: {namespace}/{name} metadata could not be validated with on-chain metadata. Exiting model evaluation.",
+                    log_level=self.log_level
+                )
+                return False
+            
+            # Check to make sure that the submitted block is not larger than the seed reference block
+            if model_block >= self.seed_reference_block:
+                Utils.subnet_logger(
+                    severity="INFO",
+                    message=f"Model: {namespace}/{name} was submitted on block: {model_block} which is greater than the seed reference block: {self.seed_reference_block}. Exiting model evaluation.",
+                    log_level=self.log_level
+                )
+                return False
+            else:
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"Model: {namespace}/{name} was submitted on block: {model_block} which is smaller than the seed reference block: {self.seed_reference_block}.",
+                    log_level=self.log_level
+                )
+
+            # Check to make sure that namespace, name and revision are unique among submitted models and if not, that it was submitted first
+            for model_dict in self.miner_models[competition]:
+                if (
+                    model_dict['hf_model_namespace'] == namespace
+                ) and (
+                    model_dict['hf_model_name'] == name
+                ) and (
+                    model_dict['hf_model_revision'] == revision
+                ) and (
+                    model_dict['block'] < model_block
+                ):
+                    return False
+                
+            
+            
+
+
+            
+
+            
+
+
+
+
+
+        except Exception as e:
+
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Error evaluating model: {model_data}: {e}", 
+                log_level=self.log_level
+            )
+
+            return False
+
 
 
 

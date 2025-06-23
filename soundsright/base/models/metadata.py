@@ -114,7 +114,7 @@ class ModelMetadataHandler:
             bt.logging.error(
                 msg=f"Error fetching model metadata: {e}"
             )
-            return False, False
+            return None, None
         
     @Utils.timeout_decorator(timeout=60)    
     async def obtain_trusted_validator_metadata_from_chain(self, hotkey: str):
