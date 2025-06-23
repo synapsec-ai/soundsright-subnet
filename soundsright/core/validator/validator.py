@@ -137,6 +137,9 @@ class SubnetValidator(Base.BaseNeuron):
         self.remote_logging_daily_tries=0
 
         # Init Functions
+        self.cpu_count = Utils.get_cpu_core_count()
+        self.gpu_count = Utils.get_gpu_count()
+        
         self.apply_config(bt_classes=[bt.subtensor, bt.logging, bt.wallet])
         self.initialize_neuron()
 
