@@ -1,6 +1,8 @@
 import bittensor as bt
 import asyncio
 import hashlib
+import os 
+import shutil
 from math import floor
 
 import soundsright.base.utils as Utils
@@ -19,6 +21,7 @@ class ModelBuilder:
         cpu_count: int,
         avg_model_size_gb: int,
         images_per_cpu: int,
+        model_path: str,
         subtensor: bt.subtensor,
         subnet_netuid: int,
         hotkeys: list,
@@ -35,6 +38,7 @@ class ModelBuilder:
         cpu_max_count = self.cpu_count * self.images_per_cpu
         storage_max_count = floor(self.free_storage_gb / self.avg_model_size_gb)
         self.max_image_count = min([cpu_max_count, storage_max_count])
+        self.model_base_path = model_path
 
         # Bittensor
         self.hotkeys = hotkeys
@@ -57,7 +61,62 @@ class ModelBuilder:
         # Misc
         self.log_level = log_level
 
-    def filter_model_cache(self):
+    def prepare_directory(self, dir_path):
+        """
+        Creates directory if it does not exist, removes contents if it does
+        """
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Created directory: {dir_path}",
+                log_level=self.log_level
+            )
+
+        else:
+            for item in os.listdir(dir_path):
+                item_path = os.path.join(dir_path, item)
+                try:
+                    if os.path.isfile(item_path) or os.path.islink(item_path):
+                        os.unlink(item_path)
+                    elif os.path.isdir(item_path):
+                        shutil.rmtree(item_path)
+
+                except Exception as e:
+                    Utils.subnet_logger(
+                        severity="ERROR",
+                        message=f"Failed to delete item at path: {item_path} because: {e}",
+                        log_level=self.log_level
+                    )
+
+    def _reset_dir(self, directory: str) -> None:
+        """Removes all files and sub-directories in an inputted directory
+
+        Args:
+            directory (str): Directory to reset.
+        """
+        # Check if the directory exists
+        if not os.path.exists(directory):
+            return
+
+        # Loop through all the files and subdirectories in the directory
+        for filename in os.listdir(directory):
+            file_path = os.path.join(directory, filename)
+            
+            # Check if it's a file or directory and remove accordingly
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)  # Remove the file or link
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)  # Remove the directory and its contents
+            except Exception as e:
+                Utils.subnet_logger(
+                    severity="ERROR",
+                    message=f"Failed to delete {file_path}. Reason: {e}",
+                    log_level=self.log_level
+                )
+
+    def get_eval_round_from_model_cache(self):
 
         remainder_cache = {}
         counter = 0
@@ -118,6 +177,14 @@ class ModelBuilder:
             
             if not isinstance(namespace, str) or not isinstance(name, str) or not isinstance(revision, str):
                 return False 
+            
+            model_id = f"{namespace}/{revision}"
+            
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Model data has valid formatting: {model_data}",
+                log_level=self.log_level
+            )
                     
             # 2. Verify on-chain metadata
             model_metadata, model_block = asyncio.run(self.metadata_handler.directly_obtain_model_metadata_from_chain(hotkey=hotkey))
@@ -143,7 +210,7 @@ class ModelBuilder:
                 )
                 return False
             
-            # Check to make sure that the submitted block is not larger than the seed reference block
+            # 3. Verify upload block is before seed determination
             if model_block >= self.seed_reference_block:
                 Utils.subnet_logger(
                     severity="INFO",
@@ -171,17 +238,57 @@ class ModelBuilder:
                 ):
                     return False
                 
+            # 4. Download repository and verify content
+            model_dir = os.path.join(self.model_base_path, hotkey)
+            self.prepare_directory(model_dir)
+
+            # Download model to path and obtain model hash
+            model_hash, _ = Models.get_model_content_hash(
+                model_id=model_id,
+                revision=revision,
+                local_dir=model_dir,
+                log_level=self.log_level
+            )
+
+            if not model_hash or model_hash in self.forbidden_model_hashes:
+                Utils.subnet_logger(
+                    severity="DEBUG",
+                    message=f"Model hash for model: {model_id} with revision: {revision} could not be calculated or is invalid.",
+                    log_level=self.log_level
+                )
+                self._reset_dir(directory=model_dir)
+                return False 
             
-            
+            if not Models.verify_directory_files(directory=model_dir):
+                Utils.subnet_logger(
+                    severity="DEBUG",
+                    message=f"Model: {model_id} with revision: {revision} contains a forbidden file.",
+                    log_level=self.log_level
+                )
+                self._reset_dir(directory=model_dir)
+                return False
 
-
-            
-
-            
-
-
-
-
+            # Make sure model hash is unique 
+            if model_hash in [model_data['model_hash'] for model_data in self.miner_models]:
+                
+                # Find block that metadata was uploaded to chain for all models with identical directory hash
+                model_blocks_with_same_hash = []
+                for model_data in self.miner_models:
+                    if model_data['model_hash'] == self.model_hash:
+                        model_blocks_with_same_hash.append(model_data['block'])
+                
+                # Append current model block for comparison
+                model_blocks_with_same_hash.append(model_block)
+                
+                # If it's not unique, don't return False only if this model is the earliest one uploaded to chain
+                if min(model_blocks_with_same_hash) != model_block:
+                    Utils.subnet_logger(
+                        severity="INFO",
+                        message=f"Current model: {self.hf_model_id} has identical hash with another model and was not uploaded first. Exiting model evaluation.",
+                        log_level=self.log_level
+                    )   
+                    self._reset_dir(directory=model_dir)
+                    return False 
 
         except Exception as e:
 

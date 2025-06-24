@@ -7,6 +7,7 @@ import time
 import glob
 import sys
 import re
+import asyncio 
 
 import soundsright.base.utils as Utils
 
@@ -226,9 +227,102 @@ def validate_container_config(directory) -> bool:
         return False 
         
     return True    
+
+async def build_container_async(directory: str, hotkey: str, log_level: str) -> bool:
+    """
+    Build one miner model image async, return True if operation was successful and False otherwise
+    """
+    dockerfile_path = None
+
+    # Search for docker-compose.yml in the directory and its subdirectories
+    for root, _, files in os.walk(directory):
+        for file in files:
+            if file == "Dockerfile":
+                dockerfile_path = os.path.join(root, file)
+                break
+        if dockerfile_path:
+            break
+
+    if not dockerfile_path:
+        return False
+    
+    if not os.path.isfile(dockerfile_path):
+        Utils.subnet_logger(
+            severity="ERROR",
+            message=f"No `Dockerfile` file found in the specified directory: {directory}",
+            log_level=log_level,
+        )
+        return False
+
+    try:
+        tag_name = f"modelapi_{hotkey}"
+
+        process = await asyncio.create_subprocess_exec(
+            "podman", "build",
+            "-t", tag_name,
+            "--file", dockerfile_path,
+            cwd=os.path.dirname(dockerfile_path),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+
+        try:
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=1500)
+        except asyncio.TimeoutError:
+            process.kill()
+            await process.wait()
+            Utils.subnet_logger(
+                severity="ERROR",
+                message=f"Timeout building container for hotkey: {hotkey}",
+                log_level=log_level,
+            )
+            return False
+
+        if process.returncode != 0:
+            Utils.subnet_logger(
+                severity="ERROR",
+                message=f"Container build failed for hotkey: {hotkey}\n{stderr.decode()}",
+                log_level=log_level,
+            )
+            return False
+
+        return True
+
+    except Exception as e:
+        Utils.subnet_logger(
+            severity="ERROR",
+            message=f"Exception during container build: {str(e)}",
+            log_level=log_level,
+        )
+        return False
+    
+async def build_containers_async(model_base_path: str, eval_cache: dict, hotkeys: list, log_level: str):
+    hk_list = []
+    tasks = []
+
+    for competition in eval_cache:
+
+        for model_data in eval_cache:
+
+            uid = model_data.get("uid", None)
+
+            if uid and isinstance(uid, int): 
+
+                hk = hotkeys[uid]
+                hk_list.append()
+                task = build_container_async(
+                    directory=os.path.join(model_base_path, hk),
+                    hotkey=hk,
+                    log_level=log_level
+                )
+                tasks.append(task)
+
+    output = await asyncio.gather(*tasks)
+
+    return hk_list, output
         
 def start_container(directory, log_level, cuda_directory) -> bool:
-    """Runs the container with docker compose
+    """Runs the container with podman compose
 
     Args:
         directory (str): Directory containing the container
