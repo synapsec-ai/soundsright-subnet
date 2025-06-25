@@ -3,6 +3,7 @@ import asyncio
 import hashlib
 import os 
 import shutil
+import time
 from math import floor
 
 import soundsright.base.utils as Utils
@@ -14,9 +15,13 @@ class ModelBuilder:
 
     Workflow:
     1. Initialize
+    - This process determines the maximum number of images we can build 
     2. Determine part of the model cache we want to build with get_eval_round_from_model_cache. 
-    - This downloads the models in a folder named with the miner hotkey as well
-    3. Build images with build_images_async
+    - This downloads the models in a folder named with the miner hotkey as does all the validation as well
+    3. Build images with build_images
+    - This returns a list of hotkeys whose model images were attempted to be built and a list of booleans 
+      whether or not the operation was successful.
+    - Each build is tagged as modelapi_{hotkey}
     """
 
     def __init__(
@@ -32,6 +37,9 @@ class ModelBuilder:
         subnet_netuid: int,
         hotkeys: list,
         miner_models: dict,
+        first_run_through_of_the_day: bool,
+        next_competition_timestamp: int,
+        avg_model_eval_time: int,
         log_level: str,
     ):
 
@@ -41,10 +49,24 @@ class ModelBuilder:
         self.avg_model_size_gb = avg_model_size_gb
         self.cpu_count = cpu_count
         self.images_per_cpu = images_per_cpu
+        self.first_run_through_of_the_day = first_run_through_of_the_day
+        self.next_competition_timestamp = next_competition_timestamp
+        self.avg_model_eval_time = avg_model_eval_time
+
+        # Calculations
+        self.max_image_count = 0
+        self.time_limit = False
+        
         cpu_max_count = self.cpu_count * self.images_per_cpu
         storage_max_count = floor(self.free_storage_gb / self.avg_model_size_gb)
-        self.max_image_count = min([cpu_max_count, storage_max_count])
-        self.model_base_path = model_path
+        time_limit_max_count = floor((self.next_competition_timestamp - int(time.time()) - 600) / self.avg_model_eval_time)
+
+        if not self.first_run_through_of_the_day:
+            self.max_image_count = min([cpu_max_count, storage_max_count, time_limit_max_count])
+            if self.max_image_count == time_limit_max_count:
+                self.time_limit = True
+        else:
+            min([cpu_max_count, storage_max_count])
 
         # Bittensor
         self.hotkeys = hotkeys
@@ -56,6 +78,7 @@ class ModelBuilder:
         )
     
         # Model
+        self.model_base_path = model_path
         self.forbidden_model_hashes = [
             "ENZIdw0H8Vbb79lXDQKBqqReXIj2ycgOX1Ob0QoexAU=",
             "Mbx0++bk5q6n+rdVlUblElnturj/zRobTk61WFVHmgg=",

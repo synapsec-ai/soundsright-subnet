@@ -1857,7 +1857,59 @@ class SubnetValidator(Base.BaseNeuron):
             filtered_models = list(unique_models.values())
             new_model_cache[competition] = filtered_models    
 
-        self.model_cache = new_model_cache                
+        self.model_cache = new_model_cache
+
+    def calculate_remaining_cache_length(self):
+
+        length = 0
+        for models in self.model_cache.values():
+            if isinstance(models, list):
+                length += len(models)
+        return length
+
+    def replacement_run_competitions(self):
+
+        while self.calculate_remaining_cache_length() > 0:
+
+            builder = Models.ModelBuilder(
+                model_cache=self.model_cache,
+                cuda_directory=self.cuda_directory,
+                seed_reference_block=self.seed_reference_block,
+                cpu_count=self.cpu_count,
+                avg_model_size_gb=self.avg_model_size_gb,
+                images_per_cpu=self.images_per_cpu,
+                model_path=self.model_path,
+                subtensor=self.subtensor,
+                subnet_netuid=self.neuron_config.netuid,
+                hotkeys=self.hotkeys,
+                miner_models=self.miner_models,
+                first_run_through_of_the_day=self.first_run_through_of_the_day,
+                next_competition_timestamp=self.next_competition_timestamp,
+                avg_model_eval_time=self.avg_model_eval_time,
+                log_level=self.log_level,
+            )
+
+            self.model_cache = builder.get_eval_round_from_model_cache()
+
+            hotkey_list, build_outcomes = builder.build_images()
+
+
+
+
+
+
+            if builder.time_limit:
+                break
+
+
+
+
+
+
+
+
+
+                    
             
     def run_competitions(self, sample_rates, tasks) -> None:
             

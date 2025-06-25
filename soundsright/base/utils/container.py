@@ -228,7 +228,7 @@ def validate_container_config(directory) -> bool:
         
     return True    
 
-async def build_container_async(directory: str, hotkey: str, log_level: str) -> bool:
+async def build_container_async(directory: str, hotkey: str, competition: str, log_level: str) -> bool:
     """
     Build one miner model image async, return True if operation was successful and False otherwise
     """
@@ -255,7 +255,7 @@ async def build_container_async(directory: str, hotkey: str, log_level: str) -> 
         return False
 
     try:
-        tag_name = f"modelapi_{hotkey}"
+        tag_name = f"{hotkey}_{competition}"
 
         process = await asyncio.create_subprocess_exec(
             "podman", "build",
@@ -302,7 +302,7 @@ async def build_containers_async(model_base_path: str, eval_cache: dict, hotkeys
 
     for competition in eval_cache:
 
-        for model_data in eval_cache:
+        for model_data in eval_cache[competition]:
 
             uid = model_data.get("uid", None)
 
@@ -313,6 +313,7 @@ async def build_containers_async(model_base_path: str, eval_cache: dict, hotkeys
                 task = build_container_async(
                     directory=os.path.join(model_base_path, hk),
                     hotkey=hk,
+                    competition=competition,
                     log_level=log_level
                 )
                 tasks.append(task)
