@@ -11,6 +11,12 @@ import soundsright.base.models as Models
 class ModelBuilder:
     """
     Class responsible for verifying models and building model images async
+
+    Workflow:
+    1. Initialize
+    2. Determine part of the model cache we want to build with get_eval_round_from_model_cache. 
+    - This downloads the models in a folder named with the miner hotkey as well
+    3. Build images with build_images_async
     """
 
     def __init__(
@@ -300,7 +306,15 @@ class ModelBuilder:
 
             return False
 
+    async def build_images_async(self):
 
+        return await Utils.build_containers_async(
+            model_base_path=self.model_base_path,
+            eval_cache=self.eval_cache,
+            hotkeys=self.hotkeys,
+            log_level=self.log_level,
+        )
+    
+    def build_images(self):
 
-
-
+        return asyncio.run(self.build_images_async())

@@ -309,15 +309,27 @@ async def build_containers_async(model_base_path: str, eval_cache: dict, hotkeys
             if uid and isinstance(uid, int): 
 
                 hk = hotkeys[uid]
-                hk_list.append()
+                hk_list.append(hk)
                 task = build_container_async(
                     directory=os.path.join(model_base_path, hk),
                     hotkey=hk,
                     log_level=log_level
                 )
                 tasks.append(task)
+        
+    Utils.subnet_logger(
+        severity="TRACE",
+        message=f"Model building task list: {tasks} for hotkeys: {hk_list}",
+        log_level=log_level
+    )
 
     output = await asyncio.gather(*tasks)
+
+    Utils.subnet_logger(
+        severity="TRACE",
+        message=f"Model building results: {output}",
+        log_level=log_level
+    )
 
     return hk_list, output
         
