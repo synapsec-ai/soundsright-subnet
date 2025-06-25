@@ -59,6 +59,7 @@ class SubnetValidator(Base.BaseNeuron):
         self.log_level="INFO" # Init log level
         self.cuda_directory = ""
         self.avg_model_eval_time = 2000
+        self.images_per_cpu = 3
         self.first_run_through_of_the_day = True
         self.tried_accessing_old_cache = False
         self.seed = 10
@@ -1889,11 +1890,17 @@ class SubnetValidator(Base.BaseNeuron):
                 log_level=self.log_level,
             )
 
-            self.model_cache = builder.get_eval_round_from_model_cache()
 
-            hotkey_list, build_outcomes = builder.build_images()
+            new_model_cache = builder.get_eval_round_from_model_cache()
 
+            image_hotkey_list = builder.build_images()
 
+            if not image_hotkey_list:
+                if builder.time_limit:
+                    break
+                continue
+
+            
 
 
 

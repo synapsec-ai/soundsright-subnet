@@ -340,4 +340,22 @@ class ModelBuilder:
     
     def build_images(self):
 
-        return asyncio.run(self.build_images_async())
+        hotkey_list, outcomes = asyncio.run(self.build_images_async())
+
+        hk_len = len(hotkey_list)
+        outcomes_len = len(outcomes)
+        if len(hotkey_list) != len(outcomes):
+            Utils.subnet_logger(
+                severity="ERROR",
+                message=f"Mismatch in hotkey_list length: {hk_len} and image building outcomes length: {outcomes_len} for asynchronous image building.",
+                log_level=self.log_level
+            )
+            return None
+        
+        successful_hotkeys = []
+
+        for hk, outcome in zip(hotkey_list, outcomes):
+            if outcome:
+                successful_hotkeys.append(hk)
+
+        return successful_hotkeys
