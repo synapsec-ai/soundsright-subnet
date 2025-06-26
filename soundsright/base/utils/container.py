@@ -8,6 +8,7 @@ import glob
 import sys
 import re
 import asyncio 
+import chardet 
 
 import soundsright.base.utils as Utils
 
@@ -228,6 +229,55 @@ def validate_container_config(directory) -> bool:
         
     return True    
 
+def detect_encoding(filepath, num_bytes=10000):
+    """
+    Detect the encoding of a file using chardet.
+
+    Args:
+        filepath (str): Path to the file.
+        num_bytes (int): Number of bytes to read for detection.
+
+    Returns:
+        str: Detected encoding, or None if detection fails.
+    """
+    try:
+        with open(filepath, 'rb') as f:
+            raw_data = f.read(num_bytes)
+        result = chardet.detect(raw_data)
+        return result['encoding']
+    except Exception as e:
+        print(f"Encoding detection failed for {filepath}: {e}")
+        return None
+
+def replace_string_in_directory(directory, old_string, new_string):
+    """
+    Recursively replaces all instances of old_string with new_string in all files
+    under the given directory and its subdirectories, regardless of encoding.
+
+    Args:
+        directory (str): Root directory to start search.
+        old_string (str): String to be replaced.
+        new_string (str): Replacement string.
+    """
+    for root, _, files in os.walk(directory):
+        for file_name in files:
+            file_path = os.path.join(root, file_name)
+
+            # Detect encoding
+            encoding = detect_encoding(file_path)
+            if not encoding:
+                continue
+
+            try:
+                with open(file_path, 'r', encoding=encoding) as file:
+                    content = file.read()
+                if old_string in content:
+                    content = content.replace(old_string, new_string)
+                    with open(file_path, 'w', encoding=encoding) as file:
+                        file.write(content)
+            except Exception as e:
+                continue
+
 async def build_container_async(directory: str, hotkey: str, competition: str, log_level: str) -> bool:
     """
     Build one miner model image async, return True if operation was successful and False otherwise
@@ -335,6 +385,62 @@ async def build_containers_async(model_base_path: str, eval_cache: dict, hotkeys
     )
 
     return hk_list, output
+
+def start_container_replacement(tag_name: str, cuda_directory: str, port: int, log_level: str):
+
+    result1 = subprocess.run(
+        [
+            "podman", "run", 
+            "-d", 
+            "--device", "nvidia.com/gpu=all", 
+            "--volume", f"{cuda_directory}:{cuda_directory}", 
+            "--user", "10002:10002", 
+            "--name", tag_name, 
+            "-p", f"127.0.0.1:{port}:{port}", 
+            tag_name
+        ], 
+        check=True,
+        timeout=30
+    )
+    if result1.returncode != 0:
+        return False
+    
+    # BLOCK ALL INTERNET ACCESS FOR THIS CONTAINER
+    block_commands = [
+        ["sudo", "iptables", "-P", "INPUT", "DROP"],
+        ["sudo", "iptables", "-P", "FORWARD", "DROP"],
+        ["sudo", "iptables", "-P", "OUTPUT", "DROP"],
+        ["sudo", "iptables", "-A", "INPUT", "-i", "lo", "-j", "ACCEPT"],
+        ["sudo", "iptables", "-A", "OUTPUT", "-o", "lo", "-j", "ACCEPT"],
+        ["sudo", "iptables", "-A", "INPUT", "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "-j", "ACCEPT"],
+        ["sudo", "iptables", "-A", "OUTPUT", "-m", "conntrack", "--ctstate", "ESTABLISHED", "-j", "ACCEPT"],
+        ["sudo", "iptables", "-A", "INPUT", "-p", "tcp", "--dport", "6500", "-m", "conntrack", "--ctstate", "NEW,ESTABLISHED", "-j", "ACCEPT"],
+        ["sudo", "iptables", "-A", "INPUT", "-p", "tcp", "--dport", "6000", "-m", "conntrack", "--ctstate", "NEW,ESTABLISHED", "-j", "ACCEPT"]
+    ]
+
+    for cmd in block_commands:
+        block_result = subprocess.run(cmd, capture_output=True, text=True)
+        if block_result.returncode != 0:
+            Utils.subnet_logger(
+                severity="WARNING",
+                message=f"Firewall rule failed: {' '.join(cmd)} - {block_result.stderr}",
+                log_level=log_level,
+            )
+        
+        else:
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Firewall rule successful: {' '.join(cmd)} - {block_result.stderr}",
+                log_level=log_level,
+            )
+    
+    Utils.subnet_logger(
+        severity="INFO",
+        message=f"Container internet access BLOCKED",
+        log_level=log_level,
+    )
+
+    return True
         
 def start_container(directory, log_level, cuda_directory) -> bool:
     """Runs the container with podman compose
@@ -454,9 +560,9 @@ def start_container(directory, log_level, cuda_directory) -> bool:
         )
         return False
     
-def check_container_status(log_level, timeout=5) -> bool:
+def check_container_status(port, log_level, timeout=5) -> bool:
     
-    url = f"http://127.0.0.1:6500/status/"
+    url = f"http://127.0.0.1:{port}/status/"
     try:
         start_time = int(time.time())
         current_time = start_time
@@ -480,15 +586,16 @@ def check_container_status(log_level, timeout=5) -> bool:
             log_level=log_level,
         )
         return False
+    return True
 
-def upload_audio(noisy_dir, log_level, timeout=10,) -> bool:
+def upload_audio(noisy_dir, port, log_level, timeout=10,) -> bool:
     """
     Upload audio files to the API.
 
     Returns:
         bool: True if operation was successful, False otherwise
     """
-    url = f"http://127.0.0.1:6500/upload-audio/"
+    url = f"http://127.0.0.1:{port}/upload-audio/"
     
     files = sorted(glob.glob(os.path.join(noisy_dir, "*.wav")))
 
@@ -531,10 +638,11 @@ def upload_audio(noisy_dir, log_level, timeout=10,) -> bool:
             log_level=log_level
         )
         return False
+    return True
     
-def prepare(log_level, timeout=10) -> bool:
+def prepare(port, log_level, timeout=10) -> bool:
     
-    url = f"http://127.0.0.1:6500/prepare/"
+    url = f"http://127.0.0.1:{port}/prepare/"
     try:
         res = requests.post(url, timeout=timeout)
         if res.status_code==200:
@@ -548,15 +656,16 @@ def prepare(log_level, timeout=10) -> bool:
             log_level=log_level,
         )
         return False
+    return True
 
-def enhance_audio(log_level, timeout=600) -> bool:
+def enhance_audio(port, log_level, timeout=600) -> bool:
     """
     Trigger audio enhancement on the API.
 
     Returns:
         bool: True if enhancement was successful, False otherwise
     """
-    url = f"http://127.0.0.1:6500/enhance/"
+    url = f"http://127.0.0.1:{port}/enhance/"
 
     try:
         response = requests.post(url, timeout=timeout)
@@ -577,8 +686,9 @@ def enhance_audio(log_level, timeout=600) -> bool:
             log_level=log_level,
         )
         return False
+    return True
 
-def download_enhanced(enhanced_dir, log_level, timeout=10) -> bool:
+def download_enhanced(port, enhanced_dir, log_level, timeout=10) -> bool:
     """
     Download the zip file containing enhanced audio files, extract its contents, 
     and remove the zip file.
@@ -589,7 +699,7 @@ def download_enhanced(enhanced_dir, log_level, timeout=10) -> bool:
     Returns:
         bool: True if successful, False otherwise.
     """
-    url = "http://127.0.0.1:6500/download-enhanced/"
+    url = f"http://127.0.0.1:{port}/download-enhanced/"
     zip_file_path = os.path.join(enhanced_dir, "enhanced_audio_files.zip")
 
     try:

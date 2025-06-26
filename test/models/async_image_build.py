@@ -7,13 +7,13 @@ from huggingface_hub import snapshot_download
 
 import soundsright.base.utils as Utils
 
-class AsyncImageTester:
+class AsyncImageBuildTester:
 
     def __init__(self):
 
-        self.denoising_path=f"{os.path.expanduser('~')}/.soundsright/image_test/denoising"
+        self.denoising_path=f"{os.path.expanduser('~')}/.SoundsRight/image_test/denoising"
         snapshot_download(repo_id="synapsecai/SoundsRightModelTemplate", local_dir=self.denoising_path, revision="DENOISING_16000HZ")
-        self.dereverb_path=f"{os.path.expanduser('~')}/.soundsright/image_test/dereverberation"
+        self.dereverb_path=f"{os.path.expanduser('~')}/.SoundsRight/image_test/dereverberation"
         snapshot_download(repo_id="synapsecai/SoundsRightModelTemplate", local_dir=self.dereverb_path, revision="DEREVERBERATION_16000HZ")
 
         self.cpu_count = Utils.get_cpu_core_count()
@@ -126,19 +126,22 @@ class AsyncImageTester:
 
         completion_time, outputs = asyncio.run(self.build_containers_async(images_per_cpu=images_per_cpu))
 
-        tot, length = 0, 0
+        tot, length, tot_len = 0, 0, 0
+
 
         for k in outputs:
 
             if isinstance(k, float):
                 tot += k
                 length += 1
+            
+            tot_len += 1
 
         avg_comp_time = tot/len 
 
         success_rate =  len(outputs) - length
 
-        return completion_time, avg_comp_time, success_rate
+        return completion_time, avg_comp_time, success_rate, tot_len
     
     def save_lines_to_file(self, lines):
         
@@ -152,29 +155,31 @@ class AsyncImageTester:
         completion_times = []
         avg_comp_times = []
         success_rates = []
+        total_lengths = []
         ipcs = [1,2,3,4]
         lines = []
 
         for ipc in ipcs:
 
-            completion_time, avg_comp_time, success_rate = self.run_async_build(images_per_cpu=ipc)
+            completion_time, avg_comp_time, success_rate, tot_len = self.run_async_build(images_per_cpu=ipc)
 
             completion_times.append(completion_time)
             avg_comp_times.append(avg_comp_time)
             success_rates.append(success_rate)
+            total_lengths.append(tot_len)
 
             self.clear_podman_cache()
 
-        for ct, act, sr, ipc in zip(completion_times, avg_comp_times, success_rates, ipcs):
+        for ct, act, sr, ipc, tl in zip(completion_times, avg_comp_times, success_rates, ipcs, total_lengths):
 
-            line = f"# of Images per CPU: {ipc}. Total completion time: {ct}. Average completion time: {act}. Success rate: {sr}."
+            line = f"# of Images per CPU: {ipc}. Number of attempted image builds: {tl} Total completion time: {ct}. Average completion time: {act}. Success rate: {sr}."
             lines.append(line)
         
         self.save_lines_to_file(lines=lines)
 
 if __name__ == "__main__":
 
-    tester = AsyncImageTester()
+    tester = AsyncImageBuildTester()
     tester.run_build_test()
 
         
