@@ -139,6 +139,13 @@ class AsyncImageTester:
         success_rate =  len(outputs) - length
 
         return completion_time, avg_comp_time, success_rate
+    
+    def save_lines_to_file(self, lines):
+        
+        with open(self.output_path, 'w', encoding='utf-8') as f:
+            for line in lines:
+                print(line)
+                f.write(f"{line}\n")
 
     def run_test(self):
 
@@ -163,12 +170,10 @@ class AsyncImageTester:
         
         self.save_lines_to_file(lines=lines)
 
-    def save_lines_to_file(self, lines):
-        
-        with open(self.output_path, 'w', encoding='utf-8') as f:
-            for line in lines:
-                print(line)
-                f.write(f"{line}\n")
+if __name__ == "__main__":
+
+    tester = AsyncImageTester()
+    tester.run_test()
 
         
 
