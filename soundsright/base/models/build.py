@@ -340,22 +340,42 @@ class ModelBuilder:
     
     def build_images(self):
 
-        hotkey_list, outcomes = asyncio.run(self.build_images_async())
+        hotkey_list, competitions_list, outcomes = asyncio.run(self.build_images_async())
+
+        if not isinstance(hotkey_list, list) or not isinstance(competitions_list, list) or not isinstance(outcomes, list):
+            Utils.subnet_logger(
+                severity="ERROR",
+                message=f"One of hotkey_list: {hotkey_list}, competitions_list: {competitions_list} or outcomes: {outcomes} is not a list.",
+                log_level=self.log_level
+            )
+            return None
 
         hk_len = len(hotkey_list)
         outcomes_len = len(outcomes)
+        competitions_len = len(competitions_list)
+
         if len(hotkey_list) != len(outcomes):
             Utils.subnet_logger(
                 severity="ERROR",
                 message=f"Mismatch in hotkey_list length: {hk_len} and image building outcomes length: {outcomes_len} for asynchronous image building.",
                 log_level=self.log_level
             )
-            return None
+            return None, None
+        
+        if len(hotkey_list) != len(competitions_list):
+            Utils.subnet_logger(
+                severity="ERROR",
+                message=f"Mismatch in hotkey_list length: {hk_len} and associated competitions length: {competitions_len} for asynchronous image building.",
+                log_level=self.log_level
+            )
+            return None, None
         
         successful_hotkeys = []
+        associated_competitions = []
 
-        for hk, outcome in zip(hotkey_list, outcomes):
+        for hk, competition, outcome in zip(hotkey_list, competition, outcomes):
             if outcome:
                 successful_hotkeys.append(hk)
+                associated_competitions.append(competition)
 
-        return successful_hotkeys
+        return successful_hotkeys, associated_competitions

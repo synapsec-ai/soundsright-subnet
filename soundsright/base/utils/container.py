@@ -299,6 +299,7 @@ async def build_container_async(directory: str, hotkey: str, competition: str, l
 async def build_containers_async(model_base_path: str, eval_cache: dict, hotkeys: list, log_level: str):
     hk_list = []
     tasks = []
+    competitions = []
 
     for competition in eval_cache:
 
@@ -310,6 +311,7 @@ async def build_containers_async(model_base_path: str, eval_cache: dict, hotkeys
 
                 hk = hotkeys[uid]
                 hk_list.append(hk)
+                competitions.append(competition)
                 task = build_container_async(
                     directory=os.path.join(model_base_path, hk),
                     hotkey=hk,

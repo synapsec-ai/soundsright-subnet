@@ -1872,6 +1872,7 @@ class SubnetValidator(Base.BaseNeuron):
 
         while self.calculate_remaining_cache_length() > 0:
 
+            # Initialize image builder object
             builder = Models.ModelBuilder(
                 model_cache=self.model_cache,
                 cuda_directory=self.cuda_directory,
@@ -1890,16 +1891,27 @@ class SubnetValidator(Base.BaseNeuron):
                 log_level=self.log_level,
             )
 
-
+            # Filter out cache
             new_model_cache = builder.get_eval_round_from_model_cache()
 
-            image_hotkey_list = builder.build_images()
+            # Build model images async
+            image_hotkey_list, competitions_list = builder.build_images()
 
-            if not image_hotkey_list:
+            # Verify outputs, if it didn't work:
+            if not image_hotkey_list or not competitions_list:
+
+                # End loop if validator is out of time and needs to start next competition
                 if builder.time_limit:
                     break
+
+                # Retry otherwise
                 continue
 
+            # Query eval cache from builder
+            eval_cache = builder.eval_cache
+
+            
+            
             
 
 
@@ -1908,7 +1920,7 @@ class SubnetValidator(Base.BaseNeuron):
             if builder.time_limit:
                 break
 
-
+            self.model_cache = new_model_cache
 
 
 
