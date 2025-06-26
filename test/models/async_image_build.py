@@ -167,7 +167,7 @@ class AsyncImageTester:
 
         for ct, act, sr, ipc in zip(completion_times, avg_comp_times, success_rates, ipcs):
 
-            line = f"# of Images per CPU: {ipc}. Total completion time: {ct}. Average completion time: {act}. Success rate: {sr}"
+            line = f"# of Images per CPU: {ipc}. Total completion time: {ct}. Average completion time: {act}. Success rate: {sr}."
             lines.append(line)
         
         self.save_lines_to_file(lines=lines)
