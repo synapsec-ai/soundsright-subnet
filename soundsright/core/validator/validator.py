@@ -1269,13 +1269,7 @@ class SubnetValidator(Base.BaseNeuron):
         """Sets the weights for the subnet"""
 
         def filter_negative_weights(weights):
-            new_weights = []
-            for weight in weights:
-                if weight < 0:
-                    new_weights.append(0)
-                else:
-                    new_weights.append(weight)
-            return new_weights
+            return [max(0, w) for w in weights]
 
         def normalize_weights_list(weights, max_value:int):
             if all(x==1 for x in weights):
