@@ -1301,6 +1301,8 @@ class SubnetValidator(Base.BaseNeuron):
                 message=f"Setting weights with the following parameters: netuid={self.neuron_config.netuid}, wallet={self.wallet}, uids={self.metagraph.uids}, weights={weights}, version_key={self.subnet_version}"
             )
 
+            weights = filter_negative_weights(weights = weights)
+
             weights = normalize_weights_list(
                 weights=weights,
                 max_value=max_value,
