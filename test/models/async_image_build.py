@@ -147,7 +147,7 @@ class AsyncImageTester:
                 print(line)
                 f.write(f"{line}\n")
 
-    def run_test(self):
+    def run_build_time_test(self):
 
         completion_times = []
         avg_comp_times = []
@@ -163,6 +163,8 @@ class AsyncImageTester:
             avg_comp_times.append(avg_comp_time)
             success_rates.append(success_rate)
 
+            self.clear_podman_cache()
+
         for ct, act, sr, ipc in zip(completion_times, avg_comp_times, success_rates, ipcs):
 
             line = f"# of Images per CPU: {ipc}. Total completion time: {ct}. Average completion time: {act}. Success rate: {sr}"
@@ -173,7 +175,7 @@ class AsyncImageTester:
 if __name__ == "__main__":
 
     tester = AsyncImageTester()
-    tester.run_test()
+    tester.run_build_test()
 
         
 
