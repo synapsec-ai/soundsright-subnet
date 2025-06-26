@@ -1268,6 +1268,9 @@ class SubnetValidator(Base.BaseNeuron):
     async def commit_weights(self) -> None:
         """Sets the weights for the subnet"""
 
+        def filter_negative_weights(weights):
+            return [max(0, w) for w in weights]
+
         def normalize_weights_list(weights, max_value:int):
             if all(x==1 for x in weights):
                 return [(x/max_value) for x in weights]
@@ -1296,6 +1299,8 @@ class SubnetValidator(Base.BaseNeuron):
                 weights=weights,
                 max_value=max_value,
             )
+
+            weights = filter_negative_weights(weights = weights)
 
             if self.wc_prevention_protcool:
                 # Modify according to miner nonce avg
