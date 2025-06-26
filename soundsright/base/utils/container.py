@@ -261,9 +261,9 @@ async def build_container_async(directory: str, hotkey: str, competition: str, l
             "podman", "build",
             "-t", tag_name,
             "--file", dockerfile_path,
-            cwd=os.path.dirname(dockerfile_path),
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
+            stderr=asyncio.subprocess.PIPE,
+            cwd=os.path.dirname(dockerfile_path),
         )
 
         try:
