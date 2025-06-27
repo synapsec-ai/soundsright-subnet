@@ -139,7 +139,7 @@ class AsyncModelRunTester:
             )
 
             try:
-                stdout, stderr = await asyncio.wait_for(process.communicate())
+                stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=10000)
             except asyncio.TimeoutError:
                 process.kill()
                 await process.wait()
@@ -273,7 +273,7 @@ class AsyncModelRunTester:
 
         start_time = time.time()
 
-        outputs = asyncio.gather(*tasks)
+        outputs = await asyncio.gather(*tasks)
 
         completion_time = time.time() - start_time
 
