@@ -70,8 +70,9 @@ class AsyncModelRunTester:
                 os.makedirs(directory)
 
         for path, port in zip(self.paths, self.ports):
-            snapshot_download(repo_id="synapsecai/SoundsRightModelTemplate", local_dir=path, revision="DENOISING_16000HZ")
-            Utils.replace_string_in_directory(directory=path, old_string="6500", new_string=str(port))
+            if not os.listdir(path):
+                snapshot_download(repo_id="synapsecai/SoundsRightModelTemplate", local_dir=path, revision="DENOISING_16000HZ")
+                Utils.replace_string_in_directory(directory=path, old_string="6500", new_string=str(port))
 
         self.sample_rates = [16000]
 
@@ -269,7 +270,9 @@ class AsyncModelRunTester:
             outputs, completion_time = asyncio.run(self.run_eval_group(i))
 
             count = i + 1
-            lines.append(f"Total completion time for {count} models: {completion_time}. Individual completion times: {outputs}")
+            line = f"Total completion time for {count} models: {completion_time}. Individual completion times: {outputs}"
+            print(line)
+            lines.append(line)
 
         self.save_lines_to_file(lines=lines)
 
