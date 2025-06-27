@@ -37,6 +37,13 @@ from .container import (
     enhance_audio,
     download_enhanced,
     delete_container,
+    start_container_replacement_async,
+    start_container_async,
+    check_container_status_async,
+    upload_audio_async,
+    prepare_async,
+    enhance_audio_async,
+    download_enhanced_async,
 )
 
 from .system import (

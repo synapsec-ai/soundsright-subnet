@@ -194,7 +194,7 @@ class AsyncModelRunTester:
 
         print(f"starting model eval for tag: {tag}")
 
-        status1 = Utils.start_container_replacement(
+        status1 = await Utils.start_container_replacement_async(
             tag_name=tag,
             port=port,
             cuda_directory="/usr/local/cuda-12.6",
@@ -206,35 +206,35 @@ class AsyncModelRunTester:
         
         print(f"{tag} container started")
         
-        status2 = Utils.check_container_status(port=port, log_level="TRACE")
+        status2 = await Utils.check_container_status_async(port=port, log_level="TRACE")
 
         if not status2:
             return False 
         
         print(f"{tag} status check successful")
 
-        status3 = Utils.prepare(port=port, log_level="TRACE")
+        status3 = await Utils.prepare_async(port=port, log_level="TRACE")
 
         if not status3:
             return False
         
         print(f"{tag} preparation successful")
         
-        status4 = Utils.upload_audio(noisy_dir=os.path.join(self.noise_base_path, "16000"), port=port, log_level="TRACE")
+        status4 = await Utils.upload_audio_async(noisy_dir=os.path.join(self.noise_base_path, "16000"), port=port, log_level="TRACE")
 
         if not status4:
             return False
         
         print(f"{tag} audio upload successful")
         
-        status5 = Utils.enhance_audio(port=port, log_level="TRACE")
+        status5 = await Utils.enhance_audio_async(port=port, log_level="TRACE")
 
         if not status5:
             return False
         
         print(f"{tag} audio enhancement successful")
         
-        status6 = Utils.download_enhanced(port=port, enhanced_dir=enhanced_path, log_level="TRACE")
+        status6 = await Utils.download_enhanced_async(port=port, enhanced_dir=enhanced_path, log_level="TRACE")
 
         if not status6:
             return False 
@@ -292,9 +292,9 @@ class AsyncModelRunTester:
 
         for i in range(5):
 
-            outputs, completion_time = asyncio.run(self.run_eval_group(i))
-
             count = i + 1
+            outputs, completion_time = asyncio.run(self.run_eval_group(count))
+
             line = f"Total completion time for {count} models: {completion_time}. Individual completion times: {outputs}"
             print(line)
             lines.append(line)
@@ -306,7 +306,3 @@ if __name__ == "__main__":
 
     tester = AsyncModelRunTester()
     tester.run_eval_test()
-
-        
-
-    
