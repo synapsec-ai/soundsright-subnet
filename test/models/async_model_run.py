@@ -247,6 +247,7 @@ class AsyncModelRunTester:
                 port=self.ports[i],
                 enhanced_path=self.output_paths[i]
             )
+            tasks.append(task)
 
         start_time = time.time()
 
