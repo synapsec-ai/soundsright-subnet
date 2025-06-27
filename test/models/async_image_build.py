@@ -11,9 +11,10 @@ class AsyncImageBuildTester:
 
     def __init__(self):
 
+
         self.denoising_path=f"{os.path.expanduser('~')}/.SoundsRight/image_test/denoising"
         self.dereverb_path=f"{os.path.expanduser('~')}/.SoundsRight/image_test/dereverberation"
-        self.output_path = os.path.join(self.base_path,'outputs')
+        self.output_path = f"{os.path.expanduser('~')}/.SoundsRight/outputs"
         self.output_txt_path = os.path.join(self.output_path,'build_results.txt')
         for path in [self.denoising_path, self.dereverb_path, self.output_path]:
             if not os.path.exists(path):
