@@ -87,16 +87,16 @@ class AsyncModelRunTester:
 
             self.TTSHandler.create_openai_tts_dataset_for_all_sample_rates(n=30, seed=self.seed)
 
-        create_noise_and_reverb_data_for_all_sampling_rates(
-            tts_base_path = self.tts_base_path,
-            arni_dir_path = self.arni_path,
-            reverb_base_path=self.reverb_base_path,
-            wham_dir_path=self.wham_path,
-            noise_base_path=self.noise_base_path,
-            tasks=['DENOISING', 'DEREVERBERATION'],
-            log_level="TRACE",
-            seed=100
-        )
+            create_noise_and_reverb_data_for_all_sampling_rates(
+                tts_base_path = self.tts_base_path,
+                arni_dir_path = self.arni_path,
+                reverb_base_path=self.reverb_base_path,
+                wham_dir_path=self.wham_path,
+                noise_base_path=self.noise_base_path,
+                tasks=['DENOISING', 'DEREVERBERATION'],
+                log_level="TRACE",
+                seed=100
+            )
 
         if not self.run_async_build():
             print("model build failed")
@@ -125,6 +125,8 @@ class AsyncModelRunTester:
             return False
 
         try:
+
+            print(f"building container for tag_name: {tag_name} and directory: {directory}")
             
             process = await asyncio.create_subprocess_exec(
                 "podman", "build",
@@ -144,11 +146,14 @@ class AsyncModelRunTester:
                 return False
 
             if process.returncode != 0:
+                print("build failed")
                 return False
 
         except Exception as e:
+            print(f"build failed because: {e}")
             return False
         
+        print(f"build successful for tag_name: {tag_name} and directory: {directory}")
         return True
 
     async def build_containers_async(self):
@@ -187,6 +192,8 @@ class AsyncModelRunTester:
 
         start_time = time.time()
 
+        print(f"starting model eval for tag: {tag}")
+
         status1 = Utils.start_container_replacement(
             tag_name=tag,
             port=port,
@@ -196,35 +203,49 @@ class AsyncModelRunTester:
         if not status1:
             return False
         
+        print(f"{tag} container started")
+        
         status2 = Utils.check_container_status(port=port, log_level="TRACE")
 
         if not status2:
             return False 
+        
+        print(f"{tag} status check successful")
 
         status3 = Utils.prepare(port=port, log_level="TRACE")
 
         if not status3:
             return False
         
+        print(f"{tag} preparation successful")
+        
         status4 = Utils.upload_audio(noisy_dir=os.path.join(self.noise_base_path, "16000"), port=port, log_level="TRACE")
 
         if not status4:
             return False
+        
+        print(f"{tag} audio upload successful")
         
         status5 = Utils.enhance_audio(port=port, log_level="TRACE")
 
         if not status5:
             return False
         
+        print(f"{tag} audio enhancement successful")
+        
         status6 = Utils.download_enhanced(port=port, enhanced_dir=enhanced_path)
 
         if not status6:
             return False 
         
+        print(f"{tag} enhanced file download successful")
+        
         status7 = self.validate_all_noisy_files_are_enhanced(enhanced_path=enhanced_path)
 
         if not status7:
             return False 
+        
+        print(f"{tag} noisy and enhanced file validation successful")
         
         completion_time = time.time() - start_time
 
