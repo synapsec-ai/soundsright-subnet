@@ -234,7 +234,7 @@ class AsyncModelRunTester:
         
         print(f"{tag} audio enhancement successful")
         
-        status6 = Utils.download_enhanced(port=port, enhanced_dir=enhanced_path)
+        status6 = Utils.download_enhanced(port=port, enhanced_dir=enhanced_path, log_level="TRACE")
 
         if not status6:
             return False 
