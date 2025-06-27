@@ -65,7 +65,7 @@ class AsyncModelRunTester:
             6505,
         ]
 
-        for directory in [self.tts_base_path, self.noise_base_path, self.reverb_base_path, self.arni_path, self.wham_path, self.enhanced1, self.enhanced2, self.enhanced3, self.enhanced4, self.enhanced5, self.model_path_1, self.model_path_2, self.model_path_3, self.model_path_4, self.model_path_5]:
+        for directory in [self.output_path, self.tts_base_path, self.noise_base_path, self.reverb_base_path, self.arni_path, self.wham_path, self.enhanced1, self.enhanced2, self.enhanced3, self.enhanced4, self.enhanced5, self.model_path_1, self.model_path_2, self.model_path_3, self.model_path_4, self.model_path_5]:
             if not os.path.exists(directory):
                 os.makedirs(directory)
 
@@ -170,7 +170,7 @@ class AsyncModelRunTester:
 
         for tag, path in zip(self.tags, paths):
 
-            task = self.build_container_async(tag_name=tag,directory=path)
+            task = asyncio.create_task(self.build_container_async(tag_name=tag,directory=path))
             tasks.append(task)
 
         outputs = await asyncio.gather(*tasks)
@@ -263,11 +263,11 @@ class AsyncModelRunTester:
 
         for i in range(count):
             
-            task = await self.run_model_evaluation(
+            task = asyncio.create_task(self.run_model_evaluation(
                 tag=self.tags[i],
                 port=self.ports[i],
                 enhanced_path=self.output_paths[i]
-            )
+            ))
             tasks.append(task)
 
         start_time = time.time()
