@@ -65,7 +65,7 @@ class AsyncModelRunTester:
             6505,
         ]
 
-        for directory in [self.tts_base_path, self.noise_base_path, self.reverb_base_path, self.arni_path, self.wham_path, self.enhanced1, self.enhanced2. self.enhanced3, self.enhanced4, self.enhanced5, self.model_path_1, self.model_path_2, self.model_path_3, self.model_path_4, self.model_path_5]:
+        for directory in [self.tts_base_path, self.noise_base_path, self.reverb_base_path, self.arni_path, self.wham_path, self.enhanced1, self.enhanced2, self.enhanced3, self.enhanced4, self.enhanced5, self.model_path_1, self.model_path_2, self.model_path_3, self.model_path_4, self.model_path_5]:
             if not os.path.exists(directory):
                 os.makedirs(directory)
 
