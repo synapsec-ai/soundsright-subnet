@@ -242,7 +242,7 @@ class AsyncModelRunTester:
 
         for i in range(count):
             
-            task = self.run_model_evaluation(
+            task = await self.run_model_evaluation(
                 tag=self.tags[i],
                 port=self.ports[i],
                 enhanced_path=self.output_paths[i]
