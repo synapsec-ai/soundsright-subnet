@@ -799,17 +799,17 @@ async def start_container_replacement_async(tag_name: str, cuda_directory: str, 
 async def start_container_async(directory: str, log_level: str, cuda_directory: str):
     return await asyncio.to_thread(start_container, directory, log_level, cuda_directory)
 
-async def check_container_status_async(port: int, log_level: str, timeout: int = 5):
+async def check_container_status_async(port: int, log_level: str, timeout: int = 600):
     return await asyncio.to_thread(check_container_status, port, log_level, timeout)
 
-async def upload_audio_async(noisy_dir: str, port: int, log_level: str, timeout: int = 10):
+async def upload_audio_async(noisy_dir: str, port: int, log_level: str, timeout: int = 600):
     return await asyncio.to_thread(upload_audio, noisy_dir, port, log_level, timeout)
 
-async def prepare_async(port: int, log_level: str, timeout: int = 10):
+async def prepare_async(port: int, log_level: str, timeout: int = 6000):
     return await asyncio.to_thread(prepare, port, log_level, timeout)
 
-async def enhance_audio_async(port: int, log_level: str, timeout: int = 600):
+async def enhance_audio_async(port: int, log_level: str, timeout: int = 6000):
     return await asyncio.to_thread(enhance_audio, port, log_level, timeout)
 
-async def download_enhanced_async(port: int, enhanced_dir: str, log_level: str, timeout: int = 10):
+async def download_enhanced_async(port: int, enhanced_dir: str, log_level: str, timeout: int = 6000):
     return await asyncio.to_thread(download_enhanced, port, enhanced_dir, log_level, timeout)
