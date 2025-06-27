@@ -197,6 +197,7 @@ class AsyncModelRunTester:
         status1 = Utils.start_container_replacement(
             tag_name=tag,
             port=port,
+            cuda_directory="/usr/local/cuda-12.6"
             log_level="TRACE"
         )
 
