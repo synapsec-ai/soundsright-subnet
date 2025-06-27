@@ -83,7 +83,9 @@ class AsyncModelRunTester:
             sample_rates=self.sample_rates
         )
 
-        self.TTSHandler.create_openai_tts_dataset_for_all_sample_rates(n=30, seed=self.seed)
+        if not os.listdir(os.path.join(self.tts_base_path, "16000")):
+
+            self.TTSHandler.create_openai_tts_dataset_for_all_sample_rates(n=30, seed=self.seed)
 
         create_noise_and_reverb_data_for_all_sampling_rates(
             tts_base_path = self.tts_base_path,
