@@ -30,6 +30,8 @@ class AsyncModelRunTester:
         self.model_path_3 = os.path.join(self.base_path,'models','model3')
         self.model_path_4 = os.path.join(self.base_path,'models','model4')
         self.model_path_5 = os.path.join(self.base_path,'models','model5')
+        self.output_path = os.path.join(self.base_path,'outputs')
+        self.output_txt_path = os.path.join(self.output_path,'eval_results.txt')
 
         self.tags = [
             "model1",
@@ -253,7 +255,7 @@ class AsyncModelRunTester:
     
     def save_lines_to_file(self, lines):
         
-        with open(self.output_path, 'w', encoding='utf-8') as f:
+        with open(self.output_txt_path, 'w', encoding='utf-8') as f:
             for line in lines:
                 print(line)
                 f.write(f"{line}\n")

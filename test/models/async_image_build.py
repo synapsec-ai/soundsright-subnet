@@ -12,8 +12,15 @@ class AsyncImageBuildTester:
     def __init__(self):
 
         self.denoising_path=f"{os.path.expanduser('~')}/.SoundsRight/image_test/denoising"
-        snapshot_download(repo_id="synapsecai/SoundsRightModelTemplate", local_dir=self.denoising_path, revision="DENOISING_16000HZ")
         self.dereverb_path=f"{os.path.expanduser('~')}/.SoundsRight/image_test/dereverberation"
+        self.output_path = os.path.join(self.base_path,'outputs')
+        self.output_txt_path = os.path.join(self.output_path,'build_results.txt')
+        for path in [self.denoising_path, self.dereverb_path, self.output_path]:
+            if not os.path.exists(path):
+                os.makedirs(path)
+
+
+        snapshot_download(repo_id="synapsecai/SoundsRightModelTemplate", local_dir=self.denoising_path, revision="DENOISING_16000HZ")
         snapshot_download(repo_id="synapsecai/SoundsRightModelTemplate", local_dir=self.dereverb_path, revision="DEREVERBERATION_16000HZ")
 
         self.cpu_count = Utils.get_cpu_core_count()
@@ -145,7 +152,7 @@ class AsyncImageBuildTester:
     
     def save_lines_to_file(self, lines):
         
-        with open(self.output_path, 'w', encoding='utf-8') as f:
+        with open(self.output_txt_path, 'w', encoding='utf-8') as f:
             for line in lines:
                 print(line)
                 f.write(f"{line}\n")
