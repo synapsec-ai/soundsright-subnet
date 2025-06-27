@@ -100,7 +100,7 @@ class AsyncModelRunTester:
             print("model build failed")
             sys.exit()
 
-    async def build_container_async(tag_name: str, directory: str) -> bool:
+    async def build_container_async(self, tag_name: str, directory: str) -> bool:
         """
         Build one miner model image async, return True if operation was successful and False otherwise
         """
