@@ -30,12 +30,6 @@ class AsyncImageBuildTester:
 
     def clear_podman_cache(self):
         try:
-            # Delete container
-            subprocess.run(
-                ["podman", "rm", "-f", "modelapi"],
-                check=True,
-                capture_output=True
-            )
             # Remove all images
             subprocess.run(
                 ["podman", "rmi", "-a", "-f"],
@@ -91,16 +85,18 @@ class AsyncImageBuildTester:
             )
 
             try:
-                stdout, stderr = await asyncio.wait_for(process.communicate())
+                stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=10000)
             except asyncio.TimeoutError:
                 process.kill()
                 await process.wait()
                 return False
 
             if process.returncode != 0:
+                print("build failed")
                 return False
 
         except Exception as e:
+            print(f"build failed because: {e}")
             return False
         
         return time.time() - start_time
@@ -108,18 +104,11 @@ class AsyncImageBuildTester:
     async def build_containers_async(self, images_per_cpu):
 
         total_image_count = self.cpu_count * images_per_cpu
-        denoising_count = total_image_count // 2
-        dereverb_count = total_image_count - denoising_count
 
         tasks = []
-        for _ in range(denoising_count):
+        for _ in range(total_image_count):
 
-            task = self.build_container_async(directory=self.denoising_path)
-            tasks.append(task)
-
-        for _ in range(dereverb_count):
-
-            task = self.build_container_async(directory=self.dereverb_path)
+            task = asyncio.create_task(self.build_container_async(directory=self.denoising_path))
             tasks.append(task)
         
         start_time = int(time.time())
@@ -176,7 +165,8 @@ class AsyncImageBuildTester:
             success_rates.append(success_rate)
             total_lengths.append(tot_len)
 
-            self.clear_podman_cache()
+            if ipcs != 4:
+                self.clear_podman_cache()
 
         for ct, act, sr, ipc, tl in zip(completion_times, avg_comp_times, success_rates, ipcs, total_lengths):
 
