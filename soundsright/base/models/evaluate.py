@@ -635,10 +635,38 @@ class ModelEvaluationHandler:
                     log_level=self.log_level
                 )
 
+    def get_next_eval_round(self):
+
+        hotkeys = self.image_hotkey_list[:self.models_per_iteration]
+        self.image_hotkey_list = self.image_hotkey_list[self.models_per_iteration:]
+
+        competitions = self.competitions_list[:self.models_per_iteration]
+        self.competitions_list = self.competitions_list[self.models_per_iteration:]
+
+        ports = self.ports_list[:self.models_per_iteration]
+        self.ports_list = self.ports_list[self.models_per_iteration:]
+
+        return hotkeys, competitions, ports
+
     def validate_all_noisy_files_are_enhanced(self, task_path: str, model_output_path: str):
         noisy_files = sorted([os.path.basename(f) for f in glob.glob(os.path.join(task_path, '*.wav'))])
         enhanced_files = sorted([os.path.basename(f) for f in glob.glob(os.path.join(model_output_path, '*.wav'))])
         return noisy_files == enhanced_files
+    
+    def get_tasks(self, hotkeys: list, competitions: list, ports: list):
+
+        tasks = []
+        for hotkey, competition, port in zip(hotkeys, competitions, ports):
+            task = asyncio.create_task(
+                self.run_model_evaluation(
+                    hotkey=hotkey,
+                    competition=competition,
+                    port=port,
+                )
+            )
+            tasks.append(task)
+
+        return tasks
 
     async def run_model_evaluation(self, hotkey: str, competition: str, port: int):
 
@@ -705,4 +733,20 @@ class ModelEvaluationHandler:
         
         return True
     
+
+    
+    def run_eval_loop(self):
+
+
+        while len(self.image_hotkey_list) > 0:
+
+            hotkeys, competitions, ports = self.get_next_eval_round()
+
+            tasks = self.get_tasks(
+                hotkeys=hotkeys,
+                competitions=competitions,
+                ports=ports
+            )
+
+            
 
