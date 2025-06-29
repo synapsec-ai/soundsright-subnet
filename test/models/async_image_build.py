@@ -11,7 +11,6 @@ class AsyncImageBuildTester:
 
     def __init__(self):
 
-
         self.denoising_path=f"{os.path.expanduser('~')}/.SoundsRight/image_test/denoising"
         self.dereverb_path=f"{os.path.expanduser('~')}/.SoundsRight/image_test/dereverberation"
         self.output_path = f"{os.path.expanduser('~')}/.SoundsRight/outputs"
@@ -73,6 +72,7 @@ class AsyncImageBuildTester:
         try:
             random_integer = random.randint(1,1000000000000000000000000000)
             tag_name = str(random_integer)
+            print(f"building container with tag name: {tag_name} for directory: {directory}")
 
             process = await asyncio.create_subprocess_exec(
                 "podman", "build",
