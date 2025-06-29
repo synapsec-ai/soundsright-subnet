@@ -1910,7 +1910,10 @@ class SubnetValidator(Base.BaseNeuron):
             # Query eval cache from builder
             eval_cache = builder.eval_cache
 
-            
+            evaluator = Models.ModelEvaluationHandler(
+                eval_cache=eval_cache,
+                
+            )
             
             
 

@@ -12,7 +12,7 @@ import soundsright.base.benchmarking as Benchmarking
 import soundsright.base.models as Models
 import soundsright.base.utils as Utils
 
-class ModelEvaluationHandler:
+class OldModelEvaluationHandler:
     
     def __init__(
         self, 
@@ -542,3 +542,167 @@ class ModelEvaluationHandler:
         self.reset_model_dirs()
         
         return metrics_dict, self.model_hash, self.hf_model_block
+    
+
+
+class ModelEvaluationHandler:
+
+    def __init__(
+            self,
+            eval_cache: dict,
+            image_hotkey_list: list,
+            competitions_list: list,
+            ports_list: list,
+            reverb_path: str,
+            noise_path: str,
+            tts_path: str,
+            model_output_path: str,
+            models_per_gpu: int,
+            gpu_count: int,
+            cuda_directory: str,
+            log_level: str,
+        ):
+
+        # Dataset paths
+        self.reverb_path = reverb_path
+        self.noise_path = noise_path
+        self.tts_path = tts_path
+        self.base_model_output_path = model_output_path
+
+        # Eval cache
+        self.eval_cache = eval_cache
+        self.image_hotkey_list = image_hotkey_list
+        self.competitions_list = competitions_list
+        self.ports_list = ports_list
+        self.models_per_iteration = models_per_gpu * gpu_count
+
+        # Misc
+        self.cuda_directory = cuda_directory
+        self.log_level = log_level
+
+    def prepare_directory(self, dir_path):
+        """
+        Creates directory if it does not exist, removes contents if it does
+        """
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Created directory: {dir_path}",
+                log_level=self.log_level
+            )
+
+        else:
+            for item in os.listdir(dir_path):
+                item_path = os.path.join(dir_path, item)
+                try:
+                    if os.path.isfile(item_path) or os.path.islink(item_path):
+                        os.unlink(item_path)
+                    elif os.path.isdir(item_path):
+                        shutil.rmtree(item_path)
+
+                except Exception as e:
+                    Utils.subnet_logger(
+                        severity="ERROR",
+                        message=f"Failed to delete item at path: {item_path} because: {e}",
+                        log_level=self.log_level
+                    )
+
+    def _reset_dir(self, directory: str) -> None:
+        """Removes all files and sub-directories in an inputted directory
+
+        Args:
+            directory (str): Directory to reset.
+        """
+        # Check if the directory exists
+        if not os.path.exists(directory):
+            return
+
+        # Loop through all the files and subdirectories in the directory
+        for filename in os.listdir(directory):
+            file_path = os.path.join(directory, filename)
+            
+            # Check if it's a file or directory and remove accordingly
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)  # Remove the file or link
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)  # Remove the directory and its contents
+            except Exception as e:
+                Utils.subnet_logger(
+                    severity="ERROR",
+                    message=f"Failed to delete {file_path}. Reason: {e}",
+                    log_level=self.log_level
+                )
+
+    def validate_all_noisy_files_are_enhanced(self, task_path: str, model_output_path: str):
+        noisy_files = sorted([os.path.basename(f) for f in glob.glob(os.path.join(task_path, '*.wav'))])
+        enhanced_files = sorted([os.path.basename(f) for f in glob.glob(os.path.join(model_output_path, '*.wav'))])
+        return noisy_files == enhanced_files
+
+    async def run_model_evaluation(self, hotkey: str, competition: str, port: int):
+
+        tag_name = f"{hotkey}_{competition}"
+        competition_components = competition.split("_")
+        task, sample_rate = competition_components[0], competition_components[1].replace("HZ", "")
+
+        if "denoising" in task.lower():
+            dataset_path = os.path.join(self.noise_path, sample_rate)
+        else:
+            dataset_path = os.path.join(self.reverb_path, sample_rate)
+
+        model_output_path = os.path.join(self.base_model_output_path, hotkey)
+
+        self.prepare_directory(dir_path=model_output_path)
+
+        start_status = await Utils.start_container_replacement_async(
+            tag_name=tag_name,
+            cuda_directory=self.cuda_directory,
+            port=port,
+            log_level=self.log_level,
+        )
+
+        if not start_status:
+            self._reset_dir(directory=model_output_path)
+            return False 
+        
+        init_status = await Utils.check_container_status_async(port=port, log_level=self.log_level)
+
+        if not init_status:
+            self._reset_dir(directory=model_output_path)
+            return False 
+        
+        prepare_status = await Utils.prepare_async(port=port, log_level=self.log_level)
+
+        if not prepare_status:
+            self._reset_dir(directory=model_output_path)
+            return False 
+        
+        upload_status = await Utils.upload_audio_async(noisy_dir=dataset_path, port=port, log_level=self.log_level)
+
+        if not upload_status:
+            self._reset_dir(directory=model_output_path)
+            return False 
+        
+        enhance_status = await Utils.enhance_audio_async(port=port, log_level=self.log_level)
+
+        if not enhance_status:
+            self._reset_dir(directory=model_output_path)
+            return False
+        
+        download_status = Utils.download_enhanced_async(enhanced_dir=model_output_path, port=port, log_level=self.log_level)
+
+        if not download_status:
+            self._reset_dir(directory=model_output_path)
+            return False
+
+        if not self.validate_all_noisy_files_are_enhanced(
+            task_path=dataset_path,
+            model_output_path=model_output_path
+        ):
+            self._reset_dir(directory=model_output_path)
+            return False
+        
+        return True
+    
+

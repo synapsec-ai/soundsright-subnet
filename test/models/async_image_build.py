@@ -179,11 +179,3 @@ if __name__ == "__main__":
 
     tester = AsyncImageBuildTester()
     tester.run_build_test()
-
-        
-
-
-    
-
-
-
