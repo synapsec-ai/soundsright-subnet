@@ -159,10 +159,15 @@ class ModelBuilder:
 
                 if counter < self.max_image_count:
                 
-                    if self.validate_model(
+                    model_hash, model_block = self.validate_model(
                         model_data=model_data,
                         competition=competition,
-                    ):
+                    )
+
+                    if model_hash and model_block and isinstance(model_hash, str) and isinstance(model_block, int):
+
+                        model_data["hash"] = model_hash
+                        model_data["block"] = model_block
 
                         self.eval_cache[competition].append(model_data)
 
@@ -187,13 +192,13 @@ class ModelBuilder:
         try:
             # 1. Verifying model data structure
             if not isinstance(model_data, dict):
-                return False 
+                return None, None 
 
             uid = model_data.get("uid", None)
             model_metadata = model_data.get("response_data", None)
 
             if not uid or not model_metadata or not isinstance(uid, int) or not isinstance(model_metadata, dict):
-                return False 
+                return None, None 
             
             hotkey = self.hotkeys[uid]
             port = 6500 + int(uid)
@@ -203,10 +208,10 @@ class ModelBuilder:
             historical_block = model_data.get("block", None)
 
             if not namespace or not name or not revision:
-                return False
+                return None, None
             
             if not isinstance(namespace, str) or not isinstance(name, str) or not isinstance(revision, str):
-                return False 
+                return None, None 
             
             model_id = f"{namespace}/{revision}"
             
@@ -220,7 +225,7 @@ class ModelBuilder:
             model_metadata, model_block = asyncio.run(self.metadata_handler.directly_obtain_model_metadata_from_chain(hotkey=hotkey))
 
             if not model_metadata or not model_block or model_block == 0:
-                return False 
+                return None, None 
             
             # Update model upload block if necessary
             if isinstance(historical_block, int) and historical_block < model_block:
@@ -238,7 +243,7 @@ class ModelBuilder:
                     message=f"Model: {namespace}/{name} metadata could not be validated with on-chain metadata. Exiting model evaluation.",
                     log_level=self.log_level
                 )
-                return False
+                return None, None
             
             # 3. Verify upload block is before seed determination
             if model_block >= self.seed_reference_block:
@@ -247,7 +252,7 @@ class ModelBuilder:
                     message=f"Model: {namespace}/{name} was submitted on block: {model_block} which is greater than the seed reference block: {self.seed_reference_block}. Exiting model evaluation.",
                     log_level=self.log_level
                 )
-                return False
+                return None, None
             else:
                 Utils.subnet_logger(
                     severity="TRACE",
@@ -266,7 +271,7 @@ class ModelBuilder:
                 ) and (
                     model_dict['block'] < model_block
                 ):
-                    return False
+                    return None, None
                 
             # 4. Download repository and verify content
             model_dir = os.path.join(self.model_base_path, hotkey)
@@ -287,7 +292,7 @@ class ModelBuilder:
                     log_level=self.log_level
                 )
                 self._reset_dir(directory=model_dir)
-                return False 
+                return None, None 
             
             if not Models.verify_directory_files(directory=model_dir):
                 Utils.subnet_logger(
@@ -296,7 +301,7 @@ class ModelBuilder:
                     log_level=self.log_level
                 )
                 self._reset_dir(directory=model_dir)
-                return False
+                return None, None
 
             # Make sure model hash is unique 
             if model_hash in [model_data['model_hash'] for model_data in self.miner_models]:
@@ -310,7 +315,7 @@ class ModelBuilder:
                 # Append current model block for comparison
                 model_blocks_with_same_hash.append(model_block)
                 
-                # If it's not unique, don't return False only if this model is the earliest one uploaded to chain
+                # If it's not unique, don't return None, None only if this model is the earliest one uploaded to chain
                 if min(model_blocks_with_same_hash) != model_block:
                     Utils.subnet_logger(
                         severity="INFO",
@@ -318,10 +323,12 @@ class ModelBuilder:
                         log_level=self.log_level
                     )   
                     self._reset_dir(directory=model_dir)
-                    return False 
+                    return None, None 
                 
             if not Utils.replace_string_in_directory(directory=model_dir, old_string="6500", new_string=str(port)):
-                return False
+                return None, None
+            
+            return model_hash, model_block
 
         except Exception as e:
 
@@ -331,9 +338,7 @@ class ModelBuilder:
                 log_level=self.log_level
             )
 
-            return False
-        
-        return True
+            return None, None
 
     async def build_images_async(self):
 

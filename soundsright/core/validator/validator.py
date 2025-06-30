@@ -1885,7 +1885,10 @@ class SubnetValidator(Base.BaseNeuron):
                 competitions=competitions,
             ))
 
-            
+            for benchmark, competition in zip(benchmarks, competitions):
+
+                self.miner_models[competition].append(benchmark)
+                self.models_evaluated_today[competition].append(benchmark)
 
     def replacement_run_competitions(self):
 

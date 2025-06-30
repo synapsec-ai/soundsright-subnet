@@ -774,13 +774,15 @@ class ModelEvaluationHandler:
                         'hf_model_name':model_metadata['hf_model_name'],
                         'hf_model_namespace':model_metadata['hf_model_namespace'],
                         'hf_model_revision':model_metadata['hf_model_revision'],
-                        'model_hash':model_hash,
-                        'block':model_block,
+                        'model_hash':cache_entry["hash"],
+                        'block':cache_entry["block"],
                         'metrics':metrics_dict,
                     }
 
                     output_benchmarks.append(model_benchmark)
                     output_competitions.append(competition)
+
+        return output_benchmarks, output_competitions
 
     def get_entry_from_cache(self, hotkey: str):
 
