@@ -41,12 +41,28 @@ class AsyncModelRunTester:
             "model5",
         ]
 
+        self.dereverb_tags = [
+            "model6",
+            "model7",
+            "model8",
+            "model9",
+            "model10",
+        ]
+
         self.paths = [
             self.model_path_1, 
             self.model_path_2, 
             self.model_path_3, 
             self.model_path_4, 
-            self.model_path_5
+            self.model_path_5,
+        ]
+
+        self.dereverb_paths = [
+            self.model_path_6, 
+            self.model_path_7, 
+            self.model_path_8, 
+            self.model_path_9, 
+            self.model_path_10
         ]
 
         self.output_paths = [
@@ -65,13 +81,48 @@ class AsyncModelRunTester:
             6505,
         ]
 
-        for directory in [self.output_path, self.tts_base_path, self.noise_base_path, self.reverb_base_path, self.arni_path, self.wham_path, self.enhanced1, self.enhanced2, self.enhanced3, self.enhanced4, self.enhanced5, self.model_path_1, self.model_path_2, self.model_path_3, self.model_path_4, self.model_path_5]:
+        self.dereverb_ports = [
+            6506,
+            6507,
+            6508,
+            6509,
+            6510,
+        ]
+
+        for directory in [
+            self.output_path, 
+            self.tts_base_path, 
+            self.noise_base_path, 
+            self.reverb_base_path, 
+            self.arni_path, 
+            self.wham_path, 
+            self.enhanced1, 
+            self.enhanced2, 
+            self.enhanced3, 
+            self.enhanced4, 
+            self.enhanced5, 
+            self.model_path_1, 
+            self.model_path_2, 
+            self.model_path_3, 
+            self.model_path_4, 
+            self.model_path_5, 
+            self.model_path_6, 
+            self.model_path_7, 
+            self.model_path_8, 
+            self.model_path_9, 
+            self.model_path_10
+        ]:
             if not os.path.exists(directory):
                 os.makedirs(directory)
 
         for path, port in zip(self.paths, self.ports):
             if not os.listdir(path):
                 snapshot_download(repo_id="synapsecai/SoundsRightModelTemplate", local_dir=path, revision="DENOISING_16000HZ")
+                Utils.replace_string_in_directory(directory=path, old_string="6500", new_string=str(port))
+
+        for path, port in zip(self.dereverb_paths, self.dereverb_ports):
+            if not os.listdir(path):
+                snapshot_download(repo_id="synapsecai/SoundsRightModelTemplate", local_dir=path, revision="DEREVERBERATION_16000HZ")
                 Utils.replace_string_in_directory(directory=path, old_string="6500", new_string=str(port))
 
         self.sample_rates = [16000]
@@ -158,17 +209,12 @@ class AsyncModelRunTester:
 
     async def build_containers_async(self):
 
-        paths = [
-            self.model_path_1,
-            self.model_path_2,
-            self.model_path_3,
-            self.model_path_4,
-            self.model_path_5,
-        ]
+        paths = self.paths + self.dereverb_paths
+        tags = self.tags + self.dereverb_tags
 
         tasks = []
 
-        for tag, path in zip(self.tags, paths):
+        for tag, path in zip(tags, paths):
 
             task = asyncio.create_task(self.build_container_async(tag_name=tag,directory=path))
             tasks.append(task)
@@ -181,10 +227,10 @@ class AsyncModelRunTester:
 
         outputs = asyncio.run(self.build_containers_async())
 
-        return len(outputs) == 5
+        return len(outputs) == 10
     
-    def validate_all_noisy_files_are_enhanced(self, enhanced_path):
-        noisy_files = sorted([os.path.basename(f) for f in glob.glob(os.path.join(self.noise_base_path, "16000", '*.wav'))])
+    def validate_all_noisy_files_are_enhanced(self, noise_path, enhanced_path):
+        noisy_files = sorted([os.path.basename(f) for f in glob.glob(os.path.join(noise_path, "16000", '*.wav'))])
         enhanced_files = sorted([os.path.basename(f) for f in glob.glob(os.path.join(enhanced_path, '*.wav'))])
         return noisy_files == enhanced_files
     
@@ -194,6 +240,8 @@ class AsyncModelRunTester:
 
         print(f"starting model eval for tag: {tag}")
 
+        start_start_time = time.time()
+
         status1 = await Utils.start_container_replacement_async(
             tag_name=tag,
             port=port,
@@ -201,47 +249,69 @@ class AsyncModelRunTester:
             log_level="TRACE"
         )
 
+        model_start_time = time.time() - start_start_time
+
         if not status1:
             return False
         
         print(f"{tag} container started")
+
+        status_start_time = time.time()
         
         status2 = await Utils.check_container_status_async(port=port, log_level="TRACE")
+
+        status_check_time = time.time() - status_start_time
 
         if not status2:
             return False 
         
         print(f"{tag} status check successful")
 
+        prepare_start_time = time.time()
+
         status3 = await Utils.prepare_async(port=port, log_level="TRACE")
+
+        prepare_time = time.time() - prepare_start_time
 
         if not status3:
             return False
         
         print(f"{tag} preparation successful")
+
+        upload_start_time = time.time()
         
         status4 = await Utils.upload_audio_async(noisy_dir=os.path.join(self.noise_base_path, "16000"), port=port, log_level="TRACE")
+
+        upload_time = time.time() - upload_start_time
 
         if not status4:
             return False
         
         print(f"{tag} audio upload successful")
+
+        enhance_start_time = time.time()
         
         status5 = await Utils.enhance_audio_async(port=port, log_level="TRACE")
+
+        enhance_time = time.time() - enhance_start_time
 
         if not status5:
             return False
         
         print(f"{tag} audio enhancement successful")
+
+        download_start_time = time.time()
         
         status6 = await Utils.download_enhanced_async(port=port, enhanced_dir=enhanced_path, log_level="TRACE")
+
+        download_time = time.time() - download_start_time
 
         if not status6:
             return False 
         
         print(f"{tag} enhanced file download successful")
         
-        status7 = self.validate_all_noisy_files_are_enhanced(enhanced_path=enhanced_path)
+        status7 = self.validate_all_noisy_files_are_enhanced(noise_path=self.noise_base_path, enhanced_path=enhanced_path)
 
         if not status7:
             return False 
@@ -256,7 +326,7 @@ class AsyncModelRunTester:
             capture_output=True
         )
         
-        return completion_time
+        return completion_time, model_start_time, status_check_time, prepare_time, upload_time, enhance_time, download_time
     
     async def run_eval_group(self, count):
 
@@ -279,12 +349,154 @@ class AsyncModelRunTester:
 
         return outputs, completion_time
     
+    async def run_model_evaluation_dereverb(self, tag, port, enhanced_path):
+
+        start_time = time.time()
+
+        print(f"starting model eval for tag: {tag}")
+
+        start_start_time = time.time()
+
+        status1 = await Utils.start_container_replacement_async(
+            tag_name=tag,
+            port=port,
+            cuda_directory="/usr/local/cuda-12.6",
+            log_level="TRACE"
+        )
+
+        model_start_time = time.time() - start_start_time
+
+        if not status1:
+            return False
+        
+        print(f"{tag} container started")
+
+        status_start_time = time.time()
+        
+        status2 = await Utils.check_container_status_async(port=port, log_level="TRACE")
+
+        status_check_time = time.time() - status_start_time
+
+        if not status2:
+            return False 
+        
+        print(f"{tag} status check successful")
+
+        prepare_start_time = time.time()
+
+        status3 = await Utils.prepare_async(port=port, log_level="TRACE")
+
+        prepare_time = time.time() - prepare_start_time
+
+        if not status3:
+            return False
+        
+        print(f"{tag} preparation successful")
+
+        upload_start_time = time.time()
+        
+        status4 = await Utils.upload_audio_async(noisy_dir=os.path.join(self.reverb_base_path, "16000"), port=port, log_level="TRACE")
+
+        upload_time = time.time() - upload_start_time
+
+        if not status4:
+            return False
+        
+        print(f"{tag} audio upload successful")
+
+        enhance_start_time = time.time()
+        
+        status5 = await Utils.enhance_audio_async(port=port, log_level="TRACE")
+
+        enhance_time = time.time() - enhance_start_time
+
+        if not status5:
+            return False
+        
+        print(f"{tag} audio enhancement successful")
+
+        download_start_time = time.time()
+        
+        status6 = await Utils.download_enhanced_async(port=port, enhanced_dir=enhanced_path, log_level="TRACE")
+
+        download_time = time.time() - download_start_time
+
+        if not status6:
+            return False 
+        
+        print(f"{tag} enhanced file download successful")
+        
+        status7 = self.validate_all_noisy_files_are_enhanced(noise_path=self.reverb_base_path, enhanced_path=enhanced_path)
+
+        if not status7:
+            return False 
+        
+        print(f"{tag} noisy and enhanced file validation successful")
+        
+        completion_time = time.time() - start_time
+
+        subprocess.run(
+            ["podman", "rm", "-f", tag],
+            check=True,
+            capture_output=True
+        )
+        
+        return completion_time, model_start_time, status_check_time, prepare_time, upload_time, enhance_time, download_time
+    
+    async def run_eval_group_dereverb(self, count):
+
+        tasks = []
+
+        for i in range(count):
+            
+            task = asyncio.create_task(self.run_model_evaluation_dereverb(
+                tag=self.dereverb_tags[i],
+                port=self.dereverb_ports[i],
+                enhanced_path=self.output_paths[i]
+            ))
+            tasks.append(task)
+
+        start_time = time.time()
+
+        outputs = await asyncio.gather(*tasks)
+
+        completion_time = time.time() - start_time
+
+        return outputs, completion_time
+    
     def save_lines_to_file(self, lines):
         
         with open(self.output_txt_path, 'w', encoding='utf-8') as f:
             for line in lines:
                 print(line)
                 f.write(f"{line}\n")
+
+    def _reset_dir(self, directory: str) -> None:
+        """Removes all files and sub-directories in an inputted directory
+
+        Args:
+            directory (str): Directory to reset.
+        """
+        # Check if the directory exists
+        if not os.path.exists(directory):
+            return
+
+        # Loop through all the files and subdirectories in the directory
+        for filename in os.listdir(directory):
+            file_path = os.path.join(directory, filename)
+            
+            # Check if it's a file or directory and remove accordingly
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)  # Remove the file or link
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)  # Remove the directory and its contents
+            except Exception as e:
+                Utils.subnet_logger(
+                    severity="ERROR",
+                    message=f"Failed to delete {file_path}. Reason: {e}",
+                    log_level=self.log_level
+                )
     
     def run_eval_test(self):
 
@@ -295,9 +507,100 @@ class AsyncModelRunTester:
             count = i + 1
             outputs, completion_time = asyncio.run(self.run_eval_group(count))
 
-            line = f"Total completion time for {count} models: {completion_time}. Individual completion times: {outputs}"
-            print(line)
-            lines.append(line)
+            completion_times = []
+            model_start_times = []
+            status_times = []
+            prepare_times = []
+            upload_times = []
+            enhance_times = []
+            download_times = []
+
+            for k in outputs: 
+                completion_times.append(k[0])
+                model_start_times.append(k[1])
+                status_times.append(k[2])
+                prepare_times.append(k[3])
+                upload_times.append(k[4])
+                enhance_times.append(k[5])
+                download_times.append(k[6])
+
+            line1 = f"(DENOISING) Total completion time for {count} models: {completion_time}. Individual completion times: {completion_times}. Average completion time per model: {completion_time/len(completion_times)}"
+            print(line1)
+            lines.append(line1)
+
+            line2 = f"Average start time: {sum(model_start_times) / len(model_start_times)}. Individual model start times: {model_start_times}"
+            print(line2)
+            lines.append(line2)
+
+            line3 = f"Average status check time: {sum(status_times) / len(status_times)}. Individual status check times: {status_times}"
+            print(line3)
+            lines.append(line3)
+
+            line4 = f"Average preparation time: {sum(prepare_times) / len(prepare_times)}. Individual preparation times: {prepare_times}"
+            print(line4)
+            lines.append(line4)
+
+            line5 = f"Average audio upload time: {sum(upload_times) / len(upload_times)}. Individual audio upload times: {upload_times}"
+            print(line5)
+            lines.append(line5)
+
+            line6 = f"Average enhancement time: {sum(enhance_times) / len(enhance_times)}. Individual enhancement times: {enhance_times}"
+            print(line6)
+            lines.append(line6)
+
+            line7 = f"Average audio download time: {sum(download_times) / len(download_times)}. Individual audio download times: {download_times}"
+            print(line7)
+            lines.append(line7)
+
+        for i in range(5):
+
+            count = i + 1
+            outputs, completion_time = asyncio.run(self.run_eval_group_dereverb(count))
+
+            completion_times = []
+            model_start_times = []
+            status_times = []
+            prepare_times = []
+            upload_times = []
+            enhance_times = []
+            download_times = []
+
+            for k in outputs: 
+                completion_times.append(k[0])
+                model_start_times.append(k[1])
+                status_times.append(k[2])
+                prepare_times.append(k[3])
+                upload_times.append(k[4])
+                enhance_times.append(k[5])
+                download_times.append(k[6])
+
+            line1 = f"(DEREVERBERATION) Total completion time for {count} models: {completion_time}. Individual completion times: {completion_times}. Average completion time per model: {completion_time/len(completion_times)}"
+            print(line1)
+            lines.append(line1)
+
+            line2 = f"Average start time: {sum(model_start_times) / len(model_start_times)}. Individual model start times: {model_start_times}"
+            print(line2)
+            lines.append(line2)
+
+            line3 = f"Average status check time: {sum(status_times) / len(status_times)}. Individual status check times: {status_times}"
+            print(line3)
+            lines.append(line3)
+
+            line4 = f"Average preparation time: {sum(prepare_times) / len(prepare_times)}. Individual preparation times: {prepare_times}"
+            print(line4)
+            lines.append(line4)
+
+            line5 = f"Average audio upload time: {sum(upload_times) / len(upload_times)}. Individual audio upload times: {upload_times}"
+            print(line5)
+            lines.append(line5)
+
+            line6 = f"Average enhancement time: {sum(enhance_times) / len(enhance_times)}. Individual enhancement times: {enhance_times}"
+            print(line6)
+            lines.append(line6)
+
+            line7 = f"Average audio download time: {sum(download_times) / len(download_times)}. Individual audio download times: {download_times}"
+            print(line7)
+            lines.append(line7)
 
         self.save_lines_to_file(lines=lines)
 
