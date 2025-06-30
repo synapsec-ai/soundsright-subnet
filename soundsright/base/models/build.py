@@ -196,6 +196,7 @@ class ModelBuilder:
                 return False 
             
             hotkey = self.hotkeys[uid]
+            port = 6500 + int(uid)
             namespace = model_metadata.get("hf_model_namespace", None)
             name = model_metadata.get("hf_model_name", None)
             revision = model_metadata.get("hf_model_revision", None)
@@ -318,16 +319,21 @@ class ModelBuilder:
                     )   
                     self._reset_dir(directory=model_dir)
                     return False 
+                
+            if not Utils.replace_string_in_directory(directory=model_dir, old_string="6500", new_string=str(port)):
+                return False
 
         except Exception as e:
 
             Utils.subnet_logger(
                 severity="TRACE",
-                message=f"Error evaluating model: {model_data}: {e}", 
+                message=f"Error validating model: {model_data}: {e}", 
                 log_level=self.log_level
             )
 
             return False
+        
+        return True
 
     async def build_images_async(self):
 
@@ -372,10 +378,18 @@ class ModelBuilder:
         
         successful_hotkeys = []
         associated_competitions = []
+        ports = []
 
         for hk, competition, outcome in zip(hotkey_list, competition, outcomes):
             if outcome:
                 successful_hotkeys.append(hk)
                 associated_competitions.append(competition)
 
-        return successful_hotkeys, associated_competitions
+        for hk in successful_hotkeys:
+            if hk in self.hotkeys:
+                port = self.hotkeys.index(hk)
+                ports.append(port)
+            else:
+                ports.append(0)
+
+        return successful_hotkeys, associated_competitions, ports

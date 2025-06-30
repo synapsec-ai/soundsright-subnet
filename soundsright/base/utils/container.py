@@ -259,24 +259,30 @@ def replace_string_in_directory(directory, old_string, new_string):
         old_string (str): String to be replaced.
         new_string (str): Replacement string.
     """
-    for root, _, files in os.walk(directory):
-        for file_name in files:
-            file_path = os.path.join(root, file_name)
+    try:
+        for root, _, files in os.walk(directory):
+            for file_name in files:
+                file_path = os.path.join(root, file_name)
 
-            # Detect encoding
-            encoding = detect_encoding(file_path)
-            if not encoding:
-                continue
+                # Detect encoding
+                encoding = detect_encoding(file_path)
+                if not encoding:
+                    continue
 
-            try:
-                with open(file_path, 'r', encoding=encoding) as file:
-                    content = file.read()
-                if old_string in content:
-                    content = content.replace(old_string, new_string)
-                    with open(file_path, 'w', encoding=encoding) as file:
-                        file.write(content)
-            except Exception as e:
-                continue
+                try:
+                    with open(file_path, 'r', encoding=encoding) as file:
+                        content = file.read()
+                    if old_string in content:
+                        content = content.replace(old_string, new_string)
+                        with open(file_path, 'w', encoding=encoding) as file:
+                            file.write(content)
+                except Exception as e:
+                    continue
+
+    except Exception as e:
+        return False 
+    
+    return True
 
 async def build_container_async(directory: str, hotkey: str, competition: str, log_level: str) -> bool:
     """
@@ -362,12 +368,12 @@ async def build_containers_async(model_base_path: str, eval_cache: dict, hotkeys
                 hk = hotkeys[uid]
                 hk_list.append(hk)
                 competitions.append(competition)
-                task = build_container_async(
+                task = asyncio.create_task(build_container_async(
                     directory=os.path.join(model_base_path, hk),
                     hotkey=hk,
                     competition=competition,
                     log_level=log_level
-                )
+                ))
                 tasks.append(task)
         
     Utils.subnet_logger(

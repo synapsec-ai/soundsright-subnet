@@ -575,6 +575,7 @@ class ModelEvaluationHandler:
         self.competitions_list = competitions_list
         self.ports_list = ports_list
         self.models_per_iteration = models_per_gpu * gpu_count
+        self.tasks = []
 
         # Misc
         self.cuda_directory = cuda_directory
@@ -655,18 +656,17 @@ class ModelEvaluationHandler:
     
     def get_tasks(self, hotkeys: list, competitions: list, ports: list):
 
-        tasks = []
+        self.tasks = []
         for hotkey, competition, port in zip(hotkeys, competitions, ports):
-            task = asyncio.create_task(
-                self.run_model_evaluation(
-                    hotkey=hotkey,
-                    competition=competition,
-                    port=port,
+            if port != 0:
+                task = asyncio.create_task(
+                    self.run_model_evaluation(
+                        hotkey=hotkey,
+                        competition=competition,
+                        port=port,
+                    )
                 )
-            )
-            tasks.append(task)
-
-        return tasks
+                self.tasks.append(task)
 
     async def run_model_evaluation(self, hotkey: str, competition: str, port: int):
 
@@ -692,61 +692,115 @@ class ModelEvaluationHandler:
 
         if not start_status:
             self._reset_dir(directory=model_output_path)
-            return False 
+            return None
         
         init_status = await Utils.check_container_status_async(port=port, log_level=self.log_level)
 
         if not init_status:
             self._reset_dir(directory=model_output_path)
-            return False 
+            return None
         
         prepare_status = await Utils.prepare_async(port=port, log_level=self.log_level)
 
         if not prepare_status:
             self._reset_dir(directory=model_output_path)
-            return False 
+            return None
         
         upload_status = await Utils.upload_audio_async(noisy_dir=dataset_path, port=port, log_level=self.log_level)
 
         if not upload_status:
             self._reset_dir(directory=model_output_path)
-            return False 
+            return None
         
         enhance_status = await Utils.enhance_audio_async(port=port, log_level=self.log_level)
 
         if not enhance_status:
             self._reset_dir(directory=model_output_path)
-            return False
+            return None
         
         download_status = Utils.download_enhanced_async(enhanced_dir=model_output_path, port=port, log_level=self.log_level)
 
         if not download_status:
             self._reset_dir(directory=model_output_path)
-            return False
+            return None
 
         if not self.validate_all_noisy_files_are_enhanced(
             task_path=dataset_path,
             model_output_path=model_output_path
         ):
             self._reset_dir(directory=model_output_path)
-            return False
+            return None
         
-        return True
+        return hotkey
     
+    async def run_eval_group(self, hotkeys: list, competitions: list):
+
+        outcomes = await asyncio.gather(*self.tasks)
+
+        output_benchmarks = []
+        output_competitions = []
+
+        for hotkey in outcomes:
+
+            if hotkey and isinstance(hotkey, str) and hotkey in hotkeys:
+
+                index = hotkeys.index(hotkey)
+                competition = competitions[index]
+                model_output_path = os.path.join(self.base_model_output_path, hotkey)
+                competition_components = competition.split("_")
+                task, sample_rate = competition_components[0], competition_components[1].replace("HZ", "")
+
+                if "denoising" in task.lower():
+                    dataset_path = os.path.join(self.noise_path, sample_rate)
+                else:
+                    dataset_path = os.path.join(self.reverb_path, sample_rate)
+
+                cache_entry = self.get_entry_from_cache(hotkey=hotkey)
+
+                if cache_entry and isinstance(cache_entry, dict):
+
+                    metrics_dict = Benchmarking.calculate_metrics_dict(
+                        clean_directory=self.tts_path,
+                        enhanced_directory=model_output_path,
+                        noisy_directory=dataset_path,
+                        sample_rate=self.sample_rate,
+                        log_level=self.log_level,
+                    )
+
+                    model_metadata = cache_entry["response_data"]
+
+                    model_benchmark = {
+                        'hotkey':hotkey,
+                        'hf_model_name':model_metadata['hf_model_name'],
+                        'hf_model_namespace':model_metadata['hf_model_namespace'],
+                        'hf_model_revision':model_metadata['hf_model_revision'],
+                        'model_hash':model_hash,
+                        'block':model_block,
+                        'metrics':metrics_dict,
+                    }
+
+                    output_benchmarks.append(model_benchmark)
+                    output_competitions.append(competition)
+
+    def get_entry_from_cache(self, hotkey: str):
+
+        for comp_list in self.eval_cache.values():
+
+            for entry in comp_list:
+
+                if entry["hotkey"] == hotkey:
+
+                    return entry
+                
+        return None
+
+
+
+
+
+
+
+
+
 
     
-    def run_eval_loop(self):
-
-
-        while len(self.image_hotkey_list) > 0:
-
-            hotkeys, competitions, ports = self.get_next_eval_round()
-
-            tasks = self.get_tasks(
-                hotkeys=hotkeys,
-                competitions=competitions,
-                ports=ports
-            )
-
-            
-

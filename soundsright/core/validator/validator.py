@@ -1867,6 +1867,25 @@ class SubnetValidator(Base.BaseNeuron):
             if isinstance(models, list):
                 length += len(models)
         return length
+    
+    def run_eval_loop(self, evaluator: Models.ModelEvaluationHandler):
+
+        while len(evaluator.image_hotkey_list) > 0:
+
+            hotkeys, competitions, ports = evaluator.get_next_eval_round()
+
+            evaluator.get_tasks(
+                hotkeys=hotkeys,
+                competitions=competitions,
+                ports=ports,
+            )
+
+            benchmarks, competitions = asyncio.run(evaluator.run_eval_group(
+                hotkeys=hotkeys,
+                competitions=competitions,
+            ))
+
+            
 
     def replacement_run_competitions(self):
 
@@ -1915,7 +1934,7 @@ class SubnetValidator(Base.BaseNeuron):
                 
             )
             
-            
+            self.run_eval_loop(evaluator)
 
 
 
