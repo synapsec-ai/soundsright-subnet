@@ -25,11 +25,21 @@ class AsyncModelRunTester:
         self.enhanced3 = os.path.join(self.base_path, 'test_data','enhanced3')
         self.enhanced4 = os.path.join(self.base_path, 'test_data','enhanced4')
         self.enhanced5 = os.path.join(self.base_path, 'test_data','enhanced5')
+        self.enhanced6 = os.path.join(self.base_path, 'test_data','enhanced6')
+        self.enhanced7 = os.path.join(self.base_path, 'test_data','enhanced7')
+        self.enhanced8 = os.path.join(self.base_path, 'test_data','enhanced8')
+        self.enhanced9 = os.path.join(self.base_path, 'test_data','enhanced9')
+        self.enhanced10 = os.path.join(self.base_path, 'test_data','enhanced10')
         self.model_path_1 = os.path.join(self.base_path,'models','model1')
         self.model_path_2 = os.path.join(self.base_path,'models','model2')
         self.model_path_3 = os.path.join(self.base_path,'models','model3')
         self.model_path_4 = os.path.join(self.base_path,'models','model4')
         self.model_path_5 = os.path.join(self.base_path,'models','model5')
+        self.model_path_1 = os.path.join(self.base_path,'models','model6')
+        self.model_path_2 = os.path.join(self.base_path,'models','model7')
+        self.model_path_3 = os.path.join(self.base_path,'models','model8')
+        self.model_path_4 = os.path.join(self.base_path,'models','model9')
+        self.model_path_5 = os.path.join(self.base_path,'models','model10')
         self.output_path = os.path.join(self.base_path,'outputs')
         self.output_txt_path = os.path.join(self.output_path,'eval_results.txt')
 
@@ -73,6 +83,14 @@ class AsyncModelRunTester:
             self.enhanced5,
         ]
 
+        self.output_paths_dereverb = [
+            self.enhanced6,
+            self.enhanced7,
+            self.enhanced8,
+            self.enhanced9,
+            self.enhanced10,
+        ]
+
         self.ports = [
             6501,
             6502,
@@ -101,6 +119,11 @@ class AsyncModelRunTester:
             self.enhanced3, 
             self.enhanced4, 
             self.enhanced5, 
+            self.enhanced6,
+            self.enhanced7,
+            self.enhanced8,
+            self.enhanced9,
+            self.enhanced10,
             self.model_path_1, 
             self.model_path_2, 
             self.model_path_3, 
@@ -452,7 +475,7 @@ class AsyncModelRunTester:
             task = asyncio.create_task(self.run_model_evaluation_dereverb(
                 tag=self.dereverb_tags[i],
                 port=self.dereverb_ports[i],
-                enhanced_path=self.output_paths[i]
+                enhanced_path=self.output_paths_dereverb[i]
             ))
             tasks.append(task)
 
@@ -551,6 +574,9 @@ class AsyncModelRunTester:
             line7 = f"Average audio download time: {sum(download_times) / len(download_times)}. Individual audio download times: {download_times}"
             print(line7)
             lines.append(line7)
+
+        for path in self.output_paths:
+            self._reset_dir(directory=path)
 
         for i in range(5):
 
