@@ -1872,6 +1872,9 @@ class SubnetValidator(Base.BaseNeuron):
 
         while len(evaluator.image_hotkey_list) > 0:
 
+            if time.time() + 600 >= self.next_competition_timestamp:
+                return False
+
             hotkeys, competitions, ports = evaluator.get_next_eval_round()
 
             evaluator.get_tasks(
@@ -1894,6 +1897,8 @@ class SubnetValidator(Base.BaseNeuron):
                 severity="TRACE",
                 message=f"Miner models following evaluation round: {self.miner_models}"
             )
+
+        return True
 
     def replacement_run_competitions(self):
 
@@ -1922,10 +1927,10 @@ class SubnetValidator(Base.BaseNeuron):
             new_model_cache = builder.get_eval_round_from_model_cache()
 
             # Build model images async
-            image_hotkey_list, competitions_list = builder.build_images()
+            image_hotkey_list, competitions_list, ports_list = builder.build_images()
 
             # Verify outputs, if it didn't work:
-            if not image_hotkey_list or not competitions_list:
+            if not image_hotkey_list or not competitions_list or not ports_list:
 
                 # End loop if validator is out of time and needs to start next competition
                 if builder.time_limit:
@@ -1939,26 +1944,23 @@ class SubnetValidator(Base.BaseNeuron):
 
             evaluator = Models.ModelEvaluationHandler(
                 eval_cache=eval_cache,
-                
+                image_hotkey_list=image_hotkey_list,
+                competitions_list=competitions_list,
+                ports_list=ports_list,
+                reverb_path=self.reverb_path,
+                noise_path=self.noise_path,
+                tts_path=self.tts_path,
+                model_output_path=self.model_output_path,
+                cuda_directory=self.cuda_directory,
+                log_level=self.log_level,
             )
             
-            self.run_eval_loop(evaluator)
+            outcome = self.run_eval_loop(evaluator)
 
-
-
-
-            if builder.time_limit:
+            if builder.time_limit or not outcome:
                 break
 
-            self.model_cache = new_model_cache
-
-
-
-
-
-
-
-                    
+            self.model_cache = new_model_cache                    
             
     def run_competitions(self, sample_rates, tasks) -> None:
             
