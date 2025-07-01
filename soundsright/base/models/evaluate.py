@@ -48,6 +48,12 @@ class ModelEvaluationHandler:
         self.cuda_directory = cuda_directory
         self.log_level = log_level
 
+        Utils.subnet_logger(
+            severity="TRACE",
+            message=f"Initialized model evaluator with model per iteration: {self.models_per_iteration}, image hotkey list: {self.image_hotkey_list}, competitions list: {self.competitions_list}, ports list: {self.ports_list}, eval cache: {self.eval_cache}",
+            log_level=self.log_level,
+        )
+
     def prepare_directory(self, dir_path):
         """
         Creates directory if it does not exist, removes contents if it does
@@ -114,6 +120,12 @@ class ModelEvaluationHandler:
         ports = self.ports_list[:self.models_per_iteration]
         self.ports_list = self.ports_list[self.models_per_iteration:]
 
+        Utils.subnet_logger(
+            severity="TRACE",
+            message=f"Next model evaluation round obtained. Hotkeys: {hotkeys} Competitions: {competitions} Ports: {ports}",
+            log_level=self.log_level
+        )
+
         return hotkeys, competitions, ports
 
     def validate_all_noisy_files_are_enhanced(self, task_path: str, model_output_path: str):
@@ -135,11 +147,23 @@ class ModelEvaluationHandler:
                 )
                 self.tasks.append(task)
 
+        Utils.subnet_logger(
+            severity="TRACE",
+            message=f"Obtained tasks for next model eval round: {self.tasks}",
+            log_level=self.log_level
+        )
+
     async def run_model_evaluation(self, hotkey: str, competition: str, port: int):
 
         tag_name = f"{hotkey}_{competition}"
         competition_components = competition.split("_")
         task, sample_rate = competition_components[0], competition_components[1].replace("HZ", "")
+
+        Utils.subnet_logger(
+            severity="INFO",
+            message=f"Starting model evaluation for miner: {hotkey} for competition: {competition} with port: {port} with tag name: {tag_name}",
+            log_level=self.log_level
+        )
 
         if "denoising" in task.lower():
             dataset_path = os.path.join(self.noise_path, sample_rate)
@@ -150,6 +174,12 @@ class ModelEvaluationHandler:
 
         self.prepare_directory(dir_path=model_output_path)
 
+        Utils.subnet_logger(
+            severity="TRACE",
+            message=f"Starting model container for miner: {hotkey}",
+            log_level=self.log_level,
+        )
+
         start_status = await Utils.start_container_replacement_async(
             tag_name=tag_name,
             cuda_directory=self.cuda_directory,
@@ -158,45 +188,136 @@ class ModelEvaluationHandler:
         )
 
         if not start_status:
+
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Model container start failed for miner: {hotkey}",
+                log_level=self.log_level,
+            )
+
             self._reset_dir(directory=model_output_path)
             return None
+        
+        Utils.subnet_logger(
+            severity="TRACE",
+            message=f"Model container start successful for miner: {hotkey}. Now checking API status.",
+            log_level=self.log_level,
+        )
         
         init_status = await Utils.check_container_status_async(port=port, log_level=self.log_level)
 
         if not init_status:
+
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"API check failed for miner: {hotkey}",
+                log_level=self.log_level,
+            )
+
             self._reset_dir(directory=model_output_path)
             return None
+        
+        Utils.subnet_logger(
+            severity="TRACE",
+            message=f"API check successful for miner: {hotkey}. Now preparing model.",
+            log_level=self.log_level,
+        )
         
         prepare_status = await Utils.prepare_async(port=port, log_level=self.log_level)
 
         if not prepare_status:
+
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Model preparation failed for miner: {hotkey}",
+                log_level=self.log_level,
+            )
+
             self._reset_dir(directory=model_output_path)
             return None
+        
+        Utils.subnet_logger(
+            severity="TRACE",
+            message=f"Model preparation successful for miner: {hotkey}. Now uploading noisy files.",
+            log_level=self.log_level,
+        )
         
         upload_status = await Utils.upload_audio_async(noisy_dir=dataset_path, port=port, log_level=self.log_level)
 
         if not upload_status:
+
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Noisy file upload failed for miner: {hotkey}",
+                log_level=self.log_level,
+            )
+
             self._reset_dir(directory=model_output_path)
             return None
+        
+        Utils.subnet_logger(
+            severity="TRACE",
+            message=f"Noisy file upload successful for miner: {hotkey}. Now enhancing model.",
+            log_level=self.log_level,
+        )
         
         enhance_status = await Utils.enhance_audio_async(port=port, log_level=self.log_level)
 
         if not enhance_status:
+
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Enhnacement failed for miner: {hotkey}",
+                log_level=self.log_level,
+            )
+
             self._reset_dir(directory=model_output_path)
             return None
+        
+        Utils.subnet_logger(
+            severity="TRACE",
+            message=f"Enhancement successful for miner: {hotkey}. Now downloading enhanced files.",
+            log_level=self.log_level,
+        )
         
         download_status = Utils.download_enhanced_async(enhanced_dir=model_output_path, port=port, log_level=self.log_level)
 
         if not download_status:
+
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Download failed for miner: {hotkey}",
+                log_level=self.log_level,
+            )
+
             self._reset_dir(directory=model_output_path)
             return None
+        
+        Utils.subnet_logger(
+            severity="TRACE",
+            message=f"Download successful for miner: {hotkey}. Now verifying output.",
+            log_level=self.log_level,
+        )
 
         if not self.validate_all_noisy_files_are_enhanced(
             task_path=dataset_path,
             model_output_path=model_output_path
         ):
+            
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Output verification failed for miner: {hotkey}",
+                log_level=self.log_level,
+            )
+
             self._reset_dir(directory=model_output_path)
             return None
+        
+        Utils.subnet_logger(
+            severity="TRACE",
+            message=f"Output verification successful for miner: {hotkey}",
+            log_level=self.log_level,
+        )
         
         return hotkey
     
@@ -224,6 +345,12 @@ class ModelEvaluationHandler:
 
                 cache_entry = self.get_entry_from_cache(hotkey=hotkey)
 
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"Cache entry for model: {cache_entry}",
+                    log_level=self.log_level,
+                )
+
                 if cache_entry and isinstance(cache_entry, dict):
 
                     metrics_dict = Benchmarking.calculate_metrics_dict(
@@ -231,6 +358,12 @@ class ModelEvaluationHandler:
                         enhanced_directory=model_output_path,
                         noisy_directory=dataset_path,
                         sample_rate=self.sample_rate,
+                        log_level=self.log_level,
+                    )
+
+                    Utils.subnet_logger(
+                        severity="TRACE",
+                        message=f"Metrics dict for hotkey: {hotkey}: {metrics_dict}",
                         log_level=self.log_level,
                     )
 
@@ -245,6 +378,12 @@ class ModelEvaluationHandler:
                         'block':cache_entry["block"],
                         'metrics':metrics_dict,
                     }
+
+                    Utils.subnet_logger(
+                        severity="TRACE",
+                        message=f"Model benchmark for hotkey: {hotkey}: {model_benchmark}",
+                        log_level=self.log_level,
+                    )
 
                     output_benchmarks.append(model_benchmark)
                     output_competitions.append(competition)
