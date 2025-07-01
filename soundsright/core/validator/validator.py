@@ -1890,6 +1890,11 @@ class SubnetValidator(Base.BaseNeuron):
                 self.miner_models[competition].append(benchmark)
                 self.models_evaluated_today[competition].append(benchmark)
 
+            self.neuron_logger(
+                severity="TRACE",
+                message=f"Miner models following evaluation round: {self.miner_models}"
+            )
+
     def replacement_run_competitions(self):
 
         while self.calculate_remaining_cache_length() > 0:

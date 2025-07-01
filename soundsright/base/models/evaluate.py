@@ -24,8 +24,6 @@ class ModelEvaluationHandler:
             noise_path: str,
             tts_path: str,
             model_output_path: str,
-            models_per_gpu: int,
-            gpu_count: int,
             cuda_directory: str,
             log_level: str,
         ):
@@ -41,8 +39,25 @@ class ModelEvaluationHandler:
         self.image_hotkey_list = image_hotkey_list
         self.competitions_list = competitions_list
         self.ports_list = ports_list
-        self.models_per_iteration = models_per_gpu * gpu_count
+        self.models_per_iteration = 3
         self.tasks = []
+
+        # Timeout calculations
+        self.base_timeouts = {
+            "status":60,
+            "prepare":10,
+            "upload":3,
+            "enhance":450,
+            "download":3,
+        }
+
+        self.timeout_multipliers = {
+            "status":[1,1,1],
+            "prepare":[1,0.95,0.95],
+            "upload":[1,0.7,0.4],
+            "enhance":[1,0.95,0.95],
+            "download":[1,0.7,0.4],
+        }
 
         # Misc
         self.cuda_directory = cuda_directory
@@ -53,6 +68,19 @@ class ModelEvaluationHandler:
             message=f"Initialized model evaluator with model per iteration: {self.models_per_iteration}, image hotkey list: {self.image_hotkey_list}, competitions list: {self.competitions_list}, ports list: {self.ports_list}, eval cache: {self.eval_cache}",
             log_level=self.log_level,
         )
+
+    def calculate_timeouts(self, concurrent_length: int):
+
+        timeouts = {}
+        index = concurrent_length - 1
+        if index < 0:
+            index = 0
+
+        for key in self.base_timeouts.keys():
+
+            timeouts[key] = self.base_timeouts[key] * self.timeout_multipliers[index] * concurrent_length
+
+        return timeouts
 
     def prepare_directory(self, dir_path):
         """
@@ -143,6 +171,7 @@ class ModelEvaluationHandler:
                         hotkey=hotkey,
                         competition=competition,
                         port=port,
+                        concurrent_length=len(hotkeys)
                     )
                 )
                 self.tasks.append(task)
@@ -153,7 +182,7 @@ class ModelEvaluationHandler:
             log_level=self.log_level
         )
 
-    async def run_model_evaluation(self, hotkey: str, competition: str, port: int):
+    async def run_model_evaluation(self, hotkey: str, competition: str, port: int, concurrent_length: int):
 
         tag_name = f"{hotkey}_{competition}"
         competition_components = competition.split("_")
@@ -173,6 +202,8 @@ class ModelEvaluationHandler:
         model_output_path = os.path.join(self.base_model_output_path, hotkey)
 
         self.prepare_directory(dir_path=model_output_path)
+
+        timeouts = self.calculate_timeouts(concurrent_length=concurrent_length)
 
         Utils.subnet_logger(
             severity="TRACE",
@@ -200,11 +231,11 @@ class ModelEvaluationHandler:
         
         Utils.subnet_logger(
             severity="TRACE",
-            message=f"Model container start successful for miner: {hotkey}. Now checking API status.",
+            message=f"Model container start successful for miner: {hotkey}. Now checking API status with timeout: {timeouts["status"]}.",
             log_level=self.log_level,
         )
         
-        init_status = await Utils.check_container_status_async(port=port, log_level=self.log_level)
+        init_status = await Utils.check_container_status_async(port=port, log_level=self.log_level, timeout=timeouts{"status"})
 
         if not init_status:
 
@@ -219,11 +250,11 @@ class ModelEvaluationHandler:
         
         Utils.subnet_logger(
             severity="TRACE",
-            message=f"API check successful for miner: {hotkey}. Now preparing model.",
+            message=f"API check successful for miner: {hotkey}. Now preparing model with timeout: {timeouts["prepare"]}.",
             log_level=self.log_level,
         )
         
-        prepare_status = await Utils.prepare_async(port=port, log_level=self.log_level)
+        prepare_status = await Utils.prepare_async(port=port, log_level=self.log_level, timeout=timeouts["prepare"])
 
         if not prepare_status:
 
@@ -238,11 +269,11 @@ class ModelEvaluationHandler:
         
         Utils.subnet_logger(
             severity="TRACE",
-            message=f"Model preparation successful for miner: {hotkey}. Now uploading noisy files.",
+            message=f"Model preparation successful for miner: {hotkey}. Now uploading noisy files with timeout: {timeouts["prepare"]}.",
             log_level=self.log_level,
         )
         
-        upload_status = await Utils.upload_audio_async(noisy_dir=dataset_path, port=port, log_level=self.log_level)
+        upload_status = await Utils.upload_audio_async(noisy_dir=dataset_path, port=port, log_level=self.log_level, timeout=timeouts["prepare"])
 
         if not upload_status:
 
@@ -257,11 +288,11 @@ class ModelEvaluationHandler:
         
         Utils.subnet_logger(
             severity="TRACE",
-            message=f"Noisy file upload successful for miner: {hotkey}. Now enhancing model.",
+            message=f"Noisy file upload successful for miner: {hotkey}. Now enhancing model with timeout: {timeouts["enhance"]}.",
             log_level=self.log_level,
         )
         
-        enhance_status = await Utils.enhance_audio_async(port=port, log_level=self.log_level)
+        enhance_status = await Utils.enhance_audio_async(port=port, log_level=self.log_level, timeout=timeouts["enhance"])
 
         if not enhance_status:
 
@@ -276,11 +307,11 @@ class ModelEvaluationHandler:
         
         Utils.subnet_logger(
             severity="TRACE",
-            message=f"Enhancement successful for miner: {hotkey}. Now downloading enhanced files.",
+            message=f"Enhancement successful for miner: {hotkey}. Now downloading enhanced files with timeout: {timeouts["download"]}.",
             log_level=self.log_level,
         )
         
-        download_status = Utils.download_enhanced_async(enhanced_dir=model_output_path, port=port, log_level=self.log_level)
+        download_status = Utils.download_enhanced_async(enhanced_dir=model_output_path, port=port, log_level=self.log_level, timeout=timeouts["download"])
 
         if not download_status:
 
