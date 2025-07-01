@@ -16,6 +16,7 @@ class AsyncModelRunTester:
 
         self.base_path = os.path.join(os.path.expanduser("~"), ".SoundsRight")
         self.tts_base_path = os.path.join(self.base_path,'test_data','tts')
+        self.tts_path = os.path.join(self.tts_base_path, "16000")
         self.noise_base_path = os.path.join(self.base_path,'test_data','noise')
         self.reverb_base_path = os.path.join(self.base_path,'test_data','reverb')
         self.arni_path = os.path.join(self.base_path,'test_data','arni')
@@ -110,6 +111,7 @@ class AsyncModelRunTester:
         for directory in [
             self.output_path, 
             self.tts_base_path, 
+            self.tts_path,
             self.noise_base_path, 
             self.reverb_base_path, 
             self.arni_path, 
@@ -157,7 +159,7 @@ class AsyncModelRunTester:
             sample_rates=self.sample_rates
         )
 
-        if not os.listdir(os.path.join(self.tts_base_path, "16000")):
+        if not os.listdir(self.tts_path):
 
             self.TTSHandler.create_openai_tts_dataset_for_all_sample_rates(n=30, seed=self.seed)
 
