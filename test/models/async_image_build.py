@@ -48,7 +48,7 @@ class AsyncImageBuildTester:
         except Exception as e:
             return False
 
-    async def build_container_async(directory: str) -> bool:
+    async def build_container_async(self, directory: str) -> bool:
         """
         Build one miner model image async, return True if operation was successful and False otherwise
         """
