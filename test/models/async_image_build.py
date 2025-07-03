@@ -19,9 +19,11 @@ class AsyncImageBuildTester:
             if not os.path.exists(path):
                 os.makedirs(path)
 
+        if not os.listdir(self.denoising_path):
+            snapshot_download(repo_id="synapsecai/SoundsRightModelTemplate", local_dir=self.denoising_path, revision="DENOISING_16000HZ")
 
-        snapshot_download(repo_id="synapsecai/SoundsRightModelTemplate", local_dir=self.denoising_path, revision="DENOISING_16000HZ")
-        snapshot_download(repo_id="synapsecai/SoundsRightModelTemplate", local_dir=self.dereverb_path, revision="DEREVERBERATION_16000HZ")
+        if not os.listdir(self.dereverb_path):
+            snapshot_download(repo_id="synapsecai/SoundsRightModelTemplate", local_dir=self.dereverb_path, revision="DEREVERBERATION_16000HZ")
 
         self.cpu_count = Utils.get_cpu_core_count()
 
@@ -183,4 +185,4 @@ class AsyncImageBuildTester:
 if __name__ == "__main__":
 
     tester = AsyncImageBuildTester()
-    tester.run_build_test()
+    tester.run_build_time_test()
