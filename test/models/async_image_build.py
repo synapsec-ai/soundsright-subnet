@@ -158,6 +158,9 @@ class AsyncImageBuildTester:
 
         for ipc in ipcs:
 
+            total_image_count = ipc * self.cpu_count
+            print(f"now building {total_image_count} images--{ipc} images per cpu.")
+
             completion_time, avg_comp_time, success_rate, tot_len = self.run_async_build(images_per_cpu=ipc)
 
             completion_times.append(completion_time)
@@ -171,9 +174,11 @@ class AsyncImageBuildTester:
         for ct, act, sr, ipc, tl in zip(completion_times, avg_comp_times, success_rates, ipcs, total_lengths):
 
             line = f"# of Images per CPU: {ipc}. Number of attempted image builds: {tl} Total completion time: {ct}. Average completion time: {act}. Success rate: {sr}."
+            print(line)
             lines.append(line)
         
         self.save_lines_to_file(lines=lines)
+        print(lines)
 
 if __name__ == "__main__":
 
