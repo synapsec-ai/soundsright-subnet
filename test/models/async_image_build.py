@@ -259,11 +259,11 @@ class AsyncImageBuildTester:
             removal_time = time.time() - removal_start
 
             removal_times.append(removal_time)
-            print(f"# of Images per CPU: {ipc}. Number of attempted image builds: {image_count} Total completion time: {completion_time}. Average completion time: {avg_comp_time}. Success rate: {success_rate}. Removal time: {removal_time}")
+            print(f"Number of attempted image builds: {image_count} Total completion time: {completion_time}. Average completion time: {avg_comp_time}. Success rate: {success_rate}. Removal time: {removal_time}")
 
-        for ct, act, sr, ipc, tl, rt in zip(completion_times, avg_comp_times, success_rates, image_count, total_lengths, removal_times):
+        for ct, act, sr, ipc, tl, rt in zip(completion_times, avg_comp_times, success_rates, total_lengths, removal_times):
 
-            line = f"# of Images per CPU: {ipc}. Number of attempted image builds: {tl} Total completion time: {ct}. Average completion time: {act}. Success rate: {sr}. Removal time: {rt}"
+            line = f"Number of attempted image builds: {tl} Total completion time: {ct}. Average completion time: {act}. Success rate: {sr}. Removal time: {rt}"
             print(line)
             lines.append(line)
         
