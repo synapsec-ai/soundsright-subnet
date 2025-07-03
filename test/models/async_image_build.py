@@ -156,6 +156,7 @@ class AsyncImageBuildTester:
         avg_comp_times = []
         success_rates = []
         total_lengths = []
+        removal_times = []
         ipcs = [1,2,3,4]
         lines = []
 
@@ -171,14 +172,16 @@ class AsyncImageBuildTester:
             success_rates.append(success_rate)
             total_lengths.append(tot_len)
 
-            print(f"# of Images per CPU: {ipc}. Number of attempted image builds: {total_image_count} Total completion time: {completion_time}. Average completion time: {avg_comp_time}. Success rate: {success_rate}.")
+            removal_start = time.time()
+            self.clear_podman_cache()
+            removal_time = time.time() - removal_start
 
-            if ipcs != 4:
-                self.clear_podman_cache()
+            removal_times.append(removal_time)
+            print(f"# of Images per CPU: {ipc}. Number of attempted image builds: {total_image_count} Total completion time: {completion_time}. Average completion time: {avg_comp_time}. Success rate: {success_rate}. Removal time: {removal_time}")
 
-        for ct, act, sr, ipc, tl in zip(completion_times, avg_comp_times, success_rates, ipcs, total_lengths):
+        for ct, act, sr, ipc, tl, rt in zip(completion_times, avg_comp_times, success_rates, ipcs, total_lengths, removal_times):
 
-            line = f"# of Images per CPU: {ipc}. Number of attempted image builds: {tl} Total completion time: {ct}. Average completion time: {act}. Success rate: {sr}."
+            line = f"# of Images per CPU: {ipc}. Number of attempted image builds: {tl} Total completion time: {ct}. Average completion time: {act}. Success rate: {sr}. Removal time: {rt}"
             print(line)
             lines.append(line)
         
