@@ -15,7 +15,8 @@ class AsyncImageBuildTester:
         self.dereverb_path=f"{os.path.expanduser('~')}/.SoundsRight/image_test/dereverberation"
         self.output_path = f"{os.path.expanduser('~')}/.SoundsRight/outputs"
         self.output_txt_path = os.path.join(self.output_path,'build_results.txt')
-        for path in [self.denoising_path, self.dereverb_path, self.output_path]:
+        self.second_output_txt_path = os.path.join(self.output_path,'small_build_results.txt')
+        for path in [self.denoising_path, self.dereverb_path, self.output_path, self.second_output_txt_path]:
             if not os.path.exists(path):
                 os.makedirs(path)
 
@@ -141,9 +142,52 @@ class AsyncImageBuildTester:
 
         return completion_time, avg_comp_time, success_rate, tot_len
     
+    async def second_build_containers_async(self, image_count):
+
+        tasks = []
+        for _ in range(image_count):
+
+            task = asyncio.create_task(self.build_container_async(directory=self.denoising_path))
+            tasks.append(task)
+        
+        start_time = int(time.time())
+
+        outputs = await asyncio.gather(*tasks)
+
+        completion_time = int(time.time()) - start_time
+
+        return completion_time, outputs
+    
+    def second_run_async_build(self, image_count):
+
+        completion_time, outputs = asyncio.run(self.build_containers_async(images_per_cpu=image_count))
+
+        tot, length, tot_len = 0, 0, 0
+
+        for k in outputs:
+
+            if isinstance(k, float):
+                tot += k
+                length += 1
+            
+            tot_len += 1
+
+        avg_comp_time = tot/length
+
+        success_rate =  len(outputs) - length
+
+        return completion_time, avg_comp_time, success_rate, tot_len
+    
     def save_lines_to_file(self, lines):
         
         with open(self.output_txt_path, 'w', encoding='utf-8') as f:
+            for line in lines:
+                print(line)
+                f.write(f"{line}\n")
+
+    def save_lines_to_second_file(self, lines):
+        
+        with open(self.second_output_txt_path, 'w', encoding='utf-8') as f:
             for line in lines:
                 print(line)
                 f.write(f"{line}\n")
@@ -188,7 +232,46 @@ class AsyncImageBuildTester:
         self.save_lines_to_file(lines=lines)
         print(lines)
 
+    def second_build_time_test(self):
+
+        self.clear_podman_cache()
+
+        completion_times = []
+        avg_comp_times = []
+        success_rates = []
+        total_lengths = []
+        removal_times = []
+        lines = []
+
+        for image_count in range(1,11):
+
+            print(f"now building {image_count} images")
+
+            completion_time, avg_comp_time, success_rate, tot_len = self.second_run_async_build(image_count=image_count)
+
+            completion_times.append(completion_time)
+            avg_comp_times.append(avg_comp_time)
+            success_rates.append(success_rate)
+            total_lengths.append(tot_len)
+
+            removal_start = time.time()
+            self.clear_podman_cache()
+            removal_time = time.time() - removal_start
+
+            removal_times.append(removal_time)
+            print(f"# of Images per CPU: {ipc}. Number of attempted image builds: {image_count} Total completion time: {completion_time}. Average completion time: {avg_comp_time}. Success rate: {success_rate}. Removal time: {removal_time}")
+
+        for ct, act, sr, ipc, tl, rt in zip(completion_times, avg_comp_times, success_rates, image_count, total_lengths, removal_times):
+
+            line = f"# of Images per CPU: {ipc}. Number of attempted image builds: {tl} Total completion time: {ct}. Average completion time: {act}. Success rate: {sr}. Removal time: {rt}"
+            print(line)
+            lines.append(line)
+        
+        self.save_lines_to_file(lines=lines)
+        print(lines)
+
+
 if __name__ == "__main__":
 
     tester = AsyncImageBuildTester()
-    tester.run_build_time_test()
+    tester.second_build_time_test()

@@ -177,6 +177,12 @@ class ModelBuilder:
 
                     remainder_cache[competition].append(model_data)
 
+        Utils.subnet_logger(
+            severity="TRACE",
+            message=f"Obtained cache to build models for in the next round: {self.eval_cache}. Remaining cache: {remainder_cache}",
+            log_level=self.log_level
+        )
+
         return remainder_cache
 
     def validate_model(self, model_data: dict, competition: str):
@@ -198,6 +204,13 @@ class ModelBuilder:
             model_metadata = model_data.get("response_data", None)
 
             if not uid or not model_metadata or not isinstance(uid, int) or not isinstance(model_metadata, dict):
+
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"Either uid: {uid} or model_metadata: {model_metadata} is invalid. Model verification failed.",
+                    log_level=self.log_level
+                )
+
                 return None, None 
             
             hotkey = self.hotkeys[uid]
@@ -208,9 +221,19 @@ class ModelBuilder:
             historical_block = model_data.get("block", None)
 
             if not namespace or not name or not revision:
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"Either namespace: {namespace} or name: {name} or revision: {revision} is invalid. Model verification failed.",
+                    log_level=self.log_level
+                )
                 return None, None
             
             if not isinstance(namespace, str) or not isinstance(name, str) or not isinstance(revision, str):
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"Either namespace: {namespace} or name: {name} or revision: {revision} is invalid. Model verification failed.",
+                    log_level=self.log_level
+                )
                 return None, None 
             
             model_id = f"{namespace}/{revision}"
@@ -225,11 +248,21 @@ class ModelBuilder:
             model_metadata, model_block = asyncio.run(self.metadata_handler.directly_obtain_model_metadata_from_chain(hotkey=hotkey))
 
             if not model_metadata or not model_block or model_block == 0:
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"Model block: {model_block} is invalid. Model verification failed.",
+                    log_level=self.log_level
+                )
                 return None, None 
             
             # Update model upload block if necessary
             if isinstance(historical_block, int) and historical_block < model_block:
-                models_block = historical_block
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"Model block: {model_block} will be updated with historical block: {historical_block}",
+                    log_level=self.log_level
+                )
+                model_block = historical_block
 
             # Obtain competition id from model and miner data
             competition_id = self.metadata_handler.get_competition_id_from_competition_name(competition)
@@ -271,6 +304,11 @@ class ModelBuilder:
                 ) and (
                     model_dict['block'] < model_block
                 ):
+                    Utils.subnet_logger(
+                        severity="TRACE",
+                        message=f"Model with namespace: {namespace} or name: {name} or revision: {revision} and block: {model_block} was not submitted first. Model verification failed.",
+                        log_level=self.log_level
+                    )
                     return None, None
                 
             # 4. Download repository and verify content
@@ -319,7 +357,7 @@ class ModelBuilder:
                 if min(model_blocks_with_same_hash) != model_block:
                     Utils.subnet_logger(
                         severity="INFO",
-                        message=f"Current model: {self.hf_model_id} has identical hash with another model and was not uploaded first. Exiting model evaluation.",
+                        message=f"Current model: {model_id} has identical hash with another model and was not uploaded first. Exiting model evaluation.",
                         log_level=self.log_level
                     )   
                     self._reset_dir(directory=model_dir)
