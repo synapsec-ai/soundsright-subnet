@@ -127,7 +127,6 @@ class AsyncImageBuildTester:
 
         tot, length, tot_len = 0, 0, 0
 
-
         for k in outputs:
 
             if isinstance(k, float):
@@ -136,7 +135,7 @@ class AsyncImageBuildTester:
             
             tot_len += 1
 
-        avg_comp_time = tot/len 
+        avg_comp_time = tot/length
 
         success_rate =  len(outputs) - length
 
