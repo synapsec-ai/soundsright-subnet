@@ -169,6 +169,8 @@ class AsyncImageBuildTester:
             success_rates.append(success_rate)
             total_lengths.append(tot_len)
 
+            print(f"# of Images per CPU: {ipc}. Number of attempted image builds: {total_image_count} Total completion time: {completion_time}. Average completion time: {avg_comp_time}. Success rate: {success_rate}.")
+
             if ipcs != 4:
                 self.clear_podman_cache()
 
