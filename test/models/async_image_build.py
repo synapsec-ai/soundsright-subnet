@@ -160,7 +160,7 @@ class AsyncImageBuildTester:
     
     def second_run_async_build(self, image_count):
 
-        completion_time, outputs = asyncio.run(self.build_containers_async(images_per_cpu=image_count))
+        completion_time, outputs = asyncio.run(self.second_build_containers_async(image_count=image_count))
 
         tot, length, tot_len = 0, 0, 0
 
