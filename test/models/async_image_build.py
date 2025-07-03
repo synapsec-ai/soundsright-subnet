@@ -150,6 +150,8 @@ class AsyncImageBuildTester:
 
     def run_build_time_test(self):
 
+        self.clear_podman_cache()
+
         completion_times = []
         avg_comp_times = []
         success_rates = []
