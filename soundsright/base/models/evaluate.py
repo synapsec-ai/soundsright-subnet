@@ -235,7 +235,7 @@ class ModelEvaluationHandler:
             log_level=self.log_level,
         )
         
-        init_status = await Utils.check_container_status_async(port=port, log_level=self.log_level, timeout=timeouts{"status"})
+        init_status = await Utils.check_container_status_async(port=port, log_level=self.log_level, timeout=timeouts["status"])
 
         if not init_status:
 
