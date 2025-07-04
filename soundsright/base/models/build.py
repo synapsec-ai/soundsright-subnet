@@ -57,16 +57,17 @@ class ModelBuilder:
         self.max_image_count = 0
         self.time_limit = False
         
+        flat_max_count = 6
         cpu_max_count = self.cpu_count * self.images_per_cpu
         storage_max_count = floor(self.free_storage_gb / self.avg_model_size_gb)
         time_limit_max_count = floor((self.next_competition_timestamp - int(time.time()) - 600) / self.avg_model_eval_time)
 
         if not self.first_run_through_of_the_day:
-            self.max_image_count = min([cpu_max_count, storage_max_count, time_limit_max_count])
+            self.max_image_count = min([flat_max_count, cpu_max_count, storage_max_count, time_limit_max_count])
             if self.max_image_count == time_limit_max_count:
                 self.time_limit = True
         else:
-            min([cpu_max_count, storage_max_count])
+            self.max_image_count = min([flat_max_count, cpu_max_count, storage_max_count])
 
         # Bittensor
         self.hotkeys = hotkeys

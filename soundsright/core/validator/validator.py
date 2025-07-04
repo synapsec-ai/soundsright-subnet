@@ -55,10 +55,11 @@ class SubnetValidator(Base.BaseNeuron):
         self.query = None
         self.debug_mode = False
         self.skip_sgmse = False
-        self.dataset_size = 30
+        self.dataset_size = 25
         self.log_level="INFO" # Init log level
         self.cuda_directory = ""
-        self.avg_model_eval_time = 2000
+        self.avg_model_eval_time = 2200
+        self.avg_model_size_gb = 20
         self.images_per_cpu = 3
         self.first_run_through_of_the_day = True
         self.tried_accessing_old_cache = False
@@ -1922,6 +1923,9 @@ class SubnetValidator(Base.BaseNeuron):
                 avg_model_eval_time=self.avg_model_eval_time,
                 log_level=self.log_level,
             )
+
+            if builder.max_image_count == 0:
+                break
 
             # Filter out cache
             new_model_cache = builder.get_eval_round_from_model_cache()
