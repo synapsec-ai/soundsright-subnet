@@ -203,6 +203,12 @@ class ModelBuilder:
         """
         try:
             # 1. Verifying model data structure
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Verifying model data structure for model: {model_data}",
+                log_level=self.log_level
+            )
+
             if not isinstance(model_data, dict):
                 return None, None 
 
@@ -292,12 +298,12 @@ class ModelBuilder:
                     log_level=self.log_level
                 )
                 return None, None
-            else:
-                Utils.subnet_logger(
-                    severity="TRACE",
-                    message=f"Model: {namespace}/{name} was submitted on block: {model_block} which is smaller than the seed reference block: {self.seed_reference_block}.",
-                    log_level=self.log_level
-                )
+        
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Model: {namespace}/{name} was submitted on block: {model_block} which is smaller than the seed reference block: {self.seed_reference_block}.",
+                log_level=self.log_level
+            )
 
             # Check to make sure that namespace, name and revision are unique among submitted models and if not, that it was submitted first
             for model_dict in self.miner_models[competition]:
@@ -316,6 +322,12 @@ class ModelBuilder:
                         log_level=self.log_level
                     )
                     return None, None
+                
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Metadata is unique for model: {model_dict}. Downloading repository and verifying content.",
+                log_level=self.log_level
+            )
                 
             # 4. Download repository and verify content
             model_dir = os.path.join(self.model_base_path, hotkey)
@@ -346,6 +358,12 @@ class ModelBuilder:
                 )
                 self._reset_dir(directory=model_dir)
                 return None, None
+            
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Model hash and directory content is valid for model: {model_dict}",
+                log_level=self.log_level
+            )
 
             # Make sure model hash is unique 
             if model_hash in [model_data['model_hash'] for model_data in self.miner_models]:
@@ -369,8 +387,20 @@ class ModelBuilder:
                     self._reset_dir(directory=model_dir)
                     return None, None 
                 
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Model hash is unique for model: {model_dict}",
+                log_level=self.log_level
+            )
+                
             if not Utils.replace_string_in_directory(directory=model_dir, old_string="6500", new_string=str(port)):
                 return None, None
+            
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Old port: 6500 replaced by new port: {port} for model: {model_dict}",
+                log_level=self.log_level
+            )
             
             return model_hash, model_block
 
