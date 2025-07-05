@@ -1,5 +1,7 @@
 from .evaluate import ModelEvaluationHandler
 
+from .build import ModelBuilder
+
 from .metadata import ModelMetadataHandler
 
 from .validation import (

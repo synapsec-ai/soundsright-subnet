@@ -81,6 +81,42 @@ class ModelMetadataHandler:
             return False
         
     @Utils.timeout_decorator(timeout=60)    
+    async def directly_obtain_model_metadata_from_chain(self, hotkey: str):
+        """_summary_
+
+        Args:
+            hotkey (str): ss58_address of miner hotkey
+
+        Returns:
+            bool: True if model metadata could be obtained from chain, False otherwise
+        """
+        try:
+            
+            metadata = bt.core.extrinsics.serving.get_metadata(
+                subtensor=self.subtensor,
+                netuid=self.subnet_netuid,
+                hotkey=hotkey
+            )
+            
+            commitment = metadata["info"]["fields"][0]
+            # Unwrap the outer tuple
+            raw64_dict = commitment[0]
+            # Get the tuple of ASCII codes
+            raw_data_tuple = raw64_dict['Raw64'][0]
+            # Convert to bytes
+            raw_bytes = bytes(raw_data_tuple)
+            # Decode to string
+            decoded_metadata = raw_bytes.decode()
+            
+            return decoded_metadata, metadata['block']
+        
+        except Exception as e:
+            bt.logging.error(
+                msg=f"Error fetching model metadata: {e}"
+            )
+            return None, None
+        
+    @Utils.timeout_decorator(timeout=60)    
     async def obtain_trusted_validator_metadata_from_chain(self, hotkey: str):
         """_summary_
 
