@@ -325,7 +325,7 @@ class ModelBuilder:
                 
             Utils.subnet_logger(
                 severity="TRACE",
-                message=f"Metadata is unique for model: {model_dict}. Downloading repository and verifying content.",
+                message=f"Metadata is unique for model: {model_data}. Downloading repository and verifying content.",
                 log_level=self.log_level
             )
                 
@@ -361,7 +361,7 @@ class ModelBuilder:
             
             Utils.subnet_logger(
                 severity="TRACE",
-                message=f"Model hash and directory content is valid for model: {model_dict}",
+                message=f"Model hash and directory content is valid for model: {model_data}",
                 log_level=self.log_level
             )
 
@@ -389,7 +389,7 @@ class ModelBuilder:
                 
             Utils.subnet_logger(
                 severity="TRACE",
-                message=f"Model hash is unique for model: {model_dict}",
+                message=f"Model hash is unique for model: {model_data}",
                 log_level=self.log_level
             )
                 
@@ -398,7 +398,7 @@ class ModelBuilder:
             
             Utils.subnet_logger(
                 severity="TRACE",
-                message=f"Old port: 6500 replaced by new port: {port} for model: {model_dict}",
+                message=f"Old port: 6500 replaced by new port: {port} for model: {model_data}",
                 log_level=self.log_level
             )
             
