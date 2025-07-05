@@ -47,7 +47,7 @@ class ModelEvaluationHandler:
             "status":60,
             "prepare":10,
             "upload":3,
-            "enhance":450,
+            "enhance":400,
             "download":3,
         }
 
@@ -75,10 +75,20 @@ class ModelEvaluationHandler:
         index = concurrent_length - 1
         if index < 0:
             index = 0
+            concurrent_length = 1
+        if index > 2:
+            index = 2
+            concurrent_length = 3
 
         for key in self.base_timeouts.keys():
 
             timeouts[key] = self.base_timeouts[key] * self.timeout_multipliers[index] * concurrent_length
+
+        Utils.subnet_logger(
+            severity="TRACE",
+            message=f"Determined timeouts for model evaluation: {timeouts} with eval length: {concurrent_length}",
+            log_level=self.log_level
+        )
 
         return timeouts
 

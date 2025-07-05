@@ -88,6 +88,11 @@ class ModelBuilder:
         self.model_cache = model_cache
         self.eval_cache = {}
 
+        # Timeouts
+        self.base_timeout = 450
+        self.timeout_multipliers = [1, 0.65, 0.5, 0.5, 0.5, 0.5]
+        self.timeout = 1500
+
         # Misc
         self.log_level = log_level
 
@@ -378,6 +383,31 @@ class ModelBuilder:
             )
 
             return None, None
+        
+    def get_eval_cache_length(self):
+        output = 0
+        for eval_list in self.eval_cache.values():
+            output += len(eval_list)
+        return output
+    
+    def determine_timeout(self):
+        eval_len = self.get_eval_cache_length()
+
+        index = eval_len - 1
+        if index < 0:
+            index = 0
+            eval_len = 1
+        if index > 5:
+            index = 5
+            eval_len = 6
+        
+        self.timeout = self.base_timeout * self.timeout_multipliers[index] * eval_len
+
+        Utils.subnet_logger(
+            severity="TRACE",
+            message=f"Determined new timeout: {self.timeout} for image building for evaluation cache length: {eval_len}",
+            log_level=self.log_level
+        )
 
     async def build_images_async(self):
 
@@ -385,10 +415,13 @@ class ModelBuilder:
             model_base_path=self.model_base_path,
             eval_cache=self.eval_cache,
             hotkeys=self.hotkeys,
+            timeout=self.timeout,
             log_level=self.log_level,
         )
     
     def build_images(self):
+
+        self.determine_timeout()
 
         hotkey_list, competitions_list, outcomes = asyncio.run(self.build_images_async())
 
