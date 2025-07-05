@@ -242,7 +242,7 @@ class ModelBuilder:
                 )
                 return None, None 
             
-            model_id = f"{namespace}/{revision}"
+            model_id = f"{namespace}/{name}"
             
             Utils.subnet_logger(
                 severity="TRACE",
@@ -431,7 +431,7 @@ class ModelBuilder:
                 message=f"One of hotkey_list: {hotkey_list}, competitions_list: {competitions_list} or outcomes: {outcomes} is not a list.",
                 log_level=self.log_level
             )
-            return None
+            return None, None, None
 
         hk_len = len(hotkey_list)
         outcomes_len = len(outcomes)
@@ -443,7 +443,7 @@ class ModelBuilder:
                 message=f"Mismatch in hotkey_list length: {hk_len} and image building outcomes length: {outcomes_len} for asynchronous image building.",
                 log_level=self.log_level
             )
-            return None, None
+            return None, None, None
         
         if len(hotkey_list) != len(competitions_list):
             Utils.subnet_logger(
@@ -451,7 +451,7 @@ class ModelBuilder:
                 message=f"Mismatch in hotkey_list length: {hk_len} and associated competitions length: {competitions_len} for asynchronous image building.",
                 log_level=self.log_level
             )
-            return None, None
+            return None, None, None
         
         successful_hotkeys = []
         associated_competitions = []
