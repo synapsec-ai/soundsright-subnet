@@ -311,7 +311,7 @@ async def build_container_async(directory: str, hotkey: str, competition: str, t
         return False
 
     try:
-        tag_name = f"{hotkey}_{competition}"
+        tag_name = f"{hotkey}_{competition}".lower()
 
         process = await asyncio.create_subprocess_exec(
             "podman", "build",

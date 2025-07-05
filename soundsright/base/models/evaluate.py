@@ -194,7 +194,7 @@ class ModelEvaluationHandler:
 
     async def run_model_evaluation(self, hotkey: str, competition: str, port: int, concurrent_length: int):
 
-        tag_name = f"{hotkey}_{competition}"
+        tag_name = f"{hotkey}_{competition}".lower()
         competition_components = competition.split("_")
         task, sample_rate = competition_components[0], competition_components[1].replace("HZ", "")
 
