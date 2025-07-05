@@ -773,6 +773,13 @@ def delete_container(log_level) -> bool:
         # Cleanup firewall rules
         cleanup_iptables()
 
+        # Remove all running containers
+        subprocess.run(
+            ["podman", "rm", "-a", "-f"],
+            check=True,
+            capture_output=True
+        )
+
         # Remove all images
         subprocess.run(
             ["podman", "rmi", "-a", "-f"],
