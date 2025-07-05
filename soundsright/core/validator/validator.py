@@ -1915,6 +1915,8 @@ class SubnetValidator(Base.BaseNeuron):
 
         new_competition_miner_models = copy.deepcopy(self.models_evaluated_today)
 
+        Utils.delete_container()
+
         while self.calculate_remaining_cache_length() > 0:
 
             self.neuron_logger(
