@@ -353,7 +353,7 @@ class ModelBuilder:
                 # Find block that metadata was uploaded to chain for all models with identical directory hash
                 model_blocks_with_same_hash = []
                 for model_data in self.miner_models:
-                    if model_data['model_hash'] == self.model_hash:
+                    if model_data['model_hash'] == model_hash:
                         model_blocks_with_same_hash.append(model_data['block'])
                 
                 # Append current model block for comparison
@@ -457,7 +457,7 @@ class ModelBuilder:
         associated_competitions = []
         ports = []
 
-        for hk, competition, outcome in zip(hotkey_list, competition, outcomes):
+        for hk, competition, outcome in zip(hotkey_list, competitions_list, outcomes):
             if outcome:
                 successful_hotkeys.append(hk)
                 associated_competitions.append(competition)
