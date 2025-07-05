@@ -1875,7 +1875,7 @@ class SubnetValidator(Base.BaseNeuron):
 
         self.neuron_logger(
             severity="TRACE",
-            message=f"Length of remaining model evaluation cache: {length}",
+            message=f"Length of remaining model evaluation cache: {length}. Cache: {self.model_cache}",
         )
         return length
     
