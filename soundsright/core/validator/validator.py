@@ -1983,6 +1983,8 @@ class SubnetValidator(Base.BaseNeuron):
 
             self.model_cache = new_model_cache      
 
+        Utils.delete_container()
+        
         filtered_models = {}
         for comp in new_competition_miner_models.keys():
 
