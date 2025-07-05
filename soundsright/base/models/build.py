@@ -366,26 +366,27 @@ class ModelBuilder:
             )
 
             # Make sure model hash is unique 
-            if model_hash in [model_data['model_hash'] for model_data in self.miner_models]:
-                
-                # Find block that metadata was uploaded to chain for all models with identical directory hash
-                model_blocks_with_same_hash = []
-                for model_data in self.miner_models:
-                    if model_data['model_hash'] == model_hash:
-                        model_blocks_with_same_hash.append(model_data['block'])
-                
-                # Append current model block for comparison
-                model_blocks_with_same_hash.append(model_block)
-                
-                # If it's not unique, don't return None, None only if this model is the earliest one uploaded to chain
-                if min(model_blocks_with_same_hash) != model_block:
-                    Utils.subnet_logger(
-                        severity="INFO",
-                        message=f"Current model: {model_id} has identical hash with another model and was not uploaded first. Exiting model evaluation.",
-                        log_level=self.log_level
-                    )   
-                    self._reset_dir(directory=model_dir)
-                    return None, None 
+            for comp in self.miner_models:
+                if model_hash in [model_data['model_hash'] for model_data in self.miner_models[comp]]:
+                    
+                    # Find block that metadata was uploaded to chain for all models with identical directory hash
+                    model_blocks_with_same_hash = []
+                    for model_data in self.miner_models:
+                        if model_data['model_hash'] == model_hash:
+                            model_blocks_with_same_hash.append(model_data['block'])
+                    
+                    # Append current model block for comparison
+                    model_blocks_with_same_hash.append(model_block)
+                    
+                    # If it's not unique, don't return None, None only if this model is the earliest one uploaded to chain
+                    if min(model_blocks_with_same_hash) != model_block:
+                        Utils.subnet_logger(
+                            severity="INFO",
+                            message=f"Current model: {model_id} has identical hash with another model and was not uploaded first. Exiting model evaluation.",
+                            log_level=self.log_level
+                        )   
+                        self._reset_dir(directory=model_dir)
+                        return None, None 
                 
             Utils.subnet_logger(
                 severity="TRACE",
