@@ -1872,6 +1872,11 @@ class SubnetValidator(Base.BaseNeuron):
         for models in self.model_cache.values():
             if isinstance(models, list):
                 length += len(models)
+
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Length of remaining model evaluation cache: {length}",
+        )
         return length
     
     def run_eval_loop(self, evaluator: Models.ModelEvaluationHandler, new_competition_miner_models: dict):
@@ -1911,6 +1916,11 @@ class SubnetValidator(Base.BaseNeuron):
         new_competition_miner_models = copy.deepcopy(self.models_evaluated_today)
 
         while self.calculate_remaining_cache_length() > 0:
+
+            self.neuron_logger(
+                severity="TRACE",
+                message="Running next round of async model building and evaluation."
+            )
 
             # Initialize image builder object
             builder = Models.ModelBuilder(
