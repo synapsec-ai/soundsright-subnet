@@ -82,7 +82,7 @@ class ModelEvaluationHandler:
 
         for key in self.base_timeouts.keys():
 
-            timeouts[key] = self.base_timeouts[key] * self.timeout_multipliers[index] * concurrent_length
+            timeouts[key] = self.base_timeouts[key] * self.timeout_multipliers[key][index] * concurrent_length
 
         Utils.subnet_logger(
             severity="TRACE",
