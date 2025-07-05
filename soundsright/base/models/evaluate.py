@@ -171,7 +171,7 @@ class ModelEvaluationHandler:
         enhanced_files = sorted([os.path.basename(f) for f in glob.glob(os.path.join(model_output_path, '*.wav'))])
         return noisy_files == enhanced_files
     
-    def get_tasks(self, hotkeys: list, competitions: list, ports: list):
+    async def get_tasks(self, hotkeys: list, competitions: list, ports: list):
 
         self.tasks = []
         for hotkey, competition, port in zip(hotkeys, competitions, ports):

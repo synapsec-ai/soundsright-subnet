@@ -1888,11 +1888,11 @@ class SubnetValidator(Base.BaseNeuron):
             
             hotkeys, competitions, ports = evaluator.get_next_eval_round()
 
-            evaluator.get_tasks(
+            asyncio.run(evaluator.get_tasks(
                 hotkeys=hotkeys,
                 competitions=competitions,
                 ports=ports,
-            )
+            ))
 
             benchmarks, competitions = asyncio.run(evaluator.run_eval_group(
                 hotkeys=hotkeys,
