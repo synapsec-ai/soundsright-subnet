@@ -394,7 +394,7 @@ async def build_containers_async(model_base_path: str, eval_cache: dict, hotkeys
 
     return hk_list, competitions, output
 
-def start_container_replacement(tag_name: str, cuda_directory: str, port: int, log_level: str):
+def start_container_async(tag_name: str, cuda_directory: str, port: int, log_level: str):
 
     result1 = subprocess.run(
         [
@@ -801,8 +801,8 @@ def delete_container(log_level) -> bool:
         )
         return False
     
-async def start_container_replacement_async(tag_name: str, cuda_directory: str, port: int, log_level: str):
-    return await asyncio.to_thread(start_container_replacement, tag_name, cuda_directory, port, log_level)
+async def do_start_container_async(tag_name: str, cuda_directory: str, port: int, log_level: str):
+    return await asyncio.to_thread(start_container_async, tag_name, cuda_directory, port, log_level)
 
 async def start_container_async(directory: str, log_level: str, cuda_directory: str):
     return await asyncio.to_thread(start_container, directory, log_level, cuda_directory)

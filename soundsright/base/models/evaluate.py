@@ -221,7 +221,7 @@ class ModelEvaluationHandler:
             log_level=self.log_level,
         )
 
-        start_status = await Utils.start_container_replacement_async(
+        start_status = await Utils.do_start_container_async(
             tag_name=tag_name,
             cuda_directory=self.cuda_directory,
             port=port,
