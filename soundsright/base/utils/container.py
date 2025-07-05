@@ -392,7 +392,7 @@ async def build_containers_async(model_base_path: str, eval_cache: dict, hotkeys
         log_level=log_level
     )
 
-    return hk_list, output
+    return hk_list, competitions, output
 
 def start_container_replacement(tag_name: str, cuda_directory: str, port: int, log_level: str):
 
