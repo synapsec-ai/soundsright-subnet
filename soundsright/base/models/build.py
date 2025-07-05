@@ -399,7 +399,7 @@ class ModelBuilder:
             
             Utils.subnet_logger(
                 severity="TRACE",
-                message=f"Old port: 6500 replaced by new port: {port} for model: {model_data}",
+                message=f"Old port: 6500 replaced by new port: {port} for model: {model_data}. Verification successful.",
                 log_level=self.log_level
             )
             
