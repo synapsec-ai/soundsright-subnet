@@ -1879,7 +1879,7 @@ class SubnetValidator(Base.BaseNeuron):
         )
         return length
     
-    def run_eval_loop(self, evaluator: Models.ModelEvaluationHandler, new_competition_miner_models: dict):
+    async def run_eval_loop(self, evaluator: Models.ModelEvaluationHandler, new_competition_miner_models: dict):
 
         while len(evaluator.image_hotkey_list) > 0:
 
@@ -1888,16 +1888,16 @@ class SubnetValidator(Base.BaseNeuron):
             
             hotkeys, competitions, ports = evaluator.get_next_eval_round()
 
-            asyncio.run(evaluator.get_tasks(
+            await evaluator.get_tasks(
                 hotkeys=hotkeys,
                 competitions=competitions,
                 ports=ports,
-            ))
+            )
 
-            benchmarks, competitions = asyncio.run(evaluator.run_eval_group(
+            benchmarks, competitions = await evaluator.run_eval_group(
                 hotkeys=hotkeys,
                 competitions=competitions,
-            ))
+            )
 
             for benchmark, competition in zip(benchmarks, competitions):
 
@@ -1978,7 +1978,7 @@ class SubnetValidator(Base.BaseNeuron):
                 log_level=self.log_level,
             )
             
-            outcome = self.run_eval_loop(evaluator, new_competition_miner_models)
+            outcome = asyncio.run(self.run_eval_loop(evaluator, new_competition_miner_models))
 
             if builder.time_limit or not outcome:
                 break

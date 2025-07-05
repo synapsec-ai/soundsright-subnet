@@ -382,7 +382,7 @@ class AsyncModelRunTester:
 
         start_start_time = time.time()
 
-        status1 = await Utils.start_container_replacement_async(
+        status1 = await Utils.do_start_container_async(
             tag_name=tag,
             port=port,
             cuda_directory="/usr/local/cuda-12.6",
