@@ -43,6 +43,9 @@ class ModelBuilder:
         log_level: str,
     ):
 
+        # Misc
+        self.log_level = log_level
+
         # Machine
         self.cuda_directory = cuda_directory
         self.free_storage_gb = Utils.get_free_space_gb()
@@ -92,9 +95,6 @@ class ModelBuilder:
         self.base_timeout = 450
         self.timeout_multipliers = [1, 0.65, 0.5, 0.5, 0.5, 0.5]
         self.timeout = 1500
-
-        # Misc
-        self.log_level = log_level
 
     def prepare_directory(self, dir_path):
         """
