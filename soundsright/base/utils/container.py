@@ -792,6 +792,12 @@ def delete_container(log_level) -> bool:
             check=True,
             capture_output=True
         )
+
+        Utils.subnet_logger(
+            severity="TRACE",
+            message=f"Containers deleted.",
+            log_level=log_level
+        )
         return True
 
     except Exception as e:
