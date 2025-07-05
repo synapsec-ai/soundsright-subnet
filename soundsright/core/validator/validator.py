@@ -1915,7 +1915,7 @@ class SubnetValidator(Base.BaseNeuron):
 
         new_competition_miner_models = copy.deepcopy(self.models_evaluated_today)
 
-        Utils.delete_container()
+        Utils.delete_container(log_level=self.log_level)
 
         while self.calculate_remaining_cache_length() > 0:
 
@@ -1985,7 +1985,7 @@ class SubnetValidator(Base.BaseNeuron):
 
             self.model_cache = new_model_cache      
 
-        Utils.delete_container()
+        Utils.delete_container(log_level=self.log_level)
         
         filtered_models = {}
         for comp in new_competition_miner_models.keys():
