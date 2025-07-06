@@ -409,6 +409,11 @@ def handle_iptables(ports: list, log_level: str):
             ["sudo", "iptables", "-A", "INPUT", "-p", "tcp", "--dport", "6000", "-m", "conntrack", "--ctstate", "NEW,ESTABLISHED", "-j", "ACCEPT"]
         ]
 
+        Utils.subnet_logger(
+            severity="TRACE",
+            message=f"Setting iptable rules with the following ports: {ports}"
+        )
+
         for port in ports:
 
             cmd = ["sudo", "iptables", "-A", "INPUT", "-p", "tcp", "--dport", str(port), "-m", "conntrack", "--ctstate", "NEW,ESTABLISHED", "-j", "ACCEPT"]
