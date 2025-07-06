@@ -240,7 +240,7 @@ class ModelEvaluationHandler:
             )
 
             self._reset_dir(directory=model_output_path)
-            return None
+            return hotkey, False
         
         Utils.subnet_logger(
             severity="TRACE",
@@ -259,7 +259,7 @@ class ModelEvaluationHandler:
             )
 
             self._reset_dir(directory=model_output_path)
-            return None
+            return hotkey, False
         
         Utils.subnet_logger(
             severity="TRACE",
@@ -278,7 +278,7 @@ class ModelEvaluationHandler:
             )
 
             self._reset_dir(directory=model_output_path)
-            return None
+            return hotkey, False
         
         Utils.subnet_logger(
             severity="TRACE",
@@ -297,7 +297,7 @@ class ModelEvaluationHandler:
             )
 
             self._reset_dir(directory=model_output_path)
-            return None
+            return hotkey, False
         
         Utils.subnet_logger(
             severity="TRACE",
@@ -316,7 +316,7 @@ class ModelEvaluationHandler:
             )
 
             self._reset_dir(directory=model_output_path)
-            return None
+            return hotkey, False
         
         Utils.subnet_logger(
             severity="TRACE",
@@ -335,7 +335,7 @@ class ModelEvaluationHandler:
             )
 
             self._reset_dir(directory=model_output_path)
-            return None
+            return hotkey, False
         
         Utils.subnet_logger(
             severity="TRACE",
@@ -355,7 +355,7 @@ class ModelEvaluationHandler:
             )
 
             self._reset_dir(directory=model_output_path)
-            return None
+            return hotkey, False
         
         Utils.subnet_logger(
             severity="TRACE",
@@ -363,7 +363,7 @@ class ModelEvaluationHandler:
             log_level=self.log_level,
         )
         
-        return hotkey
+        return hotkey, True
     
     async def run_eval_group(self, hotkeys: list, competitions: list):
 
@@ -374,7 +374,10 @@ class ModelEvaluationHandler:
         output_benchmarks = []
         output_competitions = []
 
-        for hotkey in outcomes:
+        for outcome in outcomes:
+
+            hotkey = outcome[0]
+            result = outcome[1]
 
             if hotkey and isinstance(hotkey, str) and hotkey in hotkeys:
 
@@ -400,13 +403,16 @@ class ModelEvaluationHandler:
 
                 if cache_entry and isinstance(cache_entry, dict):
 
-                    metrics_dict = Benchmarking.calculate_metrics_dict(
-                        clean_directory=tts_path,
-                        enhanced_directory=model_output_path,
-                        noisy_directory=dataset_path,
-                        sample_rate=16000,
-                        log_level=self.log_level,
-                    )
+                    if result: 
+                        metrics_dict = Benchmarking.calculate_metrics_dict(
+                            clean_directory=tts_path,
+                            enhanced_directory=model_output_path,
+                            noisy_directory=dataset_path,
+                            sample_rate=16000,
+                            log_level=self.log_level,
+                        )
+                    else: 
+                        metrics_dict = {}
 
                     Utils.subnet_logger(
                         severity="TRACE",
