@@ -321,7 +321,7 @@ class ModelEvaluationHandler:
             log_level=self.log_level,
         )
         
-        download_status = Utils.download_enhanced_async(enhanced_dir=model_output_path, port=port, log_level=self.log_level, timeout=timeouts["download"])
+        download_status = await Utils.download_enhanced_async(enhanced_dir=model_output_path, port=port, log_level=self.log_level, timeout=timeouts["download"])
 
         if not download_status:
 
