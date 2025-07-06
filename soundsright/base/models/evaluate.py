@@ -39,7 +39,8 @@ class ModelEvaluationHandler:
         self.eval_cache = eval_cache
         self.image_hotkey_list = image_hotkey_list
         self.competitions_list = competitions_list
-        self.ports_list = ports_list
+        self.current_ports_list = ports_list
+        self.old_ports_list = []
         self.models_per_iteration = 3
         self.tasks = []
 
@@ -157,16 +158,16 @@ class ModelEvaluationHandler:
         competitions = self.competitions_list[:self.models_per_iteration]
         self.competitions_list = self.competitions_list[self.models_per_iteration:]
 
-        ports = self.ports_list[:self.models_per_iteration]
+        self.current_ports_list = self.ports_list[:self.models_per_iteration]
         self.ports_list = self.ports_list[self.models_per_iteration:]
 
         Utils.subnet_logger(
             severity="TRACE",
-            message=f"Next model evaluation round obtained. Hotkeys: {hotkeys} Competitions: {competitions} Ports: {ports}",
+            message=f"Next model evaluation round obtained. Hotkeys: {hotkeys} Competitions: {competitions} Ports: {self.current_ports_list}",
             log_level=self.log_level
         )
 
-        return hotkeys, competitions, ports
+        return hotkeys, competitions, self.current_ports_list
 
     def validate_all_noisy_files_are_enhanced(self, task_path: str, model_output_path: str):
         noisy_files = sorted([os.path.basename(f) for f in glob.glob(os.path.join(task_path, '*.wav'))])
@@ -366,7 +367,7 @@ class ModelEvaluationHandler:
     
     async def run_eval_group(self, hotkeys: list, competitions: list):
 
-        Utils.handle_iptables(ports=self.ports_list, log_level=self.log_level)
+        Utils.handle_iptables(ports=self.current_ports_list, log_level=self.log_level)
 
         outcomes = await asyncio.gather(*self.tasks)
 
