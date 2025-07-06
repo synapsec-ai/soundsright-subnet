@@ -1881,12 +1881,28 @@ class SubnetValidator(Base.BaseNeuron):
     
     async def run_eval_loop(self, evaluator: Models.ModelEvaluationHandler, new_competition_miner_models: dict):
 
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Starting eval loop."
+        )
+
         while len(evaluator.image_hotkey_list) > 0:
 
             if time.time() + self.avg_model_eval_time >= self.next_competition_timestamp:
+
+                self.neuron_logger(
+                    severity="TRACE",
+                    message=f"Not enough time to do evaluation. Ending loop."
+                )
+
                 return new_competition_miner_models
             
             hotkeys, competitions, ports = evaluator.get_next_eval_round()
+
+            self.neuron_logger(
+                severity="TRACE",
+                message=f"Next evaluation round: hotkeys: {hotkeys} competitions: {competitions} ports: {ports}"
+            )
 
             await evaluator.get_tasks(
                 hotkeys=hotkeys,
