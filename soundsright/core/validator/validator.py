@@ -1984,6 +1984,7 @@ class SubnetValidator(Base.BaseNeuron):
             evaluator = Models.ModelEvaluationHandler(
                 eval_cache=eval_cache,
                 image_hotkey_list=image_hotkey_list,
+                hotkeys=self.hotkeys,
                 competitions_list=competitions_list,
                 ports_list=ports_list,
                 reverb_path=self.reverb_path,

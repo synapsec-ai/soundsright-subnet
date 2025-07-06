@@ -18,6 +18,7 @@ class ModelEvaluationHandler:
             self,
             eval_cache: dict,
             image_hotkey_list: list,
+            hotkeys: list,
             competitions_list: list,
             ports_list: list,
             reverb_path: str,
@@ -62,6 +63,7 @@ class ModelEvaluationHandler:
         # Misc
         self.cuda_directory = cuda_directory
         self.log_level = log_level
+        self.hotkeys = hotkeys
 
         Utils.subnet_logger(
             severity="TRACE",
