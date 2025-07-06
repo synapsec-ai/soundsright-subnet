@@ -380,6 +380,7 @@ class ModelEvaluationHandler:
                 index = hotkeys.index(hotkey)
                 competition = competitions[index]
                 model_output_path = os.path.join(self.base_model_output_path, hotkey)
+                tts_path = os.path.join(self.tts_path, "16000")
                 competition_components = competition.split("_")
                 task, sample_rate = competition_components[0], competition_components[1].replace("HZ", "")
 
@@ -399,10 +400,10 @@ class ModelEvaluationHandler:
                 if cache_entry and isinstance(cache_entry, dict):
 
                     metrics_dict = Benchmarking.calculate_metrics_dict(
-                        clean_directory=self.tts_path,
+                        clean_directory=tts_path,
                         enhanced_directory=model_output_path,
                         noisy_directory=dataset_path,
-                        sample_rate=self.sample_rate,
+                        sample_rate=16000,
                         log_level=self.log_level,
                     )
 
