@@ -472,7 +472,7 @@ def start_container_with_async(tag_name: str, cuda_directory: str, port: int, lo
             tag_name
         ], 
         check=True,
-        timeout=10
+        timeout=5
     )
     if result1.returncode != 0:
         return False
