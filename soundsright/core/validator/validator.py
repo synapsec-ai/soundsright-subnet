@@ -1920,11 +1920,6 @@ class SubnetValidator(Base.BaseNeuron):
                 new_competition_miner_models[competition].append(benchmark)
                 self.models_evaluated_today[competition].append(benchmark)
 
-            self.neuron_logger(
-                severity="TRACE",
-                message=f"Miner models following evaluation round: {self.miner_models}"
-            )
-
         return new_competition_miner_models
 
     def run_competitions_async(self):
