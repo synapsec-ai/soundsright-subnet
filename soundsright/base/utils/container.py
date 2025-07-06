@@ -411,7 +411,8 @@ def handle_iptables(ports: list, log_level: str):
 
         Utils.subnet_logger(
             severity="TRACE",
-            message=f"Setting iptable rules with the following ports: {ports}"
+            message=f"Setting iptable rules with the following ports: {ports}",
+            log_level=log_level
         )
 
         for port in ports:
