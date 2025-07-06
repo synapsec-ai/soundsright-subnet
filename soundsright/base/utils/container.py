@@ -394,6 +394,58 @@ async def build_containers_async(model_base_path: str, eval_cache: dict, hotkeys
 
     return hk_list, competitions, output
 
+def handle_iptables(ports: list, log_level: str):
+
+    try: 
+        # BLOCK ALL INTERNET ACCESS FOR THIS CONTAINER
+        block_commands = [
+            ["sudo", "iptables", "-P", "INPUT", "DROP"],
+            ["sudo", "iptables", "-P", "FORWARD", "DROP"],
+            ["sudo", "iptables", "-P", "OUTPUT", "DROP"],
+            ["sudo", "iptables", "-A", "INPUT", "-i", "lo", "-j", "ACCEPT"],
+            ["sudo", "iptables", "-A", "OUTPUT", "-o", "lo", "-j", "ACCEPT"],
+            ["sudo", "iptables", "-A", "INPUT", "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "-j", "ACCEPT"],
+            ["sudo", "iptables", "-A", "OUTPUT", "-m", "conntrack", "--ctstate", "ESTABLISHED", "-j", "ACCEPT"],
+            ["sudo", "iptables", "-A", "INPUT", "-p", "tcp", "--dport", "6000", "-m", "conntrack", "--ctstate", "NEW,ESTABLISHED", "-j", "ACCEPT"]
+        ]
+
+        for port in ports:
+
+            cmd = ["sudo", "iptables", "-A", "INPUT", "-p", "tcp", "--dport", str(port), "-m", "conntrack", "--ctstate", "NEW,ESTABLISHED", "-j", "ACCEPT"]
+            block_commands.append(cmd)
+
+        for cmd in block_commands:
+            block_result = subprocess.run(cmd, capture_output=True, text=True)
+            if block_result.returncode != 0:
+                Utils.subnet_logger(
+                    severity="WARNING",
+                    message=f"Firewall rule failed: {' '.join(cmd)} - {block_result.stderr}",
+                    log_level=log_level,
+                )
+            
+            else:
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"Firewall rule successful: {' '.join(cmd)} - {block_result.stderr}",
+                    log_level=log_level,
+                )
+        
+        Utils.subnet_logger(
+            severity="INFO",
+            message=f"Container internet access BLOCKED",
+            log_level=log_level,
+        )
+
+        return True
+
+    except Exception as e:
+        Utils.subnet_logger(
+            severity="TRACE",
+            message=f"Exception creating iptables rules: {e}",
+            log_level=log_level
+        )
+
+
 def start_container_with_async(tag_name: str, cuda_directory: str, port: int, log_level: str):
 
     result1 = subprocess.run(
@@ -412,41 +464,6 @@ def start_container_with_async(tag_name: str, cuda_directory: str, port: int, lo
     )
     if result1.returncode != 0:
         return False
-    
-    # BLOCK ALL INTERNET ACCESS FOR THIS CONTAINER
-    block_commands = [
-        ["sudo", "iptables", "-P", "INPUT", "DROP"],
-        ["sudo", "iptables", "-P", "FORWARD", "DROP"],
-        ["sudo", "iptables", "-P", "OUTPUT", "DROP"],
-        ["sudo", "iptables", "-A", "INPUT", "-i", "lo", "-j", "ACCEPT"],
-        ["sudo", "iptables", "-A", "OUTPUT", "-o", "lo", "-j", "ACCEPT"],
-        ["sudo", "iptables", "-A", "INPUT", "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "-j", "ACCEPT"],
-        ["sudo", "iptables", "-A", "OUTPUT", "-m", "conntrack", "--ctstate", "ESTABLISHED", "-j", "ACCEPT"],
-        ["sudo", "iptables", "-A", "INPUT", "-p", "tcp", "--dport", str(port), "-m", "conntrack", "--ctstate", "NEW,ESTABLISHED", "-j", "ACCEPT"],
-        ["sudo", "iptables", "-A", "INPUT", "-p", "tcp", "--dport", "6000", "-m", "conntrack", "--ctstate", "NEW,ESTABLISHED", "-j", "ACCEPT"]
-    ]
-
-    for cmd in block_commands:
-        block_result = subprocess.run(cmd, capture_output=True, text=True)
-        if block_result.returncode != 0:
-            Utils.subnet_logger(
-                severity="WARNING",
-                message=f"Firewall rule failed: {' '.join(cmd)} - {block_result.stderr}",
-                log_level=log_level,
-            )
-        
-        else:
-            Utils.subnet_logger(
-                severity="TRACE",
-                message=f"Firewall rule successful: {' '.join(cmd)} - {block_result.stderr}",
-                log_level=log_level,
-            )
-    
-    Utils.subnet_logger(
-        severity="INFO",
-        message=f"Container internet access BLOCKED",
-        log_level=log_level,
-    )
 
     return True
         

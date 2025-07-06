@@ -495,7 +495,7 @@ class ModelBuilder:
 
         for hk in successful_hotkeys:
             if hk in self.hotkeys:
-                port = self.hotkeys.index(hk)
+                port = self.hotkeys.index(hk) + 6500
                 ports.append(port)
             else:
                 ports.append(0)

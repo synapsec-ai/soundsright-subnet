@@ -364,6 +364,8 @@ class ModelEvaluationHandler:
     
     async def run_eval_group(self, hotkeys: list, competitions: list):
 
+        Utils.handle_iptables(ports=self.ports_list, log_level=self.log_level)
+
         outcomes = await asyncio.gather(*self.tasks)
 
         output_benchmarks = []
