@@ -39,8 +39,8 @@ class ModelEvaluationHandler:
         self.eval_cache = eval_cache
         self.image_hotkey_list = image_hotkey_list
         self.competitions_list = competitions_list
-        self.current_ports_list = ports_list
-        self.old_ports_list = []
+        self.ports_list = ports_list
+        self.current_ports_list = []
         self.models_per_iteration = 3
         self.tasks = []
 
