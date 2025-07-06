@@ -439,7 +439,7 @@ class ModelEvaluationHandler:
 
             for entry in comp_list:
 
-                if entry["hotkey"] == hotkey:
+                if self.hotkeys[entry["uid"]] == hotkey:
 
                     return entry
                 

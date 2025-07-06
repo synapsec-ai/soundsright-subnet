@@ -414,6 +414,12 @@ def handle_iptables(ports: list, log_level: str):
             cmd = ["sudo", "iptables", "-A", "INPUT", "-p", "tcp", "--dport", str(port), "-m", "conntrack", "--ctstate", "NEW,ESTABLISHED", "-j", "ACCEPT"]
             block_commands.append(cmd)
 
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Added port command to iptables command list: {cmd}",
+                log_level=log_level
+            )
+
         for cmd in block_commands:
             block_result = subprocess.run(cmd, capture_output=True, text=True)
             if block_result.returncode != 0:
