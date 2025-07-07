@@ -1888,7 +1888,7 @@ class SubnetValidator(Base.BaseNeuron):
 
         while len(evaluator.image_hotkey_list) > 0:
 
-            if time.time() + self.avg_model_eval_time >= self.next_competition_timestamp:
+            if time.time() + (self.avg_model_eval_time * len(evaluator.image_hotkey_list)) >= self.next_competition_timestamp:
 
                 self.neuron_logger(
                     severity="TRACE",
