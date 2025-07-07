@@ -97,7 +97,7 @@ class SGMSEHandler:
             log_level=self.log_level,
         )
         
-        if not Utils.check_container_status(log_level=self.log_level):
+        if not Utils.check_container_status(port=6500, log_level=self.log_level):
             Utils.subnet_logger(
                 severity="ERROR",
                 message=f"Could not establish connection with SGMSE+ API. Please contact subnet owners if issue persists.",
@@ -112,7 +112,7 @@ class SGMSEHandler:
             log_level=self.log_level
         )
         
-        if not Utils.prepare(log_level=self.log_level):
+        if not Utils.prepare(port=6500, log_level=self.log_level):
             Utils.subnet_logger(
                 severity="ERROR",
                 message=f"Could not prepare the SGMSE+ model. Please contact subnet owners if issue persists.",
@@ -127,7 +127,7 @@ class SGMSEHandler:
             log_level=self.log_level
         )
         
-        if not Utils.upload_audio(noisy_dir=self.task_path, log_level=self.log_level):
+        if not Utils.upload_audio(port=6500, noisy_dir=self.task_path, log_level=self.log_level):
             
             Utils.subnet_logger(
                 severity="ERROR",
@@ -144,7 +144,7 @@ class SGMSEHandler:
             log_level=self.log_level,
         )    
             
-        if not Utils.enhance_audio(log_level=self.log_level):
+        if not Utils.enhance_audio(port=6500, log_level=self.log_level):
             
             Utils.subnet_logger(
                 severity="ERROR",
@@ -152,7 +152,7 @@ class SGMSEHandler:
                 log_level=self.log_level
             )
             
-            Utils.delete_container(log_level=self.log_level)
+            Utils.delete_container(port=6500, log_level=self.log_level)
             return False
             
         Utils.subnet_logger(
@@ -161,7 +161,7 @@ class SGMSEHandler:
             log_level=self.log_level,
         )    
             
-        if not Utils.download_enhanced(enhanced_dir=self.sgmse_output_path, log_level=self.log_level):
+        if not Utils.download_enhanced(port=6500, enhanced_dir=self.sgmse_output_path, log_level=self.log_level):
             
             Utils.subnet_logger(
                 severity="ERROR",

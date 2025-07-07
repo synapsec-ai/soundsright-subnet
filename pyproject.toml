@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "SoundsRight"
-version = "1.5.4"
+version = "1.6.0"
 description = "This project implements the SoundsRight Bittensor subnet."
 authors = [
     { name = "synapsec.ai", email = "contact@synapsec.ai" }
@@ -53,6 +53,7 @@ validator = [
     "torchaudio==2.5.1",
     "pystoi==0.4.1",
     "huggingface-hub==0.31.4",
+    "chardet==5.2.0"
 ]
 testing = [
     "pytest==8.3.3",

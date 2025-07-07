@@ -55,10 +55,12 @@ class SubnetValidator(Base.BaseNeuron):
         self.query = None
         self.debug_mode = False
         self.skip_sgmse = False
-        self.dataset_size = 30
+        self.dataset_size = 25
         self.log_level="INFO" # Init log level
         self.cuda_directory = ""
-        self.avg_model_eval_time = 2000
+        self.avg_model_eval_time = 2200
+        self.avg_model_size_gb = 20
+        self.images_per_cpu = 3
         self.first_run_through_of_the_day = True
         self.tried_accessing_old_cache = False
         self.seed = 10
@@ -137,6 +139,9 @@ class SubnetValidator(Base.BaseNeuron):
         self.remote_logging_daily_tries=0
 
         # Init Functions
+        self.cpu_count = Utils.get_cpu_core_count()
+        self.gpu_count = Utils.get_gpu_count()
+        
         self.apply_config(bt_classes=[bt.subtensor, bt.logging, bt.wallet])
         self.initialize_neuron()
 
@@ -1859,92 +1864,182 @@ class SubnetValidator(Base.BaseNeuron):
             filtered_models = list(unique_models.values())
             new_model_cache[competition] = filtered_models    
 
-        self.model_cache = new_model_cache                
+        self.model_cache = new_model_cache
+
+    def calculate_remaining_cache_length(self):
+
+        length = 0
+        for models in self.model_cache.values():
+            if isinstance(models, list):
+                length += len(models)
+
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Length of remaining model evaluation cache: {length}. Cache: {self.model_cache}",
+        )
+        return length
+    
+    async def run_eval_loop(self, evaluator: Models.ModelEvaluationHandler, new_competition_miner_models: dict):
+
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Starting eval loop."
+        )
+
+        while len(evaluator.image_hotkey_list) > 0:
+
+            completion_ref = time.time() + (self.avg_model_eval_time * len(evaluator.image_hotkey_list))
+            self.neuron_logger(
+                severity="TRACE",
+                message=f"Evaluation expected to end at: {completion_ref}. Next competition timestamp: {self.next_competition_timestamp}"
+            )
+
+            if completion_ref >= self.next_competition_timestamp:
+
+                self.neuron_logger(
+                    severity="TRACE",
+                    message=f"Not enough time to do evaluation. Ending loop."
+                )
+
+                return new_competition_miner_models
             
-    def run_competitions(self, sample_rates, tasks) -> None:
+            hotkeys, competitions, ports = evaluator.get_next_eval_round()
+
+            self.neuron_logger(
+                severity="TRACE",
+                message=f"Next evaluation round: hotkeys: {hotkeys} competitions: {competitions} ports: {ports}"
+            )
+
+            await evaluator.get_tasks(
+                hotkeys=hotkeys,
+                competitions=competitions,
+                ports=ports,
+            )
+
+            benchmarks, competitions = await evaluator.run_eval_group(
+                hotkeys=hotkeys,
+                competitions=competitions,
+            )
+
+            for benchmark, competition in zip(benchmarks, competitions):
+
+                new_competition_miner_models[competition].append(benchmark)
+                self.models_evaluated_today[competition].append(benchmark)
+
+        return new_competition_miner_models
+
+    def run_competitions_async(self):
+
+        new_competition_miner_models = copy.deepcopy(self.models_evaluated_today)
+
+        Utils.delete_container(log_level=self.log_level)
+
+        while self.calculate_remaining_cache_length() > 0:
+
+            self.neuron_logger(
+                severity="TRACE",
+                message="Running next round of async model building and evaluation."
+            )
+
+            # Initialize image builder object
+            builder = Models.ModelBuilder(
+                model_cache=self.model_cache,
+                cuda_directory=self.cuda_directory,
+                seed_reference_block=self.seed_reference_block,
+                cpu_count=self.cpu_count,
+                avg_model_size_gb=self.avg_model_size_gb,
+                images_per_cpu=self.images_per_cpu,
+                model_path=self.model_path,
+                subtensor=self.subtensor,
+                subnet_netuid=self.neuron_config.netuid,
+                hotkeys=self.hotkeys,
+                miner_models=self.miner_models,
+                first_run_through_of_the_day=self.first_run_through_of_the_day,
+                next_competition_timestamp=self.next_competition_timestamp,
+                avg_model_eval_time=self.avg_model_eval_time,
+                log_level=self.log_level,
+            )
+
+            if builder.max_image_count == 0:
+                break
+
+            # Filter out cache
+            new_model_cache = builder.get_eval_round_from_model_cache()
+
+            # Build model images async
+            image_hotkey_list, competitions_list, ports_list = builder.build_images()
+
+            # Verify outputs, if it didn't work:
+            if not image_hotkey_list or not competitions_list or not ports_list:
+
+                # End loop if validator is out of time and needs to start next competition
+                if builder.time_limit:
+                    break
+
+                # Retry otherwise
+                continue
+
+            # Query eval cache from builder
+            eval_cache = builder.eval_cache
+
+            evaluator = Models.ModelEvaluationHandler(
+                eval_cache=eval_cache,
+                image_hotkey_list=image_hotkey_list,
+                hotkeys=self.hotkeys,
+                competitions_list=competitions_list,
+                ports_list=ports_list,
+                reverb_path=self.reverb_path,
+                noise_path=self.noise_path,
+                tts_path=self.tts_path,
+                model_output_path=self.model_output_path,
+                cuda_directory=self.cuda_directory,
+                log_level=self.log_level,
+            )
             
-        # Iterate through sample rates
-        for sample_rate in sample_rates:
-            # Iterate through tasks
-            for task in tasks:
-                
-                self.neuron_logger(
-                    severity="INFO",
-                    message=f"Evaluating for competition: {task}_{sample_rate}HZ"
-                )
+            outcome = asyncio.run(self.run_eval_loop(evaluator, new_competition_miner_models))
 
-                # Initialize the list of models with the ones already evaluated today
-                new_competition_miner_models = copy.deepcopy(self.models_evaluated_today[f"{task}_{sample_rate}HZ"])
+            if builder.time_limit or not outcome:
+                break
 
-                self.neuron_logger(
-                    severity="TRACE",
-                    message=f"Competition models already evaluated today for competition: {task}_{sample_rate}HZ: {new_competition_miner_models}"
-                )
-                
-                # Obtain competition models
-                models_to_evaluate = self.model_cache[f"{task}_{sample_rate}HZ"]
+            self.model_cache = new_model_cache      
 
-                self.neuron_logger(
-                    severity="TRACE",
-                    message=f"Filtered competition model evaluation cache for competition: {task}_{sample_rate}HZ: {models_to_evaluate}"
-                )
-                
-                # Iterate through models to evaluate
-                for model_to_evaluate in models_to_evaluate:
-                    
-                    # Obtain uid and response data
-                    uid, response_data, block = model_to_evaluate['uid'], model_to_evaluate['response_data'], model_to_evaluate["block"]
-                    
-                    # Create a dictionary logging miner model metadata & benchmark values
-                    model_data = self.benchmark_model(
-                        model_metadata = response_data,
-                        sample_rate = sample_rate,
-                        task = task,
-                        hotkey = self.hotkeys[uid],
-                        block=block
-                    )
+        Utils.delete_container(log_level=self.log_level)
+        
+        filtered_models = {}
+        for comp in new_competition_miner_models.keys():
 
-                    if model_data:
-                        # Append to the list
-                        new_competition_miner_models.append(model_data)
-                        
-                        # Append to daily cache
-                        self.models_evaluated_today[f"{task}_{sample_rate}HZ"].append(model_data)
-                
-                # In the case that multiple models have the same hash, we only want to include the model with the earliest block when the metadata was uploaded to the chain
-                hash_filtered_new_competition_miner_models = Benchmarking.filter_models_with_same_hash(
-                    new_competition_miner_models=new_competition_miner_models,
-                    hotkeys=self.hotkeys
-                )
-                
-                # In the case that multiple models have the same metadata, we only want to include the model with the earliest block when the metadata was uploaded to the chain
-                hash_metadata_filtered_new_competition_miner_models = Benchmarking.filter_models_with_same_metadata(
-                    new_competition_miner_models=hash_filtered_new_competition_miner_models,
-                    hotkeys=self.hotkeys
-                )
-                
-                # Extend blacklist and remove duplicate entries
-                self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"] = Benchmarking.remove_blacklist_duplicates(self.blacklisted_miner_models[f"{task}_{sample_rate}HZ"])
-                self.miner_models[f"{task}_{sample_rate}HZ"] = hash_metadata_filtered_new_competition_miner_models
+             # In the case that multiple models have the same hash, we only want to include the model with the earliest block when the metadata was uploaded to the chain
+            hash_filtered_models = Benchmarking.filter_models_with_same_hash(
+                new_competition_miner_models=new_competition_miner_models[comp],
+                hotkeys=self.hotkeys
+            )
+            
+            # In the case that multiple models have the same metadata, we only want to include the model with the earliest block when the metadata was uploaded to the chain
+            hash_metadata_filtered_models = Benchmarking.filter_models_with_same_metadata(
+                new_competition_miner_models=hash_filtered_models,
+                hotkeys=self.hotkeys
+            )
 
-                competition = f"{task}_{sample_rate}HZ"
-                self.neuron_logger(
-                    severity="DEBUG",
-                    message=f"Models for competition: {competition}: {self.miner_models[competition]}"
-                )
+            filtered_models[comp] = hash_metadata_filtered_models
 
-                self.neuron_logger(
-                    severity="TRACE",
-                    message=f"Blacklist for competition: {competition}: {self.blacklisted_miner_models[competition]}"
-                )
+        self.miner_models = filtered_models
+
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Miner models: {self.miner_models}"
+        )
 
         self.neuron_logger(
             severity="TRACE",
             message=f"Best miner models: {self.best_miner_models}"
         )
 
+        # Extend blacklist and remove duplicate entries
+        for comp in self.blacklisted_miner_models.keys():
+            self.blacklisted_miner_models[comp] = Benchmarking.remove_blacklist_duplicates(self.blacklisted_miner_models[comp])
+
         if self.first_run_through_of_the_day:
-            self.first_run_through_of_the_day = False
+            self.first_run_through_of_the_day = False          
 
     def reset_for_new_competition(self) -> None:
         """
@@ -2017,7 +2112,7 @@ class SubnetValidator(Base.BaseNeuron):
                     self.query_competitions(sample_rates=self.sample_rates, tasks=self.tasks)
 
                     # Run competition
-                    self.run_competitions(sample_rates=self.sample_rates, tasks=self.tasks)
+                    self.run_competitions_async()
 
                     # Handle remote logging 
                     self.handle_remote_logging()
