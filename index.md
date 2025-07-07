@@ -14,7 +14,7 @@ The SoundsRight subnet promotes the research and development of speech enhanceme
 
 Miners in the subnet will upload their fine-tuned models to HuggingFace, and the subnet's validators are in charge of downloading the models, benchmarking their performance and determining the best model. 
 
-**Each competition is winner-takes-all.**
+**Each competition is winner-takes-most.**
 
 <h1 align="center">Fine-Tuning Competitions</h1>
 
