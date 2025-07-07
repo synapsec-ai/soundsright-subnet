@@ -1888,7 +1888,13 @@ class SubnetValidator(Base.BaseNeuron):
 
         while len(evaluator.image_hotkey_list) > 0:
 
-            if time.time() + (self.avg_model_eval_time * len(evaluator.image_hotkey_list)) >= self.next_competition_timestamp:
+            completion_ref = time.time() + (self.avg_model_eval_time * len(evaluator.image_hotkey_list))
+            self.neuron_logger(
+                severity="TRACE",
+                message=f"Evaluation expected to end at: {completion_ref}. Next competition timestamp: {self.next_competition_timestamp}"
+            )
+
+            if completion_ref >= self.next_competition_timestamp:
 
                 self.neuron_logger(
                     severity="TRACE",
