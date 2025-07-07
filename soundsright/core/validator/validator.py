@@ -690,6 +690,7 @@ class SubnetValidator(Base.BaseNeuron):
                             message=f"Score before reset: {self.scores[i]}, competition scores: {self.competition_scores}"
                         )
                         self.reset_hotkey_scores(i)
+                        self.remove_uid_from_cache(i)
                         
                         self.neuron_logger(
                             severity="DEBUG",
@@ -714,6 +715,16 @@ class SubnetValidator(Base.BaseNeuron):
                 miner_models=self.miner_models[competition],
                 hotkeys=self.hotkeys
             )
+
+    def remove_uid_from_cache(self, uid):
+
+        new_model_cache = {}
+        for comp in self.model_cache:
+            new_model_cache[comp] = []
+            for model_data in self.model_cache[comp]:
+                if model_data["uid"] != uid:
+                    new_model_cache[comp].append(model_data)
+        self.model_cache = new_model_cache
 
     def reset_hotkey_scores(self, hotkey_index) -> None:
         self.scores[hotkey_index] = 0.0
@@ -2001,9 +2012,11 @@ class SubnetValidator(Base.BaseNeuron):
             if builder.time_limit or not outcome:
                 break
 
-            self.model_cache = new_model_cache      
+            self.model_cache = new_model_cache
 
-        Utils.delete_container(log_level=self.log_level)
+            self.handle_weight_setting()      
+
+            Utils.delete_container(log_level=self.log_level)
         
         filtered_models = {}
         for comp in new_competition_miner_models.keys():
