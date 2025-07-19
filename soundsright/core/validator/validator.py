@@ -650,19 +650,31 @@ class SubnetValidator(Base.BaseNeuron):
             return seed, query_block
         
     def handle_update_seed(self):
+        """Handle seed update with proper async/sync context detection"""
+        try:
+            # Check if we're already in an event loop
+            loop = asyncio.get_running_loop()
+            # We're in an event loop, so schedule the async work
+            asyncio.create_task(self._update_seed_async())
+        except RuntimeError:
+            # No event loop running, safe to create one
+            asyncio.run(self._update_seed_async())
+
+    async def _update_seed_async(self):
+        """The actual async seed update logic"""
         use_backup = False
         try:
-            self.seed, self.seed_reference_block = asyncio.run(self.get_seed())
+            self.seed, self.seed_reference_block = await self.get_seed()
         except Exception as e:
             self.neuron_logger(
                 severity="INFO",
-                message=f"Default endpoint failed to obtain seed based on block extrinsic because: {e} Resorting to default endpoint."
+                message=f"Default endpoint failed to obtain seed based on block extrinsic because: {e} Resorting to backup endpoint."
             )
-            use_backup=True
+            use_backup = True
         
         if use_backup:
             try:
-                self.seed, self.seed_reference_block = asyncio.run(self.get_seed_with_backup_method())
+                self.seed, self.seed_reference_block = await self.get_seed_with_backup_method()
             except Exception as e:
                 self.neuron_logger(
                     severity="INFO",
@@ -670,7 +682,7 @@ class SubnetValidator(Base.BaseNeuron):
                 )
                 self.seed = 10
                 self.seed_reference_block = float("inf")
-
+        
         self.healthcheck_api.update_seed(self.seed)
 
     def check_hotkeys(self) -> None:
