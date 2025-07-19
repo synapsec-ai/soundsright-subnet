@@ -11,6 +11,8 @@ from async_substrate_interface import AsyncSubstrateInterface
 import hashlib
 import numpy as np
 import asyncio
+import threading
+from concurrent.futures import ThreadPoolExecutor
 import sys
 import logging
 import pickle
@@ -649,19 +651,7 @@ class SubnetValidator(Base.BaseNeuron):
             )
             return seed, query_block
         
-    def handle_update_seed(self):
-        """Handle seed update with proper async/sync context detection"""
-        try:
-            # Check if we're already in an event loop
-            loop = asyncio.get_running_loop()
-            # We're in an event loop, so schedule the async work
-            asyncio.create_task(self._update_seed_async())
-        except RuntimeError:
-            # No event loop running, safe to create one
-            asyncio.run(self._update_seed_async())
-
-    async def _update_seed_async(self):
-        """The actual async seed update logic"""
+    async def handle_update_seed_async(self):
         use_backup = False
         try:
             self.seed, self.seed_reference_block = await self.get_seed()
@@ -670,7 +660,7 @@ class SubnetValidator(Base.BaseNeuron):
                 severity="INFO",
                 message=f"Default endpoint failed to obtain seed based on block extrinsic because: {e} Resorting to backup endpoint."
             )
-            use_backup = True
+            use_backup=True
         
         if use_backup:
             try:
@@ -682,8 +672,37 @@ class SubnetValidator(Base.BaseNeuron):
                 )
                 self.seed = 10
                 self.seed_reference_block = float("inf")
-        
+
         self.healthcheck_api.update_seed(self.seed)
+
+    def handle_update_seed(self):
+        """
+        Synchronous wrapper that executes handle_update_seed_async immediately,
+        whether or not there's a current event loop.
+        """
+        try:
+            # Try to get the current event loop
+            loop = asyncio.get_running_loop()
+            
+            # If we're already in an event loop, we need to run in a separate thread
+            # to avoid "RuntimeError: cannot be called from a running event loop"
+            with ThreadPoolExecutor() as executor:
+                future = executor.submit(asyncio.run, self.handle_update_seed_async())
+                future.result()  # Wait for completion and get any exceptions
+                
+        except RuntimeError:
+            # No event loop is running, so we can safely use asyncio.run()
+            asyncio.run(self.handle_update_seed_async())
+        except Exception as e:
+            # Handle any other exceptions that might occur
+            self.neuron_logger(
+                severity="ERROR",
+                message=f"Failed to execute handle_update_seed_async: {e}"
+            )
+            # Set fallback values
+            self.seed = 10
+            self.seed_reference_block = float("inf")
+            self.healthcheck_api.update_seed(self.seed)
 
     def check_hotkeys(self) -> None:
         """Checks if some hotkeys have been replaced in the metagraph"""
