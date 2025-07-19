@@ -1999,6 +1999,7 @@ class SubnetValidator(Base.BaseNeuron):
                 hotkeys=self.hotkeys,
                 competitions_list=competitions_list,
                 ports_list=ports_list,
+                model_path=self.model_path,
                 reverb_path=self.reverb_path,
                 noise_path=self.noise_path,
                 tts_path=self.tts_path,

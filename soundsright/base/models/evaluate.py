@@ -21,6 +21,7 @@ class ModelEvaluationHandler:
             hotkeys: list,
             competitions_list: list,
             ports_list: list,
+            model_path: str,
             reverb_path: str,
             noise_path: str,
             tts_path: str,
@@ -33,6 +34,7 @@ class ModelEvaluationHandler:
         self.reverb_path = reverb_path
         self.noise_path = noise_path
         self.tts_path = tts_path
+        self.model_base_path = model_path
         self.base_model_output_path = model_output_path
 
         # Eval cache
@@ -440,6 +442,11 @@ class ModelEvaluationHandler:
 
                     output_benchmarks.append(model_benchmark)
                     output_competitions.append(competition)
+
+                # Reset model output and model repo directories following evaluation
+                self._reset_dir(directory=model_output_path)
+                model_dir = os.path.join(self.model_base_path, hotkey)
+                self._reset_dir(model_dir)
 
         return output_benchmarks, output_competitions
 
