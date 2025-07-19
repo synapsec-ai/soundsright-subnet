@@ -14,6 +14,7 @@ Generally, mining on the subnet looks like this:
 2. Miner uploads the model to HuggingFace and makes it publicly available. 
 3. Miner ensures that their model is compatible with the validator script used to benchmark their model. See the [model tutorial doc](model_formatting.html) for more details.
 4. Miner updates their .env file with the model's data and restarts their miner neuron. The miner will automatically trigger the process of communicating the model data with validators upon restarting.
+5. Miner receives Feedback synapses from validators containing benchmarking results. Please see section 6. of this guide for more information on how you can log this data and incorporate it into your fine-tuning. 
 
 Note that there is **no fine-tuning script contained within the miner neuron itself**--all miners are responsible for fine-tuning their models externally. Miner neurons are only used to communicate model data to validators. 
 
@@ -164,3 +165,9 @@ cd soundsright-subnet
 git pull
 docker compose up soundsright-miner -d --force-recreate
 ```
+
+### 6. Feedback Synapses
+
+A Feedback synapse is sent back to each miner after the end of a competition, containing the benchmarking results of their model alongside the benchmarking results of the models who have won each competition. 
+
+The function has been left open-ended--miners are free to log and use this data however they please. If you would like to incorporate this data into your workflow, please modify the `forward_feedback` method in the `SubnetMiner` class, located in `soundsright-subnet/soundsright/core/miner/miner.py` in the GitHub repository. 
