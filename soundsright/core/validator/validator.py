@@ -67,6 +67,8 @@ class SubnetValidator(Base.BaseNeuron):
         self.tried_accessing_old_cache = False
         self.seed = 10
         self.seed_interval = 100
+        self.last_updated_block = 0
+        self.last_metagraph_sync_timestamp = 0
         self.seed_reference_block = float("inf")
 
         # WC Prevention
@@ -1259,27 +1261,29 @@ class SubnetValidator(Base.BaseNeuron):
         # Sync the metagraph
         self.metagraph.sync(subtensor=self.subtensor)
 
-    def handle_metagraph_sync(self) -> None:
-        tries=0
-        while tries < 5:
-            try:
-                asyncio.run(self.sync_metagraph())
-                self.neuron_logger(
-                    severity="INFOX",
-                    message=f"Metagraph synced: {self.metagraph}"
-                )
-                return
-            except TimeoutError as e:
-                self.neuron_logger(
-                    severity="ERROR",
-                    message=f"Metagraph sync timed out: {e}"
-                )   
-            except Exception as e:
-                self.neuron_logger(
-                    severity="ERROR",
-                    message=f"An error occured while syncing metagraph: {e}"
-                )
-            tries+=1
+    def handle_metagraph_sync(self, override=False) -> None:
+        if override or time.time() - 500 > self.last_metagraph_sync_timestamp:
+            tries=0
+            while tries < 5:
+                try:
+                    asyncio.run(self.sync_metagraph())
+                    self.neuron_logger(
+                        severity="INFOX",
+                        message=f"Metagraph synced: {self.metagraph}"
+                    )
+
+                    return
+                except TimeoutError as e:
+                    self.neuron_logger(
+                        severity="ERROR",
+                        message=f"Metagraph sync timed out: {e}"
+                    )   
+                except Exception as e:
+                    self.neuron_logger(
+                        severity="ERROR",
+                        message=f"An error occured while syncing metagraph: {e}"
+                    )
+                tries+=1
 
     def handle_weight_setting(self) -> None:
         """
@@ -1288,7 +1292,7 @@ class SubnetValidator(Base.BaseNeuron):
         # Check if it's time to set/commit new weights
         if self.subtensor.get_current_block() >= self.last_updated_block + 350 and not self.debug_mode: 
 
-            self.handle_metagraph_sync()
+            self.handle_metagraph_sync(override=True)
             self.check_hotkeys()
 
             # Try set/commit weights
