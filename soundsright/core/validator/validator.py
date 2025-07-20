@@ -2084,7 +2084,28 @@ class SubnetValidator(Base.BaseNeuron):
             self.blacklisted_miner_models[comp] = Benchmarking.remove_blacklist_duplicates(self.blacklisted_miner_models[comp])
 
         if self.first_run_through_of_the_day:
-            self.first_run_through_of_the_day = False          
+            self.first_run_through_of_the_day = False     
+
+        # Reset model and model output directories  
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Resetting directory: {self.model_path}"
+        )
+        Utils.reset_dir(directory=self.model_path)
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Directory reset: {self.model_path}"
+        )
+
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Resetting directory: {self.model_output_path}"
+        )
+        Utils.reset_dir(directory=self.model_output_path)  
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Directory reset: {self.model_output_path}"
+        )  
 
     def reset_for_new_competition(self) -> None:
         """
