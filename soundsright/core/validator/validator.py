@@ -438,6 +438,27 @@ class SubnetValidator(Base.BaseNeuron):
             message=f"HealthCheck API running at: http://{args.healthcheck_host}:{args.healthcheck_port}"
         )
 
+        # Reset model and model output directories  
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Resetting directory: {self.model_path}"
+        )
+        Utils.reset_dir(directory=self.model_path)
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Directory reset: {self.model_path}"
+        )
+
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Resetting directory: {self.model_output_path}"
+        )
+        Utils.reset_dir(directory=self.model_output_path)  
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Directory reset: {self.model_output_path}"
+        )  
+
         return True
     
     def init_default_trusted_validators(self):
