@@ -444,9 +444,30 @@ class ModelEvaluationHandler:
                     output_competitions.append(competition)
 
                 # Reset model output and model repo directories following evaluation
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"Resetting directory: {model_output_path}",
+                    log_level=self.log_level
+                )
                 self._reset_dir(directory=model_output_path)
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"Directory reset: {model_output_path}",
+                    log_level=self.log_level
+                )
+
                 model_dir = os.path.join(self.model_base_path, hotkey)
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"Resetting directory: {model_dir}",
+                    log_level=self.log_level
+                )
                 self._reset_dir(model_dir)
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"Directory reset: {model_dir}",
+                    log_level=self.log_level
+                )
 
         return output_benchmarks, output_competitions
 

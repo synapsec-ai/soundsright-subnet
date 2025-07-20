@@ -2,6 +2,8 @@ import asyncio
 import bittensor as bt 
 import json
 import time 
+import os
+import shutil
 
 def timeout_decorator(timeout):
     """
@@ -220,3 +222,26 @@ def extract_metadata(list_of_dicts):
         output_dict = {k: d[k] for k in needed_keys}
         output.append(output_dict)
     return output
+
+def reset_dir(directory: str) -> None:
+    """Removes all files and sub-directories in an inputted directory
+
+    Args:
+        directory (str): Directory to reset.
+    """
+    # Check if the directory exists
+    if not os.path.exists(directory):
+        return
+
+    # Loop through all the files and subdirectories in the directory
+    for filename in os.listdir(directory):
+        file_path = os.path.join(directory, filename)
+        
+        # Check if it's a file or directory and remove accordingly
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)  # Remove the file or link
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)  # Remove the directory and its contents
+        except Exception as e:
+            continue
