@@ -1262,7 +1262,7 @@ class SubnetValidator(Base.BaseNeuron):
         self.metagraph.sync(subtensor=self.subtensor)
 
     def handle_metagraph_sync(self, override=False) -> None:
-        if override or time.time() - 500 > self.last_metagraph_sync_timestamp:
+        if override or time.time() - 300 > self.last_metagraph_sync_timestamp:
             self.neuron_logger(
                 severity="TRACE",
                 message="Metagraph has not been synced in over 500 seconds, or the override was triggered (this happens during weight set)"
@@ -1291,7 +1291,7 @@ class SubnetValidator(Base.BaseNeuron):
 
         else:
             current_time = time.time()
-            next_update_time = current_time + 500
+            next_update_time = current_time + 300
             self.neuron_logger(
                 severity="TRACE",
                 message=f"Not enough time in between intervals to sync metagraph. Current time: {current_time}. Next update time: {next_update_time} Last updated timestamp: {self.last_metagraph_sync_timestamp}."
