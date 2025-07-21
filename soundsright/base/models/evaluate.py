@@ -246,7 +246,7 @@ class ModelEvaluationHandler:
         
         Utils.subnet_logger(
             severity="TRACE",
-            message=f"Model container start successful for miner: {hotkey}. Now checking API status with timeout: {timeouts["status"]}.",
+            message=f"Model container start successful for miner: {hotkey}. Now checking API status with timeout: {timeouts['status']}.",
             log_level=self.log_level,
         )
         
@@ -265,7 +265,7 @@ class ModelEvaluationHandler:
         
         Utils.subnet_logger(
             severity="TRACE",
-            message=f"API check successful for miner: {hotkey}. Now preparing model with timeout: {timeouts["prepare"]}.",
+            message=f"API check successful for miner: {hotkey}. Now preparing model with timeout: {timeouts['prepare']}.",
             log_level=self.log_level,
         )
         
@@ -284,7 +284,7 @@ class ModelEvaluationHandler:
         
         Utils.subnet_logger(
             severity="TRACE",
-            message=f"Model preparation successful for miner: {hotkey}. Now uploading noisy files with timeout: {timeouts["prepare"]}.",
+            message=f"Model preparation successful for miner: {hotkey}. Now uploading noisy files with timeout: {timeouts['prepare']}.",
             log_level=self.log_level,
         )
         
@@ -303,7 +303,7 @@ class ModelEvaluationHandler:
         
         Utils.subnet_logger(
             severity="TRACE",
-            message=f"Noisy file upload successful for miner: {hotkey}. Now enhancing model with timeout: {timeouts["enhance"]}.",
+            message=f"Noisy file upload successful for miner: {hotkey}. Now enhancing model with timeout: {timeouts['enhance']}.",
             log_level=self.log_level,
         )
         
@@ -322,7 +322,7 @@ class ModelEvaluationHandler:
         
         Utils.subnet_logger(
             severity="TRACE",
-            message=f"Enhancement successful for miner: {hotkey}. Now downloading enhanced files with timeout: {timeouts["download"]}.",
+            message=f"Enhancement successful for miner: {hotkey}. Now downloading enhanced files with timeout: {timeouts['download']}.",
             log_level=self.log_level,
         )
         
