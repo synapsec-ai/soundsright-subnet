@@ -1290,9 +1290,11 @@ class SubnetValidator(Base.BaseNeuron):
                 tries+=1
 
         else:
+            current_time = time.time()
+            next_update_time = current_time + 500
             self.neuron_logger(
                 severity="TRACE",
-                message="Not enough time in between intervals to sync metagraph."
+                message=f"Not enough time in between intervals to sync metagraph. Current time: {current_time}. Next update time: {next_update_time} Last updated timestamp: {self.last_metagraph_sync_timestamp}."
             )
 
     def handle_weight_setting(self) -> None:
