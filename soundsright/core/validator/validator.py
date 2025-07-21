@@ -1271,7 +1271,7 @@ class SubnetValidator(Base.BaseNeuron):
                         severity="INFOX",
                         message=f"Metagraph synced: {self.metagraph}"
                     )
-
+                    self.last_metagraph_sync_timestamp = time.time()
                     return
                 except TimeoutError as e:
                     self.neuron_logger(
