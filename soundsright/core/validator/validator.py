@@ -2144,6 +2144,8 @@ class SubnetValidator(Base.BaseNeuron):
             message=f"Directory reset: {self.model_output_path}"
         )  
 
+        self.send_feedback_synapses()
+
     def reset_for_new_competition(self) -> None:
         """
         Aggregate of all the things to reset each competition
