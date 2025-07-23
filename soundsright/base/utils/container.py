@@ -548,7 +548,8 @@ def start_container(directory, log_level, cuda_directory) -> bool:
             ["sudo", "iptables", "-A", "INPUT", "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "-j", "ACCEPT"],
             ["sudo", "iptables", "-A", "OUTPUT", "-m", "conntrack", "--ctstate", "ESTABLISHED", "-j", "ACCEPT"],
             ["sudo", "iptables", "-A", "INPUT", "-p", "tcp", "--dport", "6500", "-m", "conntrack", "--ctstate", "NEW,ESTABLISHED", "-j", "ACCEPT"],
-            ["sudo", "iptables", "-A", "INPUT", "-p", "tcp", "--dport", "6000", "-m", "conntrack", "--ctstate", "NEW,ESTABLISHED", "-j", "ACCEPT"]
+            ["sudo", "iptables", "-A", "INPUT", "-p", "tcp", "--dport", "6000", "-m", "conntrack", "--ctstate", "NEW,ESTABLISHED", "-j", "ACCEPT"],
+            ["sudo", "iptables", "-A", "INPUT", "-p", "tcp", "--dport", "22", "-m", "conntrack", "--ctstate", "NEW,ESTABLISHED", "-j", "ACCEPT"]
         ]
 
         for cmd in block_commands:
