@@ -164,6 +164,8 @@ class ModelBuilder:
             for model_data in self.model_cache[competition]:
 
                 if counter < self.max_image_count:
+
+                    time.sleep(2)
                 
                     model_hash, model_block = self.validate_model(
                         model_data=model_data,

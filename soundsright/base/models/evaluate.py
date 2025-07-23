@@ -21,6 +21,7 @@ class ModelEvaluationHandler:
             hotkeys: list,
             competitions_list: list,
             ports_list: list,
+            model_path: str,
             reverb_path: str,
             noise_path: str,
             tts_path: str,
@@ -33,6 +34,7 @@ class ModelEvaluationHandler:
         self.reverb_path = reverb_path
         self.noise_path = noise_path
         self.tts_path = tts_path
+        self.model_base_path = model_path
         self.base_model_output_path = model_output_path
 
         # Eval cache
@@ -244,7 +246,7 @@ class ModelEvaluationHandler:
         
         Utils.subnet_logger(
             severity="TRACE",
-            message=f"Model container start successful for miner: {hotkey}. Now checking API status with timeout: {timeouts["status"]}.",
+            message=f"Model container start successful for miner: {hotkey}. Now checking API status with timeout: {timeouts['status']}.",
             log_level=self.log_level,
         )
         
@@ -263,7 +265,7 @@ class ModelEvaluationHandler:
         
         Utils.subnet_logger(
             severity="TRACE",
-            message=f"API check successful for miner: {hotkey}. Now preparing model with timeout: {timeouts["prepare"]}.",
+            message=f"API check successful for miner: {hotkey}. Now preparing model with timeout: {timeouts['prepare']}.",
             log_level=self.log_level,
         )
         
@@ -282,7 +284,7 @@ class ModelEvaluationHandler:
         
         Utils.subnet_logger(
             severity="TRACE",
-            message=f"Model preparation successful for miner: {hotkey}. Now uploading noisy files with timeout: {timeouts["prepare"]}.",
+            message=f"Model preparation successful for miner: {hotkey}. Now uploading noisy files with timeout: {timeouts['prepare']}.",
             log_level=self.log_level,
         )
         
@@ -301,7 +303,7 @@ class ModelEvaluationHandler:
         
         Utils.subnet_logger(
             severity="TRACE",
-            message=f"Noisy file upload successful for miner: {hotkey}. Now enhancing model with timeout: {timeouts["enhance"]}.",
+            message=f"Noisy file upload successful for miner: {hotkey}. Now enhancing model with timeout: {timeouts['enhance']}.",
             log_level=self.log_level,
         )
         
@@ -320,7 +322,7 @@ class ModelEvaluationHandler:
         
         Utils.subnet_logger(
             severity="TRACE",
-            message=f"Enhancement successful for miner: {hotkey}. Now downloading enhanced files with timeout: {timeouts["download"]}.",
+            message=f"Enhancement successful for miner: {hotkey}. Now downloading enhanced files with timeout: {timeouts['download']}.",
             log_level=self.log_level,
         )
         
@@ -440,6 +442,32 @@ class ModelEvaluationHandler:
 
                     output_benchmarks.append(model_benchmark)
                     output_competitions.append(competition)
+
+                # Reset model output and model repo directories following evaluation
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"Resetting directory: {model_output_path}",
+                    log_level=self.log_level
+                )
+                self._reset_dir(directory=model_output_path)
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"Directory reset: {model_output_path}",
+                    log_level=self.log_level
+                )
+
+                model_dir = os.path.join(self.model_base_path, hotkey)
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"Resetting directory: {model_dir}",
+                    log_level=self.log_level
+                )
+                self._reset_dir(model_dir)
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"Directory reset: {model_dir}",
+                    log_level=self.log_level
+                )
 
         return output_benchmarks, output_competitions
 

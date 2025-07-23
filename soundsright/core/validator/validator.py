@@ -11,6 +11,8 @@ from async_substrate_interface import AsyncSubstrateInterface
 import hashlib
 import numpy as np
 import asyncio
+import threading
+from concurrent.futures import ThreadPoolExecutor
 import sys
 import logging
 import pickle
@@ -65,6 +67,8 @@ class SubnetValidator(Base.BaseNeuron):
         self.tried_accessing_old_cache = False
         self.seed = 10
         self.seed_interval = 100
+        self.last_updated_block = 0
+        self.last_metagraph_sync_timestamp = 0
         self.seed_reference_block = float("inf")
 
         # WC Prevention
@@ -436,6 +440,27 @@ class SubnetValidator(Base.BaseNeuron):
             message=f"HealthCheck API running at: http://{args.healthcheck_host}:{args.healthcheck_port}"
         )
 
+        # Reset model and model output directories  
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Resetting directory: {self.model_path}"
+        )
+        Utils.reset_dir(directory=self.model_path)
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Directory reset: {self.model_path}"
+        )
+
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Resetting directory: {self.model_output_path}"
+        )
+        Utils.reset_dir(directory=self.model_output_path)  
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Directory reset: {self.model_output_path}"
+        )  
+
         return True
     
     def init_default_trusted_validators(self):
@@ -649,20 +674,20 @@ class SubnetValidator(Base.BaseNeuron):
             )
             return seed, query_block
         
-    def handle_update_seed(self):
+    async def handle_update_seed_async(self):
         use_backup = False
         try:
-            self.seed, self.seed_reference_block = asyncio.run(self.get_seed())
+            self.seed, self.seed_reference_block = await self.get_seed()
         except Exception as e:
             self.neuron_logger(
                 severity="INFO",
-                message=f"Default endpoint failed to obtain seed based on block extrinsic because: {e} Resorting to default endpoint."
+                message=f"Default endpoint failed to obtain seed based on block extrinsic because: {e} Resorting to backup endpoint."
             )
             use_backup=True
         
         if use_backup:
             try:
-                self.seed, self.seed_reference_block = asyncio.run(self.get_seed_with_backup_method())
+                self.seed, self.seed_reference_block = await self.get_seed_with_backup_method()
             except Exception as e:
                 self.neuron_logger(
                     severity="INFO",
@@ -672,6 +697,35 @@ class SubnetValidator(Base.BaseNeuron):
                 self.seed_reference_block = float("inf")
 
         self.healthcheck_api.update_seed(self.seed)
+
+    def handle_update_seed(self):
+        """
+        Synchronous wrapper that executes handle_update_seed_async immediately,
+        whether or not there's a current event loop.
+        """
+        try:
+            # Try to get the current event loop
+            loop = asyncio.get_running_loop()
+            
+            # If we're already in an event loop, we need to run in a separate thread
+            # to avoid "RuntimeError: cannot be called from a running event loop"
+            with ThreadPoolExecutor() as executor:
+                future = executor.submit(asyncio.run, self.handle_update_seed_async())
+                future.result()  # Wait for completion and get any exceptions
+                
+        except RuntimeError:
+            # No event loop is running, so we can safely use asyncio.run()
+            asyncio.run(self.handle_update_seed_async())
+        except Exception as e:
+            # Handle any other exceptions that might occur
+            self.neuron_logger(
+                severity="ERROR",
+                message=f"Failed to execute handle_update_seed_async: {e}"
+            )
+            # Set fallback values
+            self.seed = 10
+            self.seed_reference_block = float("inf")
+            self.healthcheck_api.update_seed(self.seed)
 
     def check_hotkeys(self) -> None:
         """Checks if some hotkeys have been replaced in the metagraph"""
@@ -1207,27 +1261,41 @@ class SubnetValidator(Base.BaseNeuron):
         # Sync the metagraph
         self.metagraph.sync(subtensor=self.subtensor)
 
-    def handle_metagraph_sync(self) -> None:
-        tries=0
-        while tries < 5:
-            try:
-                asyncio.run(self.sync_metagraph())
-                self.neuron_logger(
-                    severity="INFOX",
-                    message=f"Metagraph synced: {self.metagraph}"
-                )
-                return
-            except TimeoutError as e:
-                self.neuron_logger(
-                    severity="ERROR",
-                    message=f"Metagraph sync timed out: {e}"
-                )   
-            except Exception as e:
-                self.neuron_logger(
-                    severity="ERROR",
-                    message=f"An error occured while syncing metagraph: {e}"
-                )
-            tries+=1
+    def handle_metagraph_sync(self, override=False) -> None:
+        current_time = int(time.time())
+        if override or current_time - self.last_metagraph_sync_timestamp > 300:
+            self.neuron_logger(
+                severity="TRACE",
+                message="Metagraph has not been synced in over 300 seconds, or the override was triggered (this happens during weight set)"
+            )
+            tries=0
+            while tries < 5:
+                try:
+                    asyncio.run(self.sync_metagraph())
+                    self.neuron_logger(
+                        severity="INFOX",
+                        message=f"Metagraph synced: {self.metagraph}"
+                    )
+                    self.last_metagraph_sync_timestamp = current_time
+                    return
+                except TimeoutError as e:
+                    self.neuron_logger(
+                        severity="ERROR",
+                        message=f"Metagraph sync timed out: {e}"
+                    )   
+                except Exception as e:
+                    self.neuron_logger(
+                        severity="ERROR",
+                        message=f"An error occurred while syncing metagraph: {e}"
+                    )
+                tries+=1
+
+        else:
+            next_update_time = self.last_metagraph_sync_timestamp + 300
+            self.neuron_logger(
+                severity="TRACE",
+                message=f"Not enough time in between intervals to sync metagraph. Current time: {current_time}. Next update time: {next_update_time} Last updated timestamp: {self.last_metagraph_sync_timestamp}."
+            )
 
     def handle_weight_setting(self) -> None:
         """
@@ -1236,7 +1304,7 @@ class SubnetValidator(Base.BaseNeuron):
         # Check if it's time to set/commit new weights
         if self.subtensor.get_current_block() >= self.last_updated_block + 350 and not self.debug_mode: 
 
-            self.handle_metagraph_sync()
+            self.handle_metagraph_sync(override=True)
             self.check_hotkeys()
 
             # Try set/commit weights
@@ -1999,6 +2067,7 @@ class SubnetValidator(Base.BaseNeuron):
                 hotkeys=self.hotkeys,
                 competitions_list=competitions_list,
                 ports_list=ports_list,
+                model_path=self.model_path,
                 reverb_path=self.reverb_path,
                 noise_path=self.noise_path,
                 tts_path=self.tts_path,
@@ -2052,7 +2121,30 @@ class SubnetValidator(Base.BaseNeuron):
             self.blacklisted_miner_models[comp] = Benchmarking.remove_blacklist_duplicates(self.blacklisted_miner_models[comp])
 
         if self.first_run_through_of_the_day:
-            self.first_run_through_of_the_day = False          
+            self.first_run_through_of_the_day = False     
+
+        # Reset model and model output directories  
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Resetting directory: {self.model_path}"
+        )
+        Utils.reset_dir(directory=self.model_path)
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Directory reset: {self.model_path}"
+        )
+
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Resetting directory: {self.model_output_path}"
+        )
+        Utils.reset_dir(directory=self.model_output_path)  
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Directory reset: {self.model_output_path}"
+        )  
+
+        self.send_feedback_synapses()
 
     def reset_for_new_competition(self) -> None:
         """
