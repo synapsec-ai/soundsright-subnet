@@ -2043,7 +2043,7 @@ class SubnetValidator(Base.BaseNeuron):
                 break
 
             # Filter out cache
-            new_model_cache = builder.get_eval_round_from_model_cache()
+            self.model_cache = builder.get_eval_round_from_model_cache()
 
             # Build model images async
             image_hotkey_list, competitions_list, ports_list = builder.build_images()
@@ -2080,8 +2080,6 @@ class SubnetValidator(Base.BaseNeuron):
 
             if builder.time_limit or not outcome:
                 break
-
-            self.model_cache = new_model_cache
 
             self.handle_weight_setting()      
 
