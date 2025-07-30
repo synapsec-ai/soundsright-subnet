@@ -479,7 +479,7 @@ def start_container_with_async(tag_name: str, cuda_directory: str, port: int, lo
 
     return True
         
-def start_container(directory, log_level, cuda_directory) -> bool:
+def start_container(directory, log_level, cuda_directory, build_timeout=600, start_timeout=30) -> bool:
     """Runs the container with podman compose
 
     Args:
@@ -516,7 +516,7 @@ def start_container(directory, log_level, cuda_directory) -> bool:
                 "--file", dockerfile_path
             ], 
             check=True,
-            timeout=600,
+            timeout=build_timeout,
         )
         if result1.returncode != 0:
             return False
@@ -533,7 +533,7 @@ def start_container(directory, log_level, cuda_directory) -> bool:
                 "modelapi"
             ], 
             check=True,
-            timeout=30
+            timeout=start_timeout
         )
         if result2.returncode != 0:
             return False
