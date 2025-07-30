@@ -69,7 +69,7 @@ def initialize_run_and_benchmark_model(model_namespace, model_name, model_revisi
     Utils.delete_container(log_level="TRACE")
 
     logging.info("Starting container:")    
-    if not Utils.start_container(directory=model_dir, log_level="TRACE", cuda_directory=cuda_directory):
+    if not Utils.start_container(directory=model_dir, log_level="TRACE", cuda_directory=cuda_directory, build_timeout=2000, start_timeout=300):
         logging.error("Container could not be started.")
         Utils.delete_container(log_level="TRACE")
         shutil.rmtree(model_dir)
@@ -80,7 +80,7 @@ def initialize_run_and_benchmark_model(model_namespace, model_name, model_revisi
     time.sleep(10)
     
     logging.info("Checking container status:")
-    if not Utils.check_container_status(port=6500, log_level="TRACE"):
+    if not Utils.check_container_status(port=6500, log_level="TRACE", timeout=500):
         logging.error("Container status check failed. Please check your /status/ endpoint.")
         Utils.delete_container(log_level="TRACE")
         shutil.rmtree(model_dir)
@@ -91,7 +91,7 @@ def initialize_run_and_benchmark_model(model_namespace, model_name, model_revisi
     time.sleep(1)
     
     logging.info("Preparing model:")
-    if not Utils.prepare(port=6500, log_level="TRACE"):
+    if not Utils.prepare(port=6500, log_level="TRACE", timeout=3000):
         logging.error("Model preparation failed. Please check your /prepare/ endpoint.")
         Utils.delete_container(log_level="TRACE")
         shutil.rmtree(model_dir)
@@ -102,7 +102,7 @@ def initialize_run_and_benchmark_model(model_namespace, model_name, model_revisi
     time.sleep(10)
     
     logging.info("Uploading audio:")
-    if not Utils.upload_audio(port=6500, noisy_dir=reverb_dir, log_level="TRACE"):
+    if not Utils.upload_audio(port=6500, noisy_dir=reverb_dir, log_level="TRACE", timeout=300):
         logging.error("Reverb audio upload failed. Please check your /upload-audio/ endpoint.")
         Utils.delete_container(log_level="TRACE")
         shutil.rmtree(model_dir)
@@ -113,7 +113,7 @@ def initialize_run_and_benchmark_model(model_namespace, model_name, model_revisi
     time.sleep(5)
     
     logging.info("Enhancing audio:")
-    if not Utils.enhance_audio(port=6500, log_level="TRACE"):
+    if not Utils.enhance_audio(port=6500, log_level="TRACE", timeout=3000):
         logging.error("Audio enhancement failed. Please check your /enhance/ endpoint.")
         Utils.delete_container(log_level="TRACE")
         shutil.rmtree(model_dir)
@@ -124,7 +124,7 @@ def initialize_run_and_benchmark_model(model_namespace, model_name, model_revisi
     time.sleep(5)
     
     logging.info("Downloading enhanced files:")
-    if not Utils.download_enhanced(port=6500, enhanced_dir=model_output_dir,log_level="TRACE"):
+    if not Utils.download_enhanced(port=6500, enhanced_dir=model_output_dir,log_level="TRACE", timeout=300):
         logging.error("Could not download enhanced files. Please check your /download-enhanced/ endpoint.")
         Utils.delete_container(log_level="TRACE")
         shutil.rmtree(model_dir)
