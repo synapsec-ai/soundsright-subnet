@@ -36,18 +36,21 @@ def new_model_surpasses_historical_model(new_model_metric, new_model_block, old_
     # Othewrwise, return False
     return False
     
-def get_best_current_model_from_list(models_data: List[dict], metric_name: str, sgmse_value:float) -> dict:
+def get_best_current_model_from_list(models_data: List[dict], metric_name: str, sgmse_value: float) -> dict:
     """Gets the best model submitted during today's competition for a specific metric
 
     Args:
-        current_models_data (List[dict]): List of model performance logs 
+        models_data (List[dict]): List of model performance logs 
         metric_name (str): The metric we want to find the best model for
+        sgmse_value (float): SGMSE value to exclude from consideration
            
     Returns:
         dict: The dictionary representing the model with the highest average value for the specified metric.
+              In case of ties, the model with the lower block value is selected.
     """
     best_model = None
     highest_average = float('-inf')
+    lowest_block = float('inf')
 
     for model in models_data:
         metrics = model.get('metrics', {})
@@ -56,8 +59,12 @@ def get_best_current_model_from_list(models_data: List[dict], metric_name: str, 
         # Ensure the metric_data contains 'average' and it is a number and that it is not identical to the SGMSE value
         if 'average' in metric_data and isinstance(metric_data['average'], (int, float, np.float64)) and metric_data['average'] != sgmse_value:
             avg = metric_data.get("average", 0)
-            if avg  > highest_average:
+            block = model.get("block", float('inf'))  # Default to infinity if block is missing
+            
+            # Select model if it has higher average, or same average but lower block
+            if (avg > highest_average) or (avg == highest_average and block < lowest_block):
                 highest_average = avg
+                lowest_block = block
                 best_model = model
 
     return best_model
@@ -66,14 +73,16 @@ def get_best_model_from_list(models_data: List[dict], metric_name: str) -> dict:
     """Gets the best model submitted during today's competition for a specific metric
 
     Args:
-        current_models_data (List[dict]): List of model performance logs 
+        models_data (List[dict]): List of model performance logs 
         metric_name (str): The metric we want to find the best model for
            
     Returns:
         dict: The dictionary representing the model with the highest average value for the specified metric.
+              In case of ties, the model with the lower block value is selected.
     """
     best_model = None
     highest_average = float('-inf')
+    lowest_block = float('inf')
 
     for model in models_data:
         metrics = model.get('metrics', {})
@@ -82,8 +91,12 @@ def get_best_model_from_list(models_data: List[dict], metric_name: str) -> dict:
         # Ensure the metric_data contains 'average' and it is a number
         if 'average' in metric_data and isinstance(metric_data['average'], (int, float)):
             avg = metric_data.get("average", 0)
-            if avg > highest_average:
+            block = model.get("block", float('inf'))  # Default to infinity if block is missing
+            
+            # Select model if it has higher average, or same average but lower block
+            if (avg > highest_average) or (avg == highest_average and block < lowest_block):
                 highest_average = avg
+                lowest_block = block
                 best_model = model
 
     return best_model
