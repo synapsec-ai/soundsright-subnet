@@ -16,7 +16,7 @@ class ModuleConfig:
         self.__version__ = "1.7.0"
 
         # Determine the score version
-        self.__score_version__ = "4"
+        self.__score_version__ = "3"
 
         # Convert the version into a single integer
         self.__version_split__ = self.__version__.split(".")
