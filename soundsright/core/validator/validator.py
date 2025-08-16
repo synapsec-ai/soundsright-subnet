@@ -374,14 +374,6 @@ class SubnetValidator(Base.BaseNeuron):
             message=f"Initializing validator for subnet: {self.neuron_config.netuid} on network: {self.neuron_config.subtensor.chain_endpoint} with config: {self.neuron_config}"
         )
 
-        # Init async substrate interface
-        self.async_substrate = AsyncSubstrateInterface(
-            url=self.neuron_config.subtensor.chain_endpoint
-        )
-        self.backup_async_substrate = AsyncSubstrateInterface(
-            url="wss://entrypoint-finney.opentensor.ai:443"
-        )
-
         # Setup the bittensor objects
         self.setup_bittensor_objects(self.neuron_config)
 
@@ -632,8 +624,12 @@ class SubnetValidator(Base.BaseNeuron):
             message=f"Determining seed based on block with seed interval: {self.seed_interval}. Current block: {current_block}. Remainider: {remainder}. Block to query for extrinsics: {query_block}"
         )
 
-        async with self.async_substrate:
-            block_data = await self.async_substrate.get_block(block_number=query_block)
+        async_substrate = AsyncSubstrateInterface(
+            url=self.neuron_config.subtensor.chain_endpoint
+        )
+
+        async with async_substrate:
+            block_data = await async_substrate.get_block(block_number=query_block)
             block_extrinsics = block_data["extrinsics"]
             extrinsics_string = "".join([str(extrinsic) for extrinsic in block_extrinsics])
             hash_obj = hashlib.sha256(extrinsics_string.encode("utf-8"))
@@ -662,8 +658,12 @@ class SubnetValidator(Base.BaseNeuron):
             message=f"Determining seed with backup method based on block with seed interval: {self.seed_interval}. Current block: {current_block}. Remainider: {remainder}. Block to query for extrinsics: {query_block}"
         )
 
-        async with self.backup_async_substrate:
-            block_data = await self.backup_async_substrate.get_block(block_number=query_block)
+        backup_async_substrate = AsyncSubstrateInterface(
+            url="wss://entrypoint-finney.opentensor.ai:443"
+        )
+
+        async with backup_async_substrate:
+            block_data = await backup_async_substrate.get_block(block_number=query_block)
             block_extrinsics = block_data["extrinsics"]
             extrinsics_string = "".join([str(extrinsic) for extrinsic in block_extrinsics])
             hash_obj = hashlib.sha256(extrinsics_string.encode("utf-8"))

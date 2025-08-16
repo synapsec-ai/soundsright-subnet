@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "SoundsRight"
-version = "1.6.5"
+version = "1.7.0"
 description = "This project implements the SoundsRight Bittensor subnet."
 authors = [
     { name = "synapsec.ai", email = "contact@synapsec.ai" }
@@ -28,7 +28,7 @@ classifiers = [
 requires-python = ">=3.10,<=3.13.3"
 
 dependencies = [
-    "bittensor==9.3.0",
+    "bittensor==9.9.0",
     "python-dotenv==1.0.1",
     "fastapi==0.110.1",
     "pydantic==2.9.2",
