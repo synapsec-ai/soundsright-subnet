@@ -336,12 +336,12 @@ class ModelBuilder:
             self.prepare_directory(model_dir)
 
             # Download model to path and obtain model hash
-            model_hash, _ = Models.get_model_content_hash(
+            model_hash, _ = asyncio.run(Models.get_model_content_hash(
                 model_id=model_id,
                 revision=revision,
                 local_dir=model_dir,
                 log_level=self.log_level
-            )
+            ))
 
             if not model_hash or model_hash in self.forbidden_model_hashes:
                 Utils.subnet_logger(

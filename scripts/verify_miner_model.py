@@ -4,6 +4,7 @@ import os
 import shutil
 import time
 import glob
+import asyncio
 
 import soundsright.base.utils as Utils
 import soundsright.base.models as Models
@@ -39,12 +40,13 @@ def initialize_run_and_benchmark_model(model_namespace, model_name, model_revisi
 
     logging.info("Downloading model:")
     try:
-        model_hash = Models.get_model_content_hash(
-            model_id = f"{model_namespace}/{model_name}",
+        model_hash = asyncio.run(Models.get_model_content_hash(
+            namespace=model_namespace,
+            name=model_name,
             revision=model_revision,
             local_dir=model_dir,
             log_level="TRACE"
-        )
+        ))
         logging.info(f"Model downloaded. Model hash:")
         print(model_hash)
     except Exception as e:
