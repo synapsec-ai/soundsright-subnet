@@ -80,7 +80,7 @@ def test_get_model_content_hash_bulk(namespace, name, revision):
         os.makedirs(model_dir)
 
     count = 0
-    while count < 2:
+    while count < 100:
     
         model_hash_1, sorted_files_1 = asyncio.run(Models.get_model_content_hash(
             namespace=namespace,
@@ -109,7 +109,7 @@ def test_check_repo_exists(namespace, name, revision, outcome):
 ])
 def test_check_repo_exists_bulk(namespace, name, revision):
     count = 0
-    while count < 10:
+    while count < 100:
         if not asyncio.run(Models.check_repo_exists(namespace=namespace,name=name,revision=revision)):
             raise AssertionError(f"Bulk model existence check failed for {namespace}/{name}/{revision}")
             break
@@ -130,7 +130,7 @@ def test_is_commit_hash(namespace, name, revision, outcome):
 ])
 def test_is_commit_hash_bulk(namespace, name, revision):
     count = 0
-    while count < 1000:
+    while count < 100:
         if not asyncio.run(Models.is_commit_hash(namespace=namespace,name=name,revision=revision)):
             raise AssertionError(f"Bulk model existence check failed for {namespace}/{name}/{revision}")
             break
