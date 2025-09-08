@@ -460,24 +460,47 @@ def handle_iptables(ports: list, log_level: str):
 
 def start_container_with_async(tag_name: str, cuda_directory: str, port: int, log_level: str):
 
-    result1 = subprocess.run(
-        [
-            "podman", "run", 
-            "-d", 
-            "--device", "nvidia.com/gpu=all", 
-            "--volume", f"{cuda_directory}:{cuda_directory}", 
-            "--user", "10002:10002", 
-            "--name", tag_name, 
-            "-p", f"127.0.0.1:{port}:{port}", 
-            tag_name
-        ], 
-        check=True,
-        timeout=5
-    )
-    if result1.returncode != 0:
-        return False
+    try: 
+        result1 = subprocess.run(
+            [
+                "podman", "run", 
+                "-d", 
+                "--device", "nvidia.com/gpu=all", 
+                "--volume", f"{cuda_directory}:{cuda_directory}", 
+                "--user", "10002:10002", 
+                "--name", tag_name, 
+                "-p", f"127.0.0.1:{port}:{port}", 
+                tag_name
+            ], 
+            check=True,
+            timeout=5
+        )
+        if result1.returncode != 0:
+            return False
 
-    return True
+        return result1.returncode == 0
+
+    except subprocess.CalledProcessError as e:
+        Utils.subnet_logger(
+            severity="ERROR",
+            message=f"podman run failed for {tag_name} on port {port}: {e}",
+            log_level=log_level,
+        )
+        return False
+    except subprocess.TimeoutExpired as e:
+        Utils.subnet_logger(
+            severity="ERROR",
+            message=f"podman run timed out for {tag_name} on port {port}: {e}",
+            log_level=log_level,
+        )
+        return False
+    except Exception as e:
+        Utils.subnet_logger(
+            severity="ERROR",
+            message=f"Unexpected error starting container {tag_name} on port {port}: {e}",
+            log_level=log_level,
+        )
+        return False
         
 def start_container(directory, log_level, cuda_directory, build_timeout=600, start_timeout=30) -> bool:
     """Runs the container with podman compose

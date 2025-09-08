@@ -6,6 +6,7 @@ import shutil
 import hashlib
 import bittensor as bt
 from typing import List
+import socket 
 
 # Import custom modules
 import soundsright.base.benchmarking as Benchmarking
@@ -73,6 +74,15 @@ class ModelEvaluationHandler:
             message=f"Initialized model evaluator with model per iteration: {self.models_per_iteration}, image hotkey list: {self.image_hotkey_list}, competitions list: {self.competitions_list}, ports list: {self.ports_list}, eval cache: {self.eval_cache}",
             log_level=self.log_level,
         )
+
+    def _is_port_free(self, port: int, host: str = "127.0.0.1") -> bool:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            try:
+                s.bind((host, port))
+                return True
+            except OSError:
+                return False
 
     def calculate_timeouts(self, concurrent_length: int):
 
@@ -199,6 +209,15 @@ class ModelEvaluationHandler:
 
     async def run_model_evaluation(self, hotkey: str, competition: str, port: int, concurrent_length: int):
 
+        if not self._is_port_free(port):
+            Utils.subnet_logger(
+                severity="WARNING",
+                message=f"Port {port} already in use; skipping {hotkey}.",
+                log_level=self.log_level,
+            )
+            self._reset_dir(directory=model_output_path)
+            return hotkey, False
+
         tag_name = f"{hotkey}_{competition}".lower()
         competition_components = competition.split("_")
         task, sample_rate = competition_components[0], competition_components[1].replace("HZ", "")
@@ -226,13 +245,23 @@ class ModelEvaluationHandler:
             log_level=self.log_level,
         )
 
-        start_status = await Utils.do_start_container_async(
-            tag_name=tag_name,
-            cuda_directory=self.cuda_directory,
-            port=port,
-            log_level=self.log_level,
-        )
+        try: 
+            start_status = await Utils.do_start_container_async(
+                tag_name=tag_name,
+                cuda_directory=self.cuda_directory,
+                port=port,
+                log_level=self.log_level,
+            )
 
+        except Exception as e:
+            Utils.subnet_logger(
+                severity="ERROR",
+                message=f"Model container start failed for miner because of: {e}",
+                log_level=self.log_level,
+            )
+            self._reset_dir(directory=model_output_path)
+            return hotkey, False
+        
         if not start_status:
 
             Utils.subnet_logger(
@@ -371,12 +400,20 @@ class ModelEvaluationHandler:
 
         Utils.handle_iptables(ports=self.current_ports_list, log_level=self.log_level)
 
-        outcomes = await asyncio.gather(*self.tasks)
+        outcomes = await asyncio.gather(*self.tasks, return_exceptions=True)
 
         output_benchmarks = []
         output_competitions = []
 
         for outcome in outcomes:
+
+            if isinstance(outcome, Exception):
+                Utils.subnet_logger(
+                    severity="ERROR",
+                    message=f"Model eval task raised: {repr(outcome)}",
+                    log_level=self.log_level
+                )
+                continue
 
             hotkey = outcome[0]
             result = outcome[1]
