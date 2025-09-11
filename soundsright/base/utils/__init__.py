@@ -29,6 +29,7 @@ from .container import (
     detect_encoding,
     replace_string_in_directory,
     start_container,
+    start_container_with_docker,
     handle_iptables,
     start_container_with_async,
     build_container_async,

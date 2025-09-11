@@ -10,6 +10,14 @@ load_dotenv()
 # Import subnet modules
 import soundsright.core as SoundsRightCore
 
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ("yes", "true", "t", "y", "1"):
+        return True
+    else:
+        return False
+
 # The main function parses the configuration and runs the validator.
 if __name__ == "__main__":
     # Parse command line arguments
@@ -27,6 +35,15 @@ if __name__ == "__main__":
         type=str,
         help="Path to CUDA directory.",
         default="/usr/local/cuda-12.6"
+    )
+
+    parser.add_argument(
+        "--use_docker",
+        type=str2bool,
+        nargs="?",
+        const=False,
+        default=False,
+        help="Boolean to either use docker or podman for model evaluation."
     )
 
     parser.add_argument(

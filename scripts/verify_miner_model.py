@@ -62,18 +62,18 @@ def initialize_run_and_benchmark_model(model_namespace, model_name, model_revisi
     logging.info("Validating container configuration:")
     if not Utils.validate_container_config(model_dir):
         logging.error("Container config validation failed.")
-        Utils.delete_container(log_level="TRACE")
+        Utils.delete_container(use_docker=False, log_level="TRACE")
         shutil.rmtree(model_dir)
         shutil.rmtree(model_output_dir)
         return False
     logging.info("Container validation succeeded.")
     
-    Utils.delete_container(log_level="TRACE")
+    Utils.delete_container(use_docker=False, log_level="TRACE")
 
     logging.info("Starting container:")    
     if not Utils.start_container(directory=model_dir, log_level="TRACE", cuda_directory=cuda_directory, build_timeout=2000, start_timeout=300):
         logging.error("Container could not be started.")
-        Utils.delete_container(log_level="TRACE")
+        Utils.delete_container(use_docker=False, log_level="TRACE")
         shutil.rmtree(model_dir)
         shutil.rmtree(model_output_dir)
         return False
@@ -84,7 +84,7 @@ def initialize_run_and_benchmark_model(model_namespace, model_name, model_revisi
     logging.info("Checking container status:")
     if not Utils.check_container_status(port=6500, log_level="TRACE", timeout=500):
         logging.error("Container status check failed. Please check your /status/ endpoint.")
-        Utils.delete_container(log_level="TRACE")
+        Utils.delete_container(use_docker=False, log_level="TRACE")
         shutil.rmtree(model_dir)
         shutil.rmtree(model_output_dir)
         return False
@@ -95,7 +95,7 @@ def initialize_run_and_benchmark_model(model_namespace, model_name, model_revisi
     logging.info("Preparing model:")
     if not Utils.prepare(port=6500, log_level="TRACE", timeout=3000):
         logging.error("Model preparation failed. Please check your /prepare/ endpoint.")
-        Utils.delete_container(log_level="TRACE")
+        Utils.delete_container(use_docker=False, log_level="TRACE")
         shutil.rmtree(model_dir)
         shutil.rmtree(model_output_dir)
         return False
@@ -106,7 +106,7 @@ def initialize_run_and_benchmark_model(model_namespace, model_name, model_revisi
     logging.info("Uploading audio:")
     if not Utils.upload_audio(port=6500, noisy_dir=reverb_dir, log_level="TRACE", timeout=300):
         logging.error("Reverb audio upload failed. Please check your /upload-audio/ endpoint.")
-        Utils.delete_container(log_level="TRACE")
+        Utils.delete_container(use_docker=False, log_level="TRACE")
         shutil.rmtree(model_dir)
         shutil.rmtree(model_output_dir)
         return False
@@ -117,7 +117,7 @@ def initialize_run_and_benchmark_model(model_namespace, model_name, model_revisi
     logging.info("Enhancing audio:")
     if not Utils.enhance_audio(port=6500, log_level="TRACE", timeout=3000):
         logging.error("Audio enhancement failed. Please check your /enhance/ endpoint.")
-        Utils.delete_container(log_level="TRACE")
+        Utils.delete_container(use_docker=False, log_level="TRACE")
         shutil.rmtree(model_dir)
         shutil.rmtree(model_output_dir)
         return False
@@ -128,13 +128,13 @@ def initialize_run_and_benchmark_model(model_namespace, model_name, model_revisi
     logging.info("Downloading enhanced files:")
     if not Utils.download_enhanced(port=6500, enhanced_dir=model_output_dir,log_level="TRACE", timeout=300):
         logging.error("Could not download enhanced files. Please check your /download-enhanced/ endpoint.")
-        Utils.delete_container(log_level="TRACE")
+        Utils.delete_container(use_docker=False, log_level="TRACE")
         shutil.rmtree(model_dir)
         shutil.rmtree(model_output_dir)
         return False
     logging.info("Enhanced audio download successful.")
     
-    Utils.delete_container(log_level="TRACE")
+    Utils.delete_container(use_docker=False, log_level="TRACE")
     
     logging.info("Checking to make sure that all files were enhanced:")
     if not validate_all_reverb_files_are_enhanced(reverb_dir=reverb_dir, enhanced_dir=model_output_dir):

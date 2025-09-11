@@ -70,6 +70,7 @@ class SubnetValidator(Base.BaseNeuron):
         self.last_updated_block = 0
         self.last_metagraph_sync_timestamp = 0
         self.seed_reference_block = float("inf")
+        self.use_docker = False
 
         # WC Prevention
         self.algorithm = 1
@@ -401,6 +402,8 @@ class SubnetValidator(Base.BaseNeuron):
         self.skip_sgmse = args.skip_sgmse
             
         self.dataset_size = args.dataset_size
+
+        self.use_docker = args.use_docker
             
         self.neuron_logger(
             severity="INFO",
@@ -1524,6 +1527,7 @@ class SubnetValidator(Base.BaseNeuron):
             sgmse_path = self.sgmse_path,
             sgmse_output_path = self.sgmse_output_path,
             log_level=self.log_level,
+            use_docker=self.use_docker,
             cuda_directory=self.cuda_directory,
         )
         
@@ -1913,7 +1917,7 @@ class SubnetValidator(Base.BaseNeuron):
 
         new_competition_miner_models = copy.deepcopy(self.models_evaluated_today)
 
-        Utils.delete_container(log_level=self.log_level)
+        Utils.delete_container(use_docker=self.use_docker, log_level=self.log_level)
 
         while self.calculate_remaining_cache_length() > 0:
 
@@ -1938,6 +1942,7 @@ class SubnetValidator(Base.BaseNeuron):
                 first_run_through_of_the_day=self.first_run_through_of_the_day,
                 next_competition_timestamp=self.next_competition_timestamp,
                 avg_model_eval_time=self.avg_model_eval_time,
+                use_docker=self.use_docker,
                 log_level=self.log_level,
             )
 
@@ -1985,7 +1990,7 @@ class SubnetValidator(Base.BaseNeuron):
 
             self.handle_weight_setting()      
 
-            Utils.delete_container(log_level=self.log_level)
+            Utils.delete_container(use_docker=self.use_docker, log_level=self.log_level)
         
         filtered_models = {}
         for comp in new_competition_miner_models.keys():

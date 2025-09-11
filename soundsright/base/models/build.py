@@ -40,6 +40,7 @@ class ModelBuilder:
         first_run_through_of_the_day: bool,
         next_competition_timestamp: int,
         avg_model_eval_time: int,
+        use_docker: bool,
         log_level: str,
     ):
 
@@ -55,6 +56,7 @@ class ModelBuilder:
         self.first_run_through_of_the_day = first_run_through_of_the_day
         self.next_competition_timestamp = next_competition_timestamp
         self.avg_model_eval_time = avg_model_eval_time
+        self.use_docker=use_docker
 
         # Calculations
         self.max_image_count = 0
@@ -449,6 +451,7 @@ class ModelBuilder:
             eval_cache=self.eval_cache,
             hotkeys=self.hotkeys,
             timeout=self.timeout,
+            use_docker=self.use_docker,
             log_level=self.log_level,
         )
     

@@ -12,7 +12,7 @@ import soundsright.base.utils as Utils
 
 class SGMSEHandler:
     
-    def __init__(self, task: str, sample_rate: int, task_path: str, sgmse_path: str, sgmse_output_path: str, log_level: str, cuda_directory: str) -> None:
+    def __init__(self, task: str, sample_rate: int, task_path: str, sgmse_path: str, sgmse_output_path: str, log_level: str, use_docker: bool, cuda_directory: str) -> None:
         
         self.hf_model_url = "https://huggingface.co/synapsecai/SoundsRightModelTemplate"
         self.task = task
@@ -22,6 +22,8 @@ class SGMSEHandler:
         self.sgmse_path = sgmse_path 
         self.sgmse_output_path = sgmse_output_path
         self.cuda_directory = cuda_directory
+        self.use_docker = use_docker
+
         self.log_level = log_level
         
     def download_model_container(self) -> bool:
@@ -79,17 +81,27 @@ class SGMSEHandler:
             bool: True if operations were successful, False otherwise
         """ 
         # Delete everything before starting container
-        Utils.delete_container(log_level=self.log_level)
+        Utils.delete_container(use_docker=self.use_docker, log_level=self.log_level)
         
         # Start container
-        if not Utils.start_container(directory=self.sgmse_path, log_level=self.log_level, cuda_directory=self.cuda_directory):
-            Utils.subnet_logger(
-                severity="ERROR",
-                message="SGMSE+ container could not be started. Please contact subnet owners if issue persists.",
-                log_level=self.log_level
-            )
-            Utils.delete_container(log_level=self.log_level)
-            return False
+        if self.use_docker:
+            if not Utils.start_container_with_docker(directory=self.sgmse_path, log_level=self.log_level, cuda_directory=self.cuda_directory):
+                Utils.subnet_logger(
+                    severity="ERROR",
+                    message="SGMSE+ container could not be started. Please contact subnet owners if issue persists.",
+                    log_level=self.log_level
+                )
+                Utils.delete_container(use_docker=self.use_docker, log_level=self.log_level)
+                return False
+        else:
+            if not Utils.start_container(directory=self.sgmse_path, log_level=self.log_level, cuda_directory=self.cuda_directory):
+                Utils.subnet_logger(
+                    severity="ERROR",
+                    message="SGMSE+ container could not be started. Please contact subnet owners if issue persists.",
+                    log_level=self.log_level
+                )
+                Utils.delete_container(use_docker=self.use_docker, log_level=self.log_level)
+                return False
         
         Utils.subnet_logger(
             severity="TRACE",
@@ -103,7 +115,7 @@ class SGMSEHandler:
                 message=f"Could not establish connection with SGMSE+ API. Please contact subnet owners if issue persists.",
                 log_level=self.log_level
             )
-            Utils.delete_container(log_level=self.log_level)
+            Utils.delete_container(use_docker=self.use_docker, log_level=self.log_level)
             return False
         
         Utils.subnet_logger(
@@ -118,7 +130,7 @@ class SGMSEHandler:
                 message=f"Could not prepare the SGMSE+ model. Please contact subnet owners if issue persists.",
                 log_level=self.log_level
             )
-            Utils.delete_container(log_level=self.log_level)
+            Utils.delete_container(use_docker=self.use_docker, log_level=self.log_level)
             return False
         
         Utils.subnet_logger(
@@ -135,7 +147,7 @@ class SGMSEHandler:
                 log_level=self.log_level
             )
             
-            Utils.delete_container(log_level=self.log_level)
+            Utils.delete_container(use_docker=self.use_docker, log_level=self.log_level)
             return False
             
         Utils.subnet_logger(
@@ -169,7 +181,7 @@ class SGMSEHandler:
                 log_level=self.log_level
             )
             
-            Utils.delete_container(log_level=self.log_level)
+            Utils.delete_container(use_docker=self.use_docker, log_level=self.log_level)
             return False
         
         Utils.subnet_logger(
@@ -186,7 +198,7 @@ class SGMSEHandler:
                 log_level=self.log_level
             )
             
-            Utils.delete_container(log_level=self.log_level)
+            Utils.delete_container(use_docker=self.use_docker, log_level=self.log_level)
             return False 
         
         Utils.subnet_logger(
@@ -195,7 +207,7 @@ class SGMSEHandler:
             log_level=self.log_level
         )
         
-        Utils.delete_container(log_level=self.log_level)
+        Utils.delete_container(use_docker=self.use_docker, log_level=self.log_level)
         
         return True
         
