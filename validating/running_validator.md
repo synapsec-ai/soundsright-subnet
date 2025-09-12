@@ -95,7 +95,7 @@ git clone https://github.com/synapsec-ai/soundsright-subnet.git
 cd soundsright-subnet
 python3 -m venv .venv
 source .venv/bin/activate
-pip install bittensor-cli==9.3.0
+pip install bittensor-cli==9.9.0
 ```
 
 #### 3.2 Regenerate the validator wallet
