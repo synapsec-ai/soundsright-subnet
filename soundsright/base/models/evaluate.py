@@ -4,6 +4,7 @@ import glob
 import asyncio
 import shutil
 import hashlib
+import subprocess
 import bittensor as bt
 from typing import List
 import socket 
@@ -83,6 +84,38 @@ class ModelEvaluationHandler:
                 return True
             except OSError:
                 return False
+            
+    def _kill_process_on_port(self, port: int) -> bool:
+        try:
+            result = subprocess.run(
+                ["sudo", "fuser", "-k", f"{port}/tcp"],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            if result.returncode == 0:
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"Killed existing process on port: {port}",
+                    log_level=self.log_level
+                )
+                return True
+            else:
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"Failed to kill existing process on port: {port}",
+                    log_level=self.log_level
+                )
+                return False
+
+        except Exception as e:
+        Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Failed to kill existing process on port: {port} because: {e}",
+                log_level=self.log_level
+            )
+        
+        return False
 
     def calculate_timeouts(self, concurrent_length: int):
 
@@ -210,13 +243,15 @@ class ModelEvaluationHandler:
     async def run_model_evaluation(self, hotkey: str, competition: str, port: int, concurrent_length: int):
 
         if not self._is_port_free(port):
-            Utils.subnet_logger(
-                severity="WARNING",
-                message=f"Port {port} already in use; skipping {hotkey}.",
-                log_level=self.log_level,
-            )
-            self._reset_dir(directory=model_output_path)
-            return hotkey, False
+            
+            if not self._kill_process_on_port(port):
+                Utils.subnet_logger(
+                    severity="WARNING",
+                    message=f"Port {port} already in use and process was unable to be stopped; skipping {hotkey}.",
+                    log_level=self.log_level,
+                )
+                self._reset_dir(directory=model_output_path)
+                return hotkey, False
 
         tag_name = f"{hotkey}_{competition}".lower()
         competition_components = competition.split("_")
