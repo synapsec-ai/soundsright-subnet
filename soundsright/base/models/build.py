@@ -339,7 +339,8 @@ class ModelBuilder:
 
             # Download model to path and obtain model hash
             model_hash, _ = asyncio.run(Models.get_model_content_hash(
-                model_id=model_id,
+                namespace=namespace,
+                name=name,
                 revision=revision,
                 local_dir=model_dir,
                 log_level=self.log_level
