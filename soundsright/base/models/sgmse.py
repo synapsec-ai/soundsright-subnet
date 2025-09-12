@@ -28,7 +28,11 @@ class SGMSEHandler:
         
     def download_model_container(self) -> bool:
         try:
-            snapshot_download(repo_id="synapsecai/SoundsRightModelTemplate", local_dir=self.sgmse_path, revision=self.competition)
+            url = "https://huggingface.co/synapsecai/SoundsRightModelTemplate"
+            repo = Repo.clone_from(url, self.sgmse_path, no_checkout=True)
+            repo.git.fetch("origin", self.competition)
+            repo.git.checkout(self.competition, force=True)
+            
             return True
         except Exception as e:
             Utils.subnet_logger(
