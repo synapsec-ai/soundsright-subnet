@@ -109,7 +109,7 @@ class ModelEvaluationHandler:
                 return False
 
         except Exception as e:
-        Utils.subnet_logger(
+            Utils.subnet_logger(
                 severity="TRACE",
                 message=f"Failed to kill existing process on port: {port} because: {e}",
                 log_level=self.log_level

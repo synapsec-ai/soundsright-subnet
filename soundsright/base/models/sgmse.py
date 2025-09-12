@@ -2,13 +2,13 @@ import os
 import yaml
 import glob
 import shutil
+import socket
 from typing import List
 import subprocess
 from git import Repo
 from huggingface_hub import snapshot_download
 
 import soundsright.base.utils as Utils
-
 
 class SGMSEHandler:
     
@@ -25,6 +25,47 @@ class SGMSEHandler:
         self.use_docker = use_docker
 
         self.log_level = log_level
+
+    def _is_port_free(self, port: int, host: str = "127.0.0.1") -> bool:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            try:
+                s.bind((host, port))
+                return True
+            except OSError:
+                return False
+            
+    def _kill_process_on_port(self, port: int) -> bool:
+        try:
+            result = subprocess.run(
+                ["sudo", "fuser", "-k", f"{port}/tcp"],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            if result.returncode == 0:
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"Killed existing process on port: {port}",
+                    log_level=self.log_level
+                )
+                return True
+            else:
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"Failed to kill existing process on port: {port}",
+                    log_level=self.log_level
+                )
+                return False
+
+        except Exception as e:
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Failed to kill existing process on port: {port} because: {e}",
+                log_level=self.log_level
+            )
+        
+        return False
         
     def download_model_container(self) -> bool:
         try:
@@ -86,6 +127,15 @@ class SGMSEHandler:
         """ 
         # Delete everything before starting container
         Utils.delete_container(use_docker=self.use_docker, log_level=self.log_level)
+
+        if not self._is_port_free(port=6500):
+            if not self._kill_process_on_port(port=6500):
+                Utils.subnet_logger(
+                    severity="ERROR",
+                    message=f"SGMSE+ container could not be started due to the port already being in use and the process unable to be killed.",
+                    log_level=self.log_level
+                )
+                return False
         
         # Start container
         if self.use_docker:
