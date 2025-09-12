@@ -55,6 +55,9 @@ apt install npm
 npm install pm2 -g 
 pm2 update 
 apt install -y python3.12-dev build-essential gcc g++
+apt-get update
+apt-get install git-lfs
+git lfs install
 ```
 
 #### 2.3 Configure NVIDIA Container Toolkit and CDI
