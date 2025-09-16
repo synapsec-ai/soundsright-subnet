@@ -1980,6 +1980,7 @@ class SubnetValidator(Base.BaseNeuron):
                 tts_path=self.tts_path,
                 model_output_path=self.model_output_path,
                 cuda_directory=self.cuda_directory,
+                use_docker=self.use_docker,
                 log_level=self.log_level,
             )
             

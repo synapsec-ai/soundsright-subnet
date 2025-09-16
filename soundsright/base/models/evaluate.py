@@ -29,6 +29,7 @@ class ModelEvaluationHandler:
             tts_path: str,
             model_output_path: str,
             cuda_directory: str,
+            use_docker: bool,
             log_level: str,
         ):
 
@@ -69,6 +70,7 @@ class ModelEvaluationHandler:
         self.cuda_directory = cuda_directory
         self.log_level = log_level
         self.hotkeys = hotkeys
+        self.use_docker = use_docker
 
         Utils.subnet_logger(
             severity="TRACE",
@@ -286,6 +288,7 @@ class ModelEvaluationHandler:
                 cuda_directory=self.cuda_directory,
                 port=port,
                 log_level=self.log_level,
+                use_docker=self.use_docker,
             )
 
         except Exception as e:
