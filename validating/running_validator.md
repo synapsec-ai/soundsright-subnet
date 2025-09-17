@@ -76,7 +76,18 @@ nvidia.com/gpu=all
 nvidia.com/gpu=0
 ```
 
-#### 2.4 Configure pm2 logrotate
+### Configure Git LFS
+
+Git LFS must be configured for the validator to work properly. The commands below cover the configuration:
+
+```
+apt-get update
+apt-get install git-lfs
+git lfs install
+
+```
+
+#### 2.5 Configure pm2 logrotate
 
 pm2-logrotate is highly recommended for the validator. The commands below cover installation alongside the recommended settings.
 
