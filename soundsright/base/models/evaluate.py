@@ -436,9 +436,8 @@ class ModelEvaluationHandler:
     
     async def run_eval_group(self, hotkeys: list, competitions: list):
 
-        if self.use_docker:
-            Utils.handle_iptables_for_docker(ports=self.current_ports_list, log_level=self.log_level)
-        else:
+        if not self.use_docker:
+            
             Utils.handle_iptables(ports=self.current_ports_list, log_level=self.log_level)
 
         outcomes = await asyncio.gather(*self.tasks, return_exceptions=True)

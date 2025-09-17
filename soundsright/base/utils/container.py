@@ -726,7 +726,7 @@ def start_container_with_async_with_docker(tag_name: str, cuda_directory: str, p
     except subprocess.TimeoutExpired as e:
         Utils.subnet_logger(
             severity="ERROR",
-            message=f"podman run timed out for {tag_name} on port {port}: {e}",
+            message=f"docker run timed out for {tag_name} on port {port}: {e}",
             log_level=log_level,
         )
         return False
