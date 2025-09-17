@@ -5,10 +5,6 @@ HOTKEY=hotkey_name
 OPENAI_API_KEY=
 CUDA_DIRECTORY=/usr/local/cuda-12.6
 
-# Available: true, false
-# If false, podman will be used instead.
-USE_DOCKER=false
-
 # Available: INFO, INFOX, DEBUG, DEBUGX, TRACE, TRACEX
 LOG_LEVEL=INFO
 
