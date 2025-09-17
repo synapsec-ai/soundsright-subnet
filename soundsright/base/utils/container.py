@@ -386,6 +386,7 @@ async def build_container_async_with_docker(directory: str, hotkey: str, competi
             "docker", "build",
             "-t", tag_name,
             "--file", dockerfile_path,
+            ".",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             cwd=os.path.dirname(dockerfile_path),
@@ -777,7 +778,8 @@ def start_container_with_docker(directory, log_level, cuda_directory, build_time
             [
                 "docker", "build", 
                 "-t", "modelapi", 
-                "--file", dockerfile_path
+                "--file", dockerfile_path,
+                "."
             ], 
             check=True,
             timeout=build_timeout,
