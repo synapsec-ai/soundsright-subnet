@@ -546,6 +546,109 @@ def handle_iptables(ports: list, log_level: str):
             log_level=log_level
         )
 
+def handle_iptables_for_docker(ports: list[int], log_level: str) -> bool:
+
+    def run(cmd):
+        res = subprocess.run(cmd, capture_output=True, text=True)
+        if res.returncode != 0:
+            Utils.subnet_logger(
+                severity="WARNING",
+                message=f"Firewall rule failed: {' '.join(cmd)} - {res.stderr.strip()}",
+                log_level=log_level,
+            )
+        else:
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Firewall rule successful: {' '.join(cmd)} - {res.stderr.strip()}",
+                log_level=log_level,
+            )
+        return res.returncode == 0
+
+    try:
+        Utils.subnet_logger(
+            severity="TRACE",
+            message=f"Setting Docker-friendly iptables rules for ports: {ports}",
+            log_level=log_level
+        )
+
+        cmds = []
+
+        cmds += [
+            ["sudo", "iptables", "-C", "INPUT", "-i", "lo", "-j", "ACCEPT"] or
+            ["sudo", "iptables", "-I", "INPUT", "-i", "lo", "-j", "ACCEPT"],
+            ["sudo", "iptables", "-C", "INPUT", "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "-j", "ACCEPT"] or
+            ["sudo", "iptables", "-I", "INPUT", "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "-j", "ACCEPT"],
+        ]
+
+        for p in ports:
+            cmds.append(["sudo", "iptables", "-C", "INPUT", "-p", "tcp", "--dport", str(p),
+                         "-m", "conntrack", "--ctstate", "NEW,ESTABLISHED", "-j", "ACCEPT"] or
+                        ["sudo", "iptables", "-I", "INPUT", "-p", "tcp", "--dport", str(p),
+                         "-m", "conntrack", "--ctstate", "NEW,ESTABLISHED", "-j", "ACCEPT"])
+
+
+        cmds += [
+            ["sudo", "iptables", "-C", "FORWARD", "-i", "docker0", "-o", "docker0", "-j", "ACCEPT"] or
+            ["sudo", "iptables", "-I", "FORWARD", "-i", "docker0", "-o", "docker0", "-j", "ACCEPT"],
+            ["sudo", "iptables", "-C", "FORWARD", "-i", "docker0", "!", "-o", "docker0", "-j", "ACCEPT"] or
+            ["sudo", "iptables", "-I", "FORWARD", "-i", "docker0", "!", "-o", "docker0", "-j", "ACCEPT"],
+            ["sudo", "iptables", "-C", "FORWARD", "!", "-i", "docker0", "-o", "docker0",
+             "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "-j", "ACCEPT"] or
+            ["sudo", "iptables", "-I", "FORWARD", "!", "-i", "docker0", "-o", "docker0",
+             "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "-j", "ACCEPT"],
+        ]
+
+        cmds += [
+            ["sudo", "iptables", "-C", "DOCKER-USER", "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "-j", "ACCEPT"] or
+            ["sudo", "iptables", "-I", "DOCKER-USER", "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "-j", "ACCEPT"],
+            ["sudo", "iptables", "-C", "DOCKER-USER", "-i", "lo", "-j", "ACCEPT"] or
+            ["sudo", "iptables", "-I", "DOCKER-USER", "-i", "lo", "-j", "ACCEPT"],
+        ]
+
+        cmds += [
+            ["sudo", "iptables", "-C", "DOCKER-USER", "-i", "docker0", "-o", "docker0", "-j", "RETURN"] or
+            ["sudo", "iptables", "-I", "DOCKER-USER", "-i", "docker0", "-o", "docker0", "-j", "RETURN"],
+        ]
+
+        cmds += [
+            ["sudo", "iptables", "-C", "DOCKER-USER", "-i", "docker0", "!", "-o", "docker0", "-j", "DROP"] or
+            ["sudo", "iptables", "-I", "DOCKER-USER", "-i", "docker0", "!", "-o", "docker0", "-j", "DROP"],
+        ]
+
+        for c in cmds:
+           
+            if "-C" in c:
+                check_cmd = c
+                insert_cmd = c.copy()
+                idx = insert_cmd.index("-C")
+                insert_cmd[idx] = "-I"
+
+                ok = subprocess.run(check_cmd, capture_output=True, text=True)
+                if ok.returncode != 0:
+                    run(insert_cmd)
+                else:
+                    Utils.subnet_logger(
+                        severity="TRACE",
+                        message=f"Rule already present: {' '.join(check_cmd)}",
+                        log_level=log_level,
+                    )
+            else:
+                run(c)
+
+        Utils.subnet_logger(
+            severity="INFO",
+            message="Applied Docker-friendly firewall; container egress blocked via DOCKER-USER.",
+            log_level=log_level,
+        )
+        return True
+
+    except Exception as e:
+        Utils.subnet_logger(
+            severity="ERROR",
+            message=f"Exception creating iptables rules: {e}",
+            log_level=log_level
+        )
+        return False
 
 def start_container_with_async(tag_name: str, cuda_directory: str, port: int, log_level: str):
 

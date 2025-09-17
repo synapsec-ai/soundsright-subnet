@@ -31,6 +31,7 @@ from .container import (
     start_container,
     start_container_with_docker,
     handle_iptables,
+    handle_iptables_for_docker,
     start_container_with_async,
     build_container_async,
     build_containers_async,
