@@ -288,6 +288,11 @@ async def build_container_async(directory: str, hotkey: str, competition: str, t
     """
     Build one miner model image async, return True if operation was successful and False otherwise
     """
+    Utils.subnet_logger(
+        severity="TRACE",
+        message=f"Building container with podman in directory: {directory}",
+        log_level=log_level,
+    )
     dockerfile_path = None
 
     # Search for docker-compose.yml in the directory and its subdirectories
@@ -357,6 +362,11 @@ async def build_container_async_with_docker(directory: str, hotkey: str, competi
     """
     Build one miner model image async, return True if operation was successful and False otherwise
     """
+    Utils.subnet_logger(
+        severity="TRACE",
+        message=f"Building container with docker in directory: {directory}",
+        log_level=log_level,
+    )
     dockerfile_path = None
 
     # Search for docker-compose.yml in the directory and its subdirectories
@@ -631,6 +641,11 @@ def start_container(directory, log_level, cuda_directory, build_timeout=600, sta
     Args:
         directory (str): Directory containing the container
     """
+    Utils.subnet_logger(
+        severity="TRACE",
+        message=f"Building container with podman in directory: {directory}",
+        log_level=log_level,
+    )
     dockerfile_path = None
 
     # Search for docker-compose.yml in the directory and its subdirectories
@@ -750,6 +765,11 @@ def start_container_with_docker(directory, log_level, cuda_directory, build_time
     Args:
         directory (str): Directory containing the container
     """
+    Utils.subnet_logger(
+        severity="TRACE",
+        message=f"Building container with docker in directory: {directory}",
+        log_level=log_level,
+    )
     dockerfile_path = None
 
     # Search for docker-compose.yml in the directory and its subdirectories
