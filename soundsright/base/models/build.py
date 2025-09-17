@@ -40,6 +40,7 @@ class ModelBuilder:
         first_run_through_of_the_day: bool,
         next_competition_timestamp: int,
         avg_model_eval_time: int,
+        use_docker: bool,
         log_level: str,
     ):
 
@@ -55,6 +56,7 @@ class ModelBuilder:
         self.first_run_through_of_the_day = first_run_through_of_the_day
         self.next_competition_timestamp = next_competition_timestamp
         self.avg_model_eval_time = avg_model_eval_time
+        self.use_docker=use_docker
 
         # Calculations
         self.max_image_count = 0
@@ -336,12 +338,13 @@ class ModelBuilder:
             self.prepare_directory(model_dir)
 
             # Download model to path and obtain model hash
-            model_hash, _ = Models.get_model_content_hash(
-                model_id=model_id,
+            model_hash, _ = asyncio.run(Models.get_model_content_hash(
+                namespace=namespace,
+                name=name,
                 revision=revision,
                 local_dir=model_dir,
                 log_level=self.log_level
-            )
+            ))
 
             if not model_hash or model_hash in self.forbidden_model_hashes:
                 Utils.subnet_logger(
@@ -449,6 +452,7 @@ class ModelBuilder:
             eval_cache=self.eval_cache,
             hotkeys=self.hotkeys,
             timeout=self.timeout,
+            use_docker=self.use_docker,
             log_level=self.log_level,
         )
     

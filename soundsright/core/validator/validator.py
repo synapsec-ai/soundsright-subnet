@@ -70,6 +70,7 @@ class SubnetValidator(Base.BaseNeuron):
         self.last_updated_block = 0
         self.last_metagraph_sync_timestamp = 0
         self.seed_reference_block = float("inf")
+        self.use_docker = False
 
         # WC Prevention
         self.algorithm = 1
@@ -401,6 +402,8 @@ class SubnetValidator(Base.BaseNeuron):
         self.skip_sgmse = args.skip_sgmse
             
         self.dataset_size = args.dataset_size
+
+        self.use_docker = args.use_docker
             
         self.neuron_logger(
             severity="INFO",
@@ -1524,6 +1527,7 @@ class SubnetValidator(Base.BaseNeuron):
             sgmse_path = self.sgmse_path,
             sgmse_output_path = self.sgmse_output_path,
             log_level=self.log_level,
+            use_docker=self.use_docker,
             cuda_directory=self.cuda_directory,
         )
         
@@ -1592,92 +1596,6 @@ class SubnetValidator(Base.BaseNeuron):
             return False 
         return True
     
-    def benchmark_model(self, model_metadata: dict, sample_rate: int, task: str, hotkey: str, block: int) -> dict:
-        """Runs benchmarking for miner-submitted model using Models.ModelEvaluationHandler 
-
-        Args:
-            :param model_metadata: (dict): Model metadata submitted by miner via synapse
-            :param sample_rate: (int): Sample rate
-            :param task: (str): DENOISING/DEREVERBERATIOn
-            :param hotkey: (str): ss58_address
-
-        Returns:
-            dict: model benchmarking results. If model benchmarking could not be performed, returns an empty (no-response) dict
-        """
-        # Check if we need to set weights during this process
-        self.handle_weight_setting()
-
-        try:
-
-            if not self.check_if_time_to_benchmark() and not self.first_run_through_of_the_day:
-                self.neuron_logger(
-                    severity="DEBUG",
-                    message=f"Not enough time in current competition to benchmark model for hotkey: {hotkey}."
-                )
-                return False
-
-            # Validate that miner data is formatted correctly
-            if not Utils.validate_miner_response(model_metadata):
-                
-                self.neuron_logger(
-                    severity="INFO",
-                    message=f"Miner with hotkey: {hotkey} has response that was not properly formatted, cannot benchmark: {model_metadata}"
-                )
-                
-                return None
-            
-            # Initialize model evaluation handler
-            eval_handler = Models.ModelEvaluationHandler(
-                tts_base_path=self.tts_path,
-                noise_base_path=self.noise_path,
-                reverb_base_path=self.reverb_path,
-                model_output_path=self.model_output_path,
-                model_path=self.model_path,
-                sample_rate=sample_rate,
-                task=task,
-                hf_model_namespace=model_metadata['hf_model_namespace'],
-                hf_model_name=model_metadata['hf_model_name'],
-                hf_model_revision=model_metadata['hf_model_revision'],
-                log_level=self.log_level,
-                subtensor=self.subtensor,
-                subnet_netuid=self.neuron_config.netuid,
-                miner_hotkey=hotkey,
-                miner_models=self.miner_models[f'{task}_{sample_rate}HZ'],
-                cuda_directory=self.cuda_directory,
-                historical_block=block,
-                seed_reference_block=self.seed_reference_block,
-            )
-            
-            metrics_dict, model_hash, model_block = eval_handler.download_run_and_evaluate()
-            
-            model_benchmark = {
-                'hotkey':hotkey,
-                'hf_model_name':model_metadata['hf_model_name'],
-                'hf_model_namespace':model_metadata['hf_model_namespace'],
-                'hf_model_revision':model_metadata['hf_model_revision'],
-                'model_hash':model_hash,
-                'block':model_block,
-                'metrics':metrics_dict,
-            }
-            
-            if not Utils.validate_model_benchmark(model_benchmark):
-                self.neuron_logger(
-                    severity="INFO",
-                    message=f"Model benchmark: {model_benchmark} for task: {task} and sample rate: {sample_rate} is invalidly formatted."
-                )
-                
-                return None
-            
-            self.neuron_logger(
-                severity="INFO",
-                message=f"Model benchmark for task: {task} and sample rate: {sample_rate}: {model_benchmark}"
-            )
-            
-            return model_benchmark
-        
-        except:
-            return None
-    
     async def get_miner_response(self, uid_to_query, sample_rate, task):
         response = await self.send_competition_synapse(
             uid_to_query=uid_to_query,
@@ -1691,7 +1609,7 @@ class SubnetValidator(Base.BaseNeuron):
         Runs a competition (a competition is a unique combination of sample rate and task).
         
         1. Queries all miners for their models.
-        2. If miner submits a new model, benchmarks it with SubnetValidator.benchmark_model 
+        2. If miner submits a new model, benchmarks it.
         3. Updates knowledge of miner model benchmarking results.
         """
         self.model_cache = {
@@ -2011,7 +1929,7 @@ class SubnetValidator(Base.BaseNeuron):
 
         new_competition_miner_models = copy.deepcopy(self.models_evaluated_today)
 
-        Utils.delete_container(log_level=self.log_level)
+        Utils.delete_container(use_docker=self.use_docker, log_level=self.log_level)
 
         while self.calculate_remaining_cache_length() > 0:
 
@@ -2036,6 +1954,7 @@ class SubnetValidator(Base.BaseNeuron):
                 first_run_through_of_the_day=self.first_run_through_of_the_day,
                 next_competition_timestamp=self.next_competition_timestamp,
                 avg_model_eval_time=self.avg_model_eval_time,
+                use_docker=self.use_docker,
                 log_level=self.log_level,
             )
 
@@ -2073,6 +1992,7 @@ class SubnetValidator(Base.BaseNeuron):
                 tts_path=self.tts_path,
                 model_output_path=self.model_output_path,
                 cuda_directory=self.cuda_directory,
+                use_docker=self.use_docker,
                 log_level=self.log_level,
             )
             
@@ -2083,7 +2003,7 @@ class SubnetValidator(Base.BaseNeuron):
 
             self.handle_weight_setting()      
 
-            Utils.delete_container(log_level=self.log_level)
+            Utils.delete_container(use_docker=self.use_docker, log_level=self.log_level)
         
         filtered_models = {}
         for comp in new_competition_miner_models.keys():

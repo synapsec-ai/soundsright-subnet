@@ -288,6 +288,11 @@ async def build_container_async(directory: str, hotkey: str, competition: str, t
     """
     Build one miner model image async, return True if operation was successful and False otherwise
     """
+    Utils.subnet_logger(
+        severity="TRACE",
+        message=f"Building container with podman in directory: {directory}",
+        log_level=log_level,
+    )
     dockerfile_path = None
 
     # Search for docker-compose.yml in the directory and its subdirectories
@@ -353,7 +358,82 @@ async def build_container_async(directory: str, hotkey: str, competition: str, t
         )
         return False
     
-async def build_containers_async(model_base_path: str, eval_cache: dict, hotkeys: list, log_level: str, timeout: int = 1500):
+async def build_container_async_with_docker(directory: str, hotkey: str, competition: str, timeout: int, log_level: str) -> bool:
+    """
+    Build one miner model image async, return True if operation was successful and False otherwise
+    """
+    Utils.subnet_logger(
+        severity="TRACE",
+        message=f"Building container with docker in directory: {directory}",
+        log_level=log_level,
+    )
+    dockerfile_path = None
+
+    # Search for docker-compose.yml in the directory and its subdirectories
+    for root, _, files in os.walk(directory):
+        for file in files:
+            if file == "Dockerfile":
+                dockerfile_path = os.path.join(root, file)
+                break
+        if dockerfile_path:
+            break
+
+    if not dockerfile_path:
+        return False
+    
+    if not os.path.isfile(dockerfile_path):
+        Utils.subnet_logger(
+            severity="ERROR",
+            message=f"No `Dockerfile` file found in the specified directory: {directory}",
+            log_level=log_level,
+        )
+        return False
+
+    try:
+        tag_name = f"{hotkey}_{competition}".lower()
+
+        process = await asyncio.create_subprocess_exec(
+            "docker", "build",
+            "-t", tag_name,
+            "--file", dockerfile_path,
+            ".",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            cwd=os.path.dirname(dockerfile_path),
+        )
+
+        try:
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=timeout)
+
+        except asyncio.TimeoutError:
+            process.kill()
+            await process.wait()
+            Utils.subnet_logger(
+                severity="ERROR",
+                message=f"Timeout building container for hotkey: {hotkey}",
+                log_level=log_level,
+            )
+            return False
+
+        if process.returncode != 0:
+            Utils.subnet_logger(
+                severity="ERROR",
+                message=f"Container build failed for hotkey: {hotkey}\n{stderr.decode()}",
+                log_level=log_level,
+            )
+            return False
+
+        return True
+
+    except Exception as e:
+        Utils.subnet_logger(
+            severity="ERROR",
+            message=f"Exception during container build: {str(e)}",
+            log_level=log_level,
+        )
+        return False
+    
+async def build_containers_async(model_base_path: str, eval_cache: dict, hotkeys: list, log_level: str, use_docker: bool, timeout: int = 1500):
     hk_list = []
     tasks = []
     competitions = []
@@ -369,13 +449,22 @@ async def build_containers_async(model_base_path: str, eval_cache: dict, hotkeys
                 hk = hotkeys[uid]
                 hk_list.append(hk)
                 competitions.append(competition)
-                task = asyncio.create_task(build_container_async(
-                    directory=os.path.join(model_base_path, hk),
-                    hotkey=hk,
-                    competition=competition,
-                    timeout=timeout,
-                    log_level=log_level
-                ))
+                if use_docker: 
+                    task = asyncio.create_task(build_container_async_with_docker(
+                        directory=os.path.join(model_base_path, hk),
+                        hotkey=hk,
+                        competition=competition,
+                        timeout=timeout,
+                        log_level=log_level
+                    ))
+                else:
+                    task = asyncio.create_task(build_container_async(
+                        directory=os.path.join(model_base_path, hk),
+                        hotkey=hk,
+                        competition=competition,
+                        timeout=timeout,
+                        log_level=log_level
+                    ))
                 tasks.append(task)
         
     Utils.subnet_logger(
@@ -457,27 +546,197 @@ def handle_iptables(ports: list, log_level: str):
             log_level=log_level
         )
 
+def handle_iptables_for_docker(ports: list[int], log_level: str) -> bool:
+
+    def run(cmd):
+        res = subprocess.run(cmd, capture_output=True, text=True)
+        if res.returncode != 0:
+            Utils.subnet_logger(
+                severity="WARNING",
+                message=f"Firewall rule failed: {' '.join(cmd)} - {res.stderr.strip()}",
+                log_level=log_level,
+            )
+        else:
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Firewall rule successful: {' '.join(cmd)} - {res.stderr.strip()}",
+                log_level=log_level,
+            )
+        return res.returncode == 0
+
+    try:
+        Utils.subnet_logger(
+            severity="TRACE",
+            message=f"Setting Docker-friendly iptables rules for ports: {ports}",
+            log_level=log_level
+        )
+
+        cmds = []
+
+        cmds += [
+            ["sudo", "iptables", "-C", "INPUT", "-i", "lo", "-j", "ACCEPT"] or
+            ["sudo", "iptables", "-I", "INPUT", "-i", "lo", "-j", "ACCEPT"],
+            ["sudo", "iptables", "-C", "INPUT", "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "-j", "ACCEPT"] or
+            ["sudo", "iptables", "-I", "INPUT", "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "-j", "ACCEPT"],
+        ]
+
+        for p in ports:
+            cmds.append(["sudo", "iptables", "-C", "INPUT", "-p", "tcp", "--dport", str(p),
+                         "-m", "conntrack", "--ctstate", "NEW,ESTABLISHED", "-j", "ACCEPT"] or
+                        ["sudo", "iptables", "-I", "INPUT", "-p", "tcp", "--dport", str(p),
+                         "-m", "conntrack", "--ctstate", "NEW,ESTABLISHED", "-j", "ACCEPT"])
+
+
+        cmds += [
+            ["sudo", "iptables", "-C", "FORWARD", "-i", "docker0", "-o", "docker0", "-j", "ACCEPT"] or
+            ["sudo", "iptables", "-I", "FORWARD", "-i", "docker0", "-o", "docker0", "-j", "ACCEPT"],
+            ["sudo", "iptables", "-C", "FORWARD", "-i", "docker0", "!", "-o", "docker0", "-j", "ACCEPT"] or
+            ["sudo", "iptables", "-I", "FORWARD", "-i", "docker0", "!", "-o", "docker0", "-j", "ACCEPT"],
+            ["sudo", "iptables", "-C", "FORWARD", "!", "-i", "docker0", "-o", "docker0",
+             "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "-j", "ACCEPT"] or
+            ["sudo", "iptables", "-I", "FORWARD", "!", "-i", "docker0", "-o", "docker0",
+             "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "-j", "ACCEPT"],
+        ]
+
+        cmds += [
+            ["sudo", "iptables", "-C", "DOCKER-USER", "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "-j", "ACCEPT"] or
+            ["sudo", "iptables", "-I", "DOCKER-USER", "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "-j", "ACCEPT"],
+            ["sudo", "iptables", "-C", "DOCKER-USER", "-i", "lo", "-j", "ACCEPT"] or
+            ["sudo", "iptables", "-I", "DOCKER-USER", "-i", "lo", "-j", "ACCEPT"],
+        ]
+
+        cmds += [
+            ["sudo", "iptables", "-C", "DOCKER-USER", "-i", "docker0", "-o", "docker0", "-j", "RETURN"] or
+            ["sudo", "iptables", "-I", "DOCKER-USER", "-i", "docker0", "-o", "docker0", "-j", "RETURN"],
+        ]
+
+        cmds += [
+            ["sudo", "iptables", "-C", "DOCKER-USER", "-i", "docker0", "!", "-o", "docker0", "-j", "DROP"] or
+            ["sudo", "iptables", "-I", "DOCKER-USER", "-i", "docker0", "!", "-o", "docker0", "-j", "DROP"],
+        ]
+
+        for c in cmds:
+           
+            if "-C" in c:
+                check_cmd = c
+                insert_cmd = c.copy()
+                idx = insert_cmd.index("-C")
+                insert_cmd[idx] = "-I"
+
+                ok = subprocess.run(check_cmd, capture_output=True, text=True)
+                if ok.returncode != 0:
+                    run(insert_cmd)
+                else:
+                    Utils.subnet_logger(
+                        severity="TRACE",
+                        message=f"Rule already present: {' '.join(check_cmd)}",
+                        log_level=log_level,
+                    )
+            else:
+                run(c)
+
+        Utils.subnet_logger(
+            severity="INFO",
+            message="Applied Docker-friendly firewall; container egress blocked via DOCKER-USER.",
+            log_level=log_level,
+        )
+        return True
+
+    except Exception as e:
+        Utils.subnet_logger(
+            severity="ERROR",
+            message=f"Exception creating iptables rules: {e}",
+            log_level=log_level
+        )
+        return False
 
 def start_container_with_async(tag_name: str, cuda_directory: str, port: int, log_level: str):
 
-    result1 = subprocess.run(
-        [
-            "podman", "run", 
-            "-d", 
-            "--device", "nvidia.com/gpu=all", 
-            "--volume", f"{cuda_directory}:{cuda_directory}", 
-            "--user", "10002:10002", 
-            "--name", tag_name, 
-            "-p", f"127.0.0.1:{port}:{port}", 
-            tag_name
-        ], 
-        check=True,
-        timeout=5
-    )
-    if result1.returncode != 0:
-        return False
+    try: 
+        result1 = subprocess.run(
+            [
+                "podman", "run", 
+                "-d", 
+                "--device", "nvidia.com/gpu=all", 
+                "--volume", f"{cuda_directory}:{cuda_directory}", 
+                "--user", "10002:10002", 
+                "--name", tag_name, 
+                "-p", f"127.0.0.1:{port}:{port}", 
+                tag_name
+            ], 
+            check=True,
+            timeout=5
+        )
+        if result1.returncode != 0:
+            return False
 
-    return True
+        return result1.returncode == 0
+
+    except subprocess.CalledProcessError as e:
+        Utils.subnet_logger(
+            severity="ERROR",
+            message=f"podman run failed for {tag_name} on port {port}: {e}",
+            log_level=log_level,
+        )
+        return False
+    except subprocess.TimeoutExpired as e:
+        Utils.subnet_logger(
+            severity="ERROR",
+            message=f"podman run timed out for {tag_name} on port {port}: {e}",
+            log_level=log_level,
+        )
+        return False
+    except Exception as e:
+        Utils.subnet_logger(
+            severity="ERROR",
+            message=f"Unexpected error starting container {tag_name} on port {port}: {e}",
+            log_level=log_level,
+        )
+        return False
+    
+def start_container_with_async_with_docker(tag_name: str, cuda_directory: str, port: int, log_level: str):
+
+    try: 
+        result1 = subprocess.run(
+            [
+                "docker", "run", 
+                "-d", 
+                "--gpus", "all", 
+                "--volume", f"{cuda_directory}:{cuda_directory}", 
+                "--user", "10002:10002", 
+                "--name", tag_name, 
+                "-p", f"127.0.0.1:{port}:{port}", 
+                tag_name
+            ], 
+            check=True,
+            timeout=5
+        )
+        if result1.returncode != 0:
+            return False
+
+        return result1.returncode == 0
+
+    except subprocess.CalledProcessError as e:
+        Utils.subnet_logger(
+            severity="ERROR",
+            message=f"docker run failed for {tag_name} on port {port}: {e}",
+            log_level=log_level,
+        )
+        return False
+    except subprocess.TimeoutExpired as e:
+        Utils.subnet_logger(
+            severity="ERROR",
+            message=f"docker run timed out for {tag_name} on port {port}: {e}",
+            log_level=log_level,
+        )
+        return False
+    except Exception as e:
+        Utils.subnet_logger(
+            severity="ERROR",
+            message=f"Unexpected error starting container {tag_name} on port {port}: {e}",
+            log_level=log_level,
+        )
+        return False
         
 def start_container(directory, log_level, cuda_directory, build_timeout=600, start_timeout=30) -> bool:
     """Runs the container with podman compose
@@ -485,6 +744,11 @@ def start_container(directory, log_level, cuda_directory, build_timeout=600, sta
     Args:
         directory (str): Directory containing the container
     """
+    Utils.subnet_logger(
+        severity="TRACE",
+        message=f"Building container with podman in directory: {directory}",
+        log_level=log_level,
+    )
     dockerfile_path = None
 
     # Search for docker-compose.yml in the directory and its subdirectories
@@ -526,6 +790,131 @@ def start_container(directory, log_level, cuda_directory, build_timeout=600, sta
                 "podman", "run", 
                 "-d", 
                 "--device", "nvidia.com/gpu=all", 
+                "--volume", cuda_insert, 
+                "--user", "10002:10002", 
+                "--name", "modelapi", 
+                "-p", "127.0.0.1:6500:6500", 
+                "modelapi"
+            ], 
+            check=True,
+            timeout=start_timeout
+        )
+        if result2.returncode != 0:
+            return False
+        
+        # BLOCK ALL INTERNET ACCESS FOR THIS CONTAINER
+        block_commands = [
+            ["sudo", "iptables", "-P", "INPUT", "DROP"],
+            ["sudo", "iptables", "-P", "FORWARD", "DROP"],
+            ["sudo", "iptables", "-P", "OUTPUT", "DROP"],
+            ["sudo", "iptables", "-A", "INPUT", "-i", "lo", "-j", "ACCEPT"],
+            ["sudo", "iptables", "-A", "OUTPUT", "-o", "lo", "-j", "ACCEPT"],
+            ["sudo", "iptables", "-A", "INPUT", "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "-j", "ACCEPT"],
+            ["sudo", "iptables", "-A", "OUTPUT", "-m", "conntrack", "--ctstate", "ESTABLISHED", "-j", "ACCEPT"],
+            ["sudo", "iptables", "-A", "INPUT", "-p", "tcp", "--dport", "6500", "-m", "conntrack", "--ctstate", "NEW,ESTABLISHED", "-j", "ACCEPT"],
+            ["sudo", "iptables", "-A", "INPUT", "-p", "tcp", "--dport", "6000", "-m", "conntrack", "--ctstate", "NEW,ESTABLISHED", "-j", "ACCEPT"],
+            ["sudo", "iptables", "-A", "INPUT", "-p", "tcp", "--dport", "22", "-m", "conntrack", "--ctstate", "NEW,ESTABLISHED", "-j", "ACCEPT"]
+        ]
+
+        for cmd in block_commands:
+            block_result = subprocess.run(cmd, capture_output=True, text=True)
+            if block_result.returncode != 0:
+                Utils.subnet_logger(
+                    severity="WARNING",
+                    message=f"Firewall rule failed: {' '.join(cmd)} - {block_result.stderr}",
+                    log_level=log_level,
+                )
+            
+            else:
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"Firewall rule successful: {' '.join(cmd)} - {block_result.stderr}",
+                    log_level=log_level,
+                )
+        
+        Utils.subnet_logger(
+            severity="INFO",
+            message=f"Container internet access BLOCKED",
+            log_level=log_level,
+        )
+
+        return True
+        
+    except subprocess.TimeoutExpired as e:
+        Utils.subnet_logger(
+            severity="ERROR",
+            message=f"Container operation timed out: {e}",
+            log_level=log_level,
+        )
+        return False
+    except subprocess.CalledProcessError as e:
+        Utils.subnet_logger(
+            severity="ERROR",
+            message=f"Container could not be started due to error: {e}",
+            log_level=log_level,
+        )
+        return False
+    except Exception as e:
+        Utils.subnet_logger(
+            severity="ERROR",
+            message=f"Container could not be started due to error: {e}",
+            log_level=log_level,
+        )
+        return False
+    
+def start_container_with_docker(directory, log_level, cuda_directory, build_timeout=600, start_timeout=30) -> bool:
+    """Runs the container with docker
+
+    Args:
+        directory (str): Directory containing the container
+    """
+    Utils.subnet_logger(
+        severity="TRACE",
+        message=f"Building container with docker in directory: {directory}",
+        log_level=log_level,
+    )
+    dockerfile_path = None
+
+    # Search for docker-compose.yml in the directory and its subdirectories
+    for root, _, files in os.walk(directory):
+        for file in files:
+            if file == "Dockerfile":
+                dockerfile_path = os.path.join(root, file)
+                break
+        if dockerfile_path:
+            break
+
+    if not dockerfile_path:
+        return False
+    
+    if not os.path.isfile(dockerfile_path):
+        Utils.subnet_logger(
+            severity="ERROR",
+            message=f"No `Dockerfile` file found in the specified directory: {directory}",
+            log_level=log_level,
+        )
+        return False
+
+    try:
+
+        result1 = subprocess.run(
+            [
+                "docker", "build", 
+                "-t", "modelapi", 
+                "--file", dockerfile_path,
+                "."
+            ], 
+            check=True,
+            timeout=build_timeout,
+        )
+        if result1.returncode != 0:
+            return False
+        cuda_insert = f"{cuda_directory}:{cuda_directory}"
+        result2 = subprocess.run(
+            [
+                "podman", "run", 
+                "-d", 
+                "--gpus", "all", 
                 "--volume", cuda_insert, 
                 "--user", "10002:10002", 
                 "--name", "modelapi", 
@@ -793,7 +1182,7 @@ def cleanup_iptables():
     except:
         pass
 
-def delete_container(log_level) -> bool:
+def delete_container(use_docker: bool, log_level: str) -> bool:
     """Deletes a specified Docker container by name or ID.
 
     Returns:
@@ -803,25 +1192,62 @@ def delete_container(log_level) -> bool:
         # Cleanup firewall rules
         cleanup_iptables()
 
-        # Remove all running containers
-        subprocess.run(
-            ["podman", "rm", "-a", "-f"],
-            check=True,
-            capture_output=True
-        )
+        if use_docker: 
+            containers = subprocess.run(
+                ["docker", "ps", "-aq"],
+                check=True,
+                capture_output=True,
+                text=True
+            ).stdout.split()
 
-        # Remove all images
-        subprocess.run(
-            ["podman", "rmi", "-a", "-f"],
-            check=True,
-            capture_output=True
-        )
-        # System prune
-        subprocess.run(
-            ["podman", "system", "prune", "-a", "-f"],
-            check=True,
-            capture_output=True
-        )
+            if containers:
+                subprocess.run(
+                    ["docker", "rm", "-f"] + containers,
+                    check=True,
+                    capture_output=True
+                )
+
+            # Remove all images
+            images = subprocess.run(
+                ["docker", "images", "-aq"],
+                check=True,
+                capture_output=True,
+                text=True
+            ).stdout.split()
+
+            if images:
+                subprocess.run(
+                    ["docker", "rmi", "-f"] + images,
+                    check=True,
+                    capture_output=True
+                )
+
+            subprocess.run(
+                ["docker", "system", "prune", "-a", "-f"],
+                check=True,
+                capture_output=True
+            )
+
+        else:
+            # Remove all running containers
+            subprocess.run(
+                ["podman", "rm", "-a", "-f"],
+                check=True,
+                capture_output=True
+            )
+
+            # Remove all images
+            subprocess.run(
+                ["podman", "rmi", "-a", "-f"],
+                check=True,
+                capture_output=True
+            )
+            # System prune
+            subprocess.run(
+                ["podman", "system", "prune", "-a", "-f"],
+                check=True,
+                capture_output=True
+            )
 
         Utils.subnet_logger(
             severity="TRACE",
@@ -838,11 +1264,17 @@ def delete_container(log_level) -> bool:
         )
         return False
     
-async def do_start_container_async(tag_name: str, cuda_directory: str, port: int, log_level: str):
-    return await asyncio.to_thread(start_container_with_async, tag_name, cuda_directory, port, log_level)
+async def do_start_container_async(tag_name: str, cuda_directory: str, port: int, log_level: str, use_docker: bool):
+    if use_docker:
+        return await asyncio.to_thread(start_container_with_async_with_docker, tag_name, cuda_directory, port, log_level)
+    else:
+        return await asyncio.to_thread(start_container_with_async, tag_name, cuda_directory, port, log_level)
 
-async def start_container_async(directory: str, log_level: str, cuda_directory: str):
-    return await asyncio.to_thread(start_container, directory, log_level, cuda_directory)
+async def start_container_async(directory: str, log_level: str, cuda_directory: str, use_docker: bool):
+    if use_docker:
+        return await asyncio.to_thread(start_container_with_docker, directory, log_level, cuda_directory)
+    else: 
+        return await asyncio.to_thread(start_container, directory, log_level, cuda_directory)
 
 async def check_container_status_async(port: int, log_level: str, timeout: int | float = 600):
     return await asyncio.to_thread(check_container_status, port, log_level, timeout)

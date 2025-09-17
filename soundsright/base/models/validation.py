@@ -3,11 +3,16 @@ import os
 import base64
 import shutil
 import subprocess
+import tempfile
 import re
-from git import Repo
+import asyncio
+from git import Repo, Git, GitCommandError
 from huggingface_hub import snapshot_download, HfApi
 
 import soundsright.base.utils as Utils
+
+def _hf_repo_url(namespace: str, name: str) -> str:
+    return f"https://huggingface.co/{namespace}/{name}"
 
 def get_file_content_hash(filepath, chunk_size=8192):
     """
@@ -86,8 +91,10 @@ def get_directory_content_hash(directory: str):
     # Encode the final hash in base64 and return it
     return base64.b64encode(hash_obj.digest()).decode(), sorted_files
 
-def get_model_content_hash(
-    model_id: str, 
+@Utils.timeout_decorator(timeout=60)
+async def get_model_content_hash(
+    namespace: str,
+    name: str,
     revision: str, 
     local_dir: str, 
     log_level: str,
@@ -96,7 +103,8 @@ def get_model_content_hash(
     Downloads the model and computes the hash of its entire contents.
 
     Args:
-        :param model_id: (str): The repository ID of the Hugging Face model (e.g., 'bert-base-uncased').
+        :param namespace: (str): The user/org who uploaded the model.
+        :param name: (str): The name of the model.
         :param revision: (str): The specific branch, tag, or commit hash (default is 'main').
         :param local_dir: (str): Local directory to download the model to.
         :param log_level: (str): One of: INFO, INFOX, DEBUG, DEBUGX, TRACE, TRACEX.
@@ -116,21 +124,44 @@ def get_model_content_hash(
     
     try:
         
-        # Download the model files for the specified revision
-        snapshot_download(repo_id=model_id, local_dir=local_dir, revision=revision)
+        url = _hf_repo_url(namespace=namespace,name=name)
+
+        # Clone without checkout, then fetch the revision shallowly and checkout
+        Utils.subnet_logger(
+            severity="TRACE",
+            message=f"Cloning {url} to {local_dir}.",
+            log_level=log_level
+        )
+        repo = Repo.clone_from(url, local_dir, no_checkout=True)
+
+        # Fetch the exact revision (works for branch, tag, or commit SHA)
+        repo.git.fetch("origin", revision)
+        repo.git.checkout(revision, force=True)
+        Utils.subnet_logger(
+            severity="TRACE",
+            message=f"Fetched revision: {revision}",
+            log_level=log_level
+        )
 
         # Compute the hash of the model's contents
         return get_directory_content_hash(directory=local_dir)
     
+    except GitCommandError as e:
+        Utils.subnet_logger(
+            severity="ERROR",
+            message=f"Git error cloning/checking out {namespace}/{name}/{revision}: {e}",
+            log_level=log_level
+        )
     except Exception as e:
         Utils.subnet_logger(
             severity="ERROR",
-            message=f"Model {model_id} could not be downloaded because : {e}",
+            message=f"Model {namespace}/{name}/{revision} could not be downloaded because : {e}",
             log_level=log_level
         )
         return None, None
 
-def check_repo_exists(namespace: str, name: str, revision: str) -> bool:
+@Utils.timeout_decorator(timeout=20)
+async def check_repo_exists(namespace: str, name: str, revision: str) -> bool:
     """
     Check if a Hugging Face repository exists with the specified revision.
     
@@ -142,18 +173,28 @@ def check_repo_exists(namespace: str, name: str, revision: str) -> bool:
     Returns:
         bool: True if the repository and revision exist, False otherwise
     """
-    repo_id = f"{namespace}/{name}"
-    api = HfApi()
-    
     try:
-        # Try to get repository info with the specific revision
-        api.repo_info(repo_id=repo_id, revision=revision)
+        url = _hf_repo_url(namespace, name)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo=Repo.clone_from(
+                url,
+                tmpdir,
+                no_checkout=True
+            )
+            repo.git.fetch("origin", revision)
+            repo.git.checkout(revision, force=True)
         return True
+    
     except Exception as e:
+        Utils.subnet_logger(
+            severity="INFO",
+            message=f"Error when checking if repo exists for namespace: {namespace}, name: {name}, revision: {revision}: {e}"
+        )
+        
         return False
 
-
-def is_commit_hash(namespace: str, name: str, revision: str) -> bool:
+@Utils.timeout_decorator(timeout=20)
+async def is_commit_hash(namespace: str, name: str, revision: str) -> bool:
     """
     Check if a revision is actually a commit hash by verifying it with the repository.
     
@@ -169,42 +210,27 @@ def is_commit_hash(namespace: str, name: str, revision: str) -> bool:
     Returns:
         bool: True if the revision is a genuine commit hash, False otherwise
     """
-    # First, check if it looks like a commit hash
-    commit_hash_pattern = r'^[a-f0-9]{40}$'
-    if not re.match(commit_hash_pattern, revision):
-        return False
-    
-    repo_id = f"{namespace}/{name}"
-    api = HfApi()
-    
     try:
-        # Get repository info
-        repo_info = api.repo_info(repo_id=repo_id, revision=revision)
+        url = _hf_repo_url(namespace, name)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo=Repo.clone_from(
+                url,
+                tmpdir,
+                no_checkout=True
+            )
+            repo.git.fetch("origin", revision)
+            repo.git.checkout(revision, force=True)
+            all_commits = list(repo.iter_commits(revision))
+            return revision in [commit.hexsha for commit in all_commits]
         
-        # Get list of branches and tags
-        try:
-            branches = [ref.name for ref in api.list_repo_refs(repo_id=repo_id).branches]
-            tags = [ref.name for ref in api.list_repo_refs(repo_id=repo_id).tags]
-            
-            # If the revision is in branches or tags, it's not a pure commit hash
-            if revision in branches or revision in tags:
-                return False
-                
-        except Exception:
-            # If we can't get branches/tags, fall back to checking repo_info
-            pass
+    except Exception as e:
+        Utils.subnet_logger(
+            severity="INFO",
+            message=f"Error when checking if commit hash exists for namespace: {namespace}, name: {name}, revision: {revision}: {e}"
+        )
         
-        # Additional verification: check if the revision in repo_info matches our input
-        # If someone created a branch with a hash-like name, the actual commit SHA would be different
-        if hasattr(repo_info, 'sha') and repo_info.sha != revision:
-            return False
-            
-        return True
-        
-    except Exception:
         return False
 
-    return False
 
 def is_valid_commit_hash_format(revision: str) -> bool:
     """
@@ -249,7 +275,7 @@ def validate_repo_and_revision(namespace: str, name: str, revision: str, log_lev
         log_level=log_level
     )
 
-    if not check_repo_exists(namespace, name, revision):
+    if not asyncio.run(check_repo_exists(namespace, name, revision)):
         
         Utils.subnet_logger(
             severity="TRACE",
@@ -265,7 +291,7 @@ def validate_repo_and_revision(namespace: str, name: str, revision: str, log_lev
         log_level=log_level
     )
 
-    if not is_commit_hash(namespace, name, revision):
+    if not asyncio.run(is_commit_hash(namespace, name, revision)):
 
         Utils.subnet_logger(
             severity="TRACE",

@@ -4,8 +4,10 @@ import glob
 import asyncio
 import shutil
 import hashlib
+import subprocess
 import bittensor as bt
 from typing import List
+import socket 
 
 # Import custom modules
 import soundsright.base.benchmarking as Benchmarking
@@ -27,6 +29,7 @@ class ModelEvaluationHandler:
             tts_path: str,
             model_output_path: str,
             cuda_directory: str,
+            use_docker: bool,
             log_level: str,
         ):
 
@@ -67,12 +70,54 @@ class ModelEvaluationHandler:
         self.cuda_directory = cuda_directory
         self.log_level = log_level
         self.hotkeys = hotkeys
+        self.use_docker = use_docker
 
         Utils.subnet_logger(
             severity="TRACE",
             message=f"Initialized model evaluator with model per iteration: {self.models_per_iteration}, image hotkey list: {self.image_hotkey_list}, competitions list: {self.competitions_list}, ports list: {self.ports_list}, eval cache: {self.eval_cache}",
             log_level=self.log_level,
         )
+
+    def _is_port_free(self, port: int, host: str = "127.0.0.1") -> bool:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            try:
+                s.bind((host, port))
+                return True
+            except OSError:
+                return False
+            
+    def _kill_process_on_port(self, port: int) -> bool:
+        try:
+            result = subprocess.run(
+                ["sudo", "fuser", "-k", f"{port}/tcp"],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            if result.returncode == 0:
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"Killed existing process on port: {port}",
+                    log_level=self.log_level
+                )
+                return True
+            else:
+                Utils.subnet_logger(
+                    severity="TRACE",
+                    message=f"Failed to kill existing process on port: {port}",
+                    log_level=self.log_level
+                )
+                return False
+
+        except Exception as e:
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Failed to kill existing process on port: {port} because: {e}",
+                log_level=self.log_level
+            )
+        
+        return False
 
     def calculate_timeouts(self, concurrent_length: int):
 
@@ -199,6 +244,17 @@ class ModelEvaluationHandler:
 
     async def run_model_evaluation(self, hotkey: str, competition: str, port: int, concurrent_length: int):
 
+        if not self._is_port_free(port):
+            
+            if not self._kill_process_on_port(port):
+                Utils.subnet_logger(
+                    severity="WARNING",
+                    message=f"Port {port} already in use and process was unable to be stopped; skipping {hotkey}.",
+                    log_level=self.log_level,
+                )
+                self._reset_dir(directory=model_output_path)
+                return hotkey, False
+
         tag_name = f"{hotkey}_{competition}".lower()
         competition_components = competition.split("_")
         task, sample_rate = competition_components[0], competition_components[1].replace("HZ", "")
@@ -226,13 +282,24 @@ class ModelEvaluationHandler:
             log_level=self.log_level,
         )
 
-        start_status = await Utils.do_start_container_async(
-            tag_name=tag_name,
-            cuda_directory=self.cuda_directory,
-            port=port,
-            log_level=self.log_level,
-        )
+        try: 
+            start_status = await Utils.do_start_container_async(
+                tag_name=tag_name,
+                cuda_directory=self.cuda_directory,
+                port=port,
+                log_level=self.log_level,
+                use_docker=self.use_docker,
+            )
 
+        except Exception as e:
+            Utils.subnet_logger(
+                severity="ERROR",
+                message=f"Model container start failed for miner because of: {e}",
+                log_level=self.log_level,
+            )
+            self._reset_dir(directory=model_output_path)
+            return hotkey, False
+        
         if not start_status:
 
             Utils.subnet_logger(
@@ -371,12 +438,20 @@ class ModelEvaluationHandler:
 
         Utils.handle_iptables(ports=self.current_ports_list, log_level=self.log_level)
 
-        outcomes = await asyncio.gather(*self.tasks)
+        outcomes = await asyncio.gather(*self.tasks, return_exceptions=True)
 
         output_benchmarks = []
         output_competitions = []
 
         for outcome in outcomes:
+
+            if isinstance(outcome, Exception):
+                Utils.subnet_logger(
+                    severity="ERROR",
+                    message=f"Model eval task raised: {repr(outcome)}",
+                    log_level=self.log_level
+                )
+                continue
 
             hotkey = outcome[0]
             result = outcome[1]

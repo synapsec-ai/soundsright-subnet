@@ -141,6 +141,7 @@ generate_pm2_launch_file() {
     local wallet_name="${WALLET}"
     local wallet_hotkey="${HOTKEY}"
     local logging_value="${LOG_LEVEL}"
+    local use_docker="${USE_DOCKER}"
     local healthcheck_api_host="$HEALTHCHECK_API_HOST"
     local healthcheck_api_port="$HEALTHCHECK_API_PORT"
 
@@ -171,6 +172,20 @@ generate_pm2_launch_file() {
     if [[ -n "$dataset_size" ]]; then
         dataset_size_value="${arg#*=}"
         launch_args+=" --dataset_size $dataset_size"
+    fi
+
+    if [[ -n "$use_docker" ]]; then
+        case "${use_docker,,}" in
+            1|true|yes|on)
+                launch_args+=" --use_docker true"
+                ;;
+            0|false|no|off)
+                launch_args+=" --use_docker false"
+                ;;
+            *)
+                launch_args+=" --use_docker $use_docker"
+                ;;
+        esac
     fi
 
     if [[ -v args['debug_mode'] ]]; then
