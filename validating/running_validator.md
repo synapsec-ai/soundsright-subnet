@@ -172,7 +172,7 @@ pip install httpx==0.27.2
 
 Run the validator with this command: 
 ```
-bash scripts/run_validator.sh --name soundsright-validator --max_memory_restart 50G --branch main
+bash scripts/run_validator.sh --name soundsright-validator --max_memory_restart 500G --branch main
 ```
 To see the logs, execute the following command: 
 ```
