@@ -282,7 +282,7 @@ class SubnetMiner(Base.BaseNeuron):
         new_miner_model_data = {}
         
         # Iterate through competitions
-        for sample_rate in ["16000HZ"]:
+        for sample_rate in ["16000HZ", "48000HZ"]:
             for task in ["DENOISING","DEREVERBERATION"]:
                 # Get .env params
                 namespace = os.getenv(f"{task}_{sample_rate}_HF_MODEL_NAMESPACE")
@@ -469,7 +469,7 @@ class SubnetMiner(Base.BaseNeuron):
 
         return False
     
-    def blacklist_fn(self, synapse: Base.Denoising_16kHz_Protocol | Base.Dereverberation_16kHz_Protocol) -> Tuple[bool, str]:
+    def blacklist_fn(self, synapse: Base.Denoising_16kHz_Protocol | Base.Dereverberation_16kHz_Protocol | Base.Denoising_48kHz_Protocol | Base.Dereverberation_48kHz_Protocol | Base.FeedbackProtocol) -> Tuple[bool, str]:
         """
         This function is executed before the synapse data has been
         deserialized.
@@ -543,11 +543,19 @@ class SubnetMiner(Base.BaseNeuron):
         """Wrapper for the blacklist function to avoid repetition in code"""
         return self.blacklist_fn(synapse=synapse)
     
+    def blacklist_48kHz_denoising(self, synapse: Base.Denoising_48kHz_Protocol) -> Tuple[bool, str]:
+        """Wrapper for the blacklist function to avoid repetition in code"""
+        return self.blacklist_fn(synapse=synapse)
+
+    def blacklist_48kHz_dereverberation(self, synapse: Base.Dereverberation_48kHz_Protocol) -> Tuple[bool, str]:
+        """Wrapper for the blacklist function to avoid repetition in code"""
+        return self.blacklist_fn(synapse=synapse)
+    
     def blacklist_feedback(self, synapse: Base.FeedbackProtocol) -> Tuple[bool, str]:
         """Wrapper for the blacklist function to avoid repetition in code"""
         return self.blacklist_fn(synapse=synapse)
 
-    def priority_fn(self, synapse: Base.Denoising_16kHz_Protocol | Base.Dereverberation_16kHz_Protocol) -> float:
+    def priority_fn(self, synapse: Base.Denoising_16kHz_Protocol | Base.Dereverberation_16kHz_Protocol | Base.Denoising_48kHz_Protocol | Base.Dereverberation_48kHz_Protocol | Base.FeedbackProtocol) -> float:
         """
         This function defines the priority based on which the validators
         are selected. Higher priority value means the input from the
@@ -577,11 +585,19 @@ class SubnetMiner(Base.BaseNeuron):
         """Wrapper for the priority function to avoid repetition in code"""
         return self.priority_fn(synapse=synapse)
     
+    def priority_48kHz_denoising(self, synapse: Base.Denoising_48kHz_Protocol) -> float:
+        """Wrapper for the priority function to avoid repetition in code"""
+        return self.priority_fn(synapse=synapse)
+
+    def priority_48kHz_dereverberation(self, synapse: Base.Dereverberation_48kHz_Protocol) -> float:
+        """Wrapper for the priority function to avoid repetition in code"""
+        return self.priority_fn(synapse=synapse)
+    
     def priority_feedback(self, synapse:Base.FeedbackProtocol) -> float:
         """Wrapper for the priority function to avoid repetition in code"""
         return self.priority_fn(synapse=synapse)
 
-    def forward(self, synapse: Base.Denoising_16kHz_Protocol | Base.Dereverberation_16kHz_Protocol, competition: str) -> Base.Denoising_16kHz_Protocol | Base.Dereverberation_16kHz_Protocol:
+    def forward(self, synapse: Base.Denoising_16kHz_Protocol | Base.Dereverberation_16kHz_Protocol | Base.Denoising_48kHz_Protocol | Base.Dereverberation_48kHz_Protocol | Base.FeedbackProtocol, competition: str) -> Base.Denoising_16kHz_Protocol | Base.Dereverberation_16kHz_Protocol  | Base.Denoising_48kHz_Protocol | Base.Dereverberation_48kHz_Protocol | Base.FeedbackProtocol:
         """This function responds to validators with the miner's model data"""
 
         hotkey = synapse.dendrite.hotkey
@@ -613,6 +629,14 @@ class SubnetMiner(Base.BaseNeuron):
     def forward_16kHz_dereverberation(self, synapse: Base.Dereverberation_16kHz_Protocol) -> Base.Dereverberation_16kHz_Protocol:
         """Wrapper for the forward function to avoid repetition in code"""
         return self.forward(synapse=synapse, competition='DEREVERBERATION_16000HZ')
+    
+    def forward_48kHz_denoising(self, synapse: Base.Denoising_48kHz_Protocol) -> Base.Denoising_48kHz_Protocol:
+        """Wrapper for the forward function to avoid repetition in code"""
+        return self.forward(synapse=synapse, competition='DENOISING_48000HZ')
+
+    def forward_48kHz_dereverberation(self, synapse: Base.Dereverberation_48kHz_Protocol) -> Base.Dereverberation_48kHz_Protocol:
+        """Wrapper for the forward function to avoid repetition in code"""
+        return self.forward(synapse=synapse, competition='DEREVERBERATION_48000HZ')
     
     def forward_feedback(self, synapse: Base.FeedbackProtocol) -> Base.FeedbackProtocol:
         """
@@ -678,6 +702,14 @@ class SubnetMiner(Base.BaseNeuron):
             forward_fn=self.forward_16kHz_dereverberation,
             blacklist_fn=self.blacklist_16kHz_dereverberation,
             priority_fn=self.priority_16kHz_dereverberation,
+        ).attach( # DENOISING 48000 HZ
+            forward_fn=self.forward_48kHz_denoising,
+            blacklist_fn=self.blacklist_48kHz_denoising,
+            priority_fn=self.priority_48kHz_denoising,
+        ).attach( # DEREVERBERATION 48000 HZ
+            forward_fn=self.forward_48kHz_dereverberation,
+            blacklist_fn=self.blacklist_48kHz_dereverberation,
+            priority_fn=self.priority_48kHz_dereverberation,
         ).attach( # FEEDBACK SYNAPSE
             forward_fn=self.forward_feedback,
             blacklist_fn=self.blacklist_feedback,
