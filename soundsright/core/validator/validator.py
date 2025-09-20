@@ -85,25 +85,35 @@ class SubnetValidator(Base.BaseNeuron):
         # Benchmarking / Scoring Object Init
         self.scores = None
         self.weights_objects = []
-        self.sample_rates = [16000]
+        self.sample_rates = [16000, 48000]
         self.tasks = ['DENOISING','DEREVERBERATION']
         self.miner_models = {
             'DENOISING_16000HZ':[],
             'DEREVERBERATION_16000HZ':[],
+            'DENOISING_48000HZ':[],
+            'DEREVERBERATION_48000HZ':[],
         }
         self.best_miner_models = {
             'DENOISING_16000HZ':[],
             'DEREVERBERATION_16000HZ':[],
+            'DENOISING_48000HZ':[],
+            'DEREVERBERATION_48000HZ':[],
         }
         self.blacklisted_miner_models = {
             "DENOISING_16000HZ":[],
             "DEREVERBERATION_16000HZ":[],
+            'DENOISING_48000HZ':[],
+            'DEREVERBERATION_48000HZ':[],
         }
         self.competition_max_scores = {
-            'DENOISING_16000HZ':40,
-            'DEREVERBERATION_16000HZ':40,
-            'DENOISING_16000HZ_remainder':10,
-            'DEREVERBERATION_16000HZ_remainder':10,
+            'DENOISING_16000HZ':13,
+            'DEREVERBERATION_16000HZ':13,
+            'DENOISING_16000HZ_remainder':2,
+            'DEREVERBERATION_16000HZ_remainder':2,
+            'DENOISING_48000HZ':30,
+            'DEREVERBERATION_48000HZ':30,
+            'DENOISING_48000HZ_remainder':5,
+            'DEREVERBERATION_48000HZ_remainder':5,
         }
         self.metric_proportions = {
             "DENOISING_16000HZ":{
@@ -120,22 +130,44 @@ class SubnetValidator(Base.BaseNeuron):
                 "SI_SIR":0.15,
                 "SI_SAR":0.15,
             },
+            "DENOISING_48000HZ":{
+                "PESQ":0.3,
+                "ESTOI":0.25,
+                "SI_SDR":0.15,
+                "SI_SIR":0.15,
+                "SI_SAR":0.15,
+            },
+            "DEREVERBERATION_48000HZ":{
+                "PESQ":0.3,
+                "ESTOI":0.25,
+                "SI_SDR":0.15,
+                "SI_SIR":0.15,
+                "SI_SAR":0.15,
+            },
         }
         self.competition_scores = {
             'DENOISING_16000HZ':None,
             'DEREVERBERATION_16000HZ':None,
+            'DENOISING_48000HZ':None,
+            'DEREVERBERATION_48000HZ':None,
         }
         self.sgmse_benchmarks = {
             "DENOISING_16000HZ":None,
             "DEREVERBERATION_16000HZ":None,
+            "DENOISING_48000HZ":None,
+            "DEREVERBERATION_48000HZ":None,
         }
         self.models_evaluated_today = {
             "DENOISING_16000HZ":[],
             "DEREVERBERATION_16000HZ":[],
+            "DENOISING_48000HZ":[],
+            "DEREVERBERATION_48000HZ":[],
         }
         self.model_cache = {
             "DENOISING_16000HZ":[],
             "DEREVERBERATION_16000HZ":[],
+            "DENOISING_48000HZ":[],
+            "DEREVERBERATION_48000HZ":[],
         }
 
         # Remote Logging
@@ -184,6 +216,11 @@ class SubnetValidator(Base.BaseNeuron):
         # Check to see if we need to generate a new dataset
         if override:
 
+            self.TTSHandler = Data.TTSHandler(
+                tts_base_path=self.tts_path, 
+                sample_rates=self.sample_rates
+            )
+
             self.neuron_logger(
                 severity="INFO",
                 message=f"Generating new dataset."
@@ -202,10 +239,16 @@ class SubnetValidator(Base.BaseNeuron):
             
             tts_16000 = os.path.join(self.tts_path, "16000")
             tts_files_16000 = [f for f in os.listdir(tts_16000)]
+            tts_48000 = os.path.join(self.tts_path, "16000")
+            tts_files_48000 = [f for f in os.listdir(tts_48000)]
             
             self.neuron_logger(
                 severity="DEBUG",
                 message=f"TTS files generated in directory: {tts_16000} are: {tts_files_16000}"
+            )
+            self.neuron_logger(
+                severity="DEBUG",
+                message=f"TTS files generated in directory: {tts_48000} are: {tts_files_48000}"
             )
 
             # Generate new noise/reverb data
@@ -234,6 +277,22 @@ class SubnetValidator(Base.BaseNeuron):
             self.neuron_logger(
                 severity="DEBUG",
                 message=f"Reverb files generated in directory: {reverb_16000}: {reverb_files_16000}"
+            )
+
+            noise_48000 = os.path.join(self.noise_path, "48000")
+            noise_files_48000 = [f for f in os.listdir(noise_48000)]
+            
+            self.neuron_logger(
+                severity="DEBUG",
+                message=f"Noise files generated in directory: {noise_48000}: {noise_files_48000}"
+            )
+            
+            reverb_48000 = os.path.join(self.reverb_path, "48000")
+            reverb_files_48000 = [f for f in os.listdir(reverb_48000)]
+            
+            self.neuron_logger(
+                severity="DEBUG",
+                message=f"Reverb files generated in directory: {reverb_48000}: {reverb_files_48000}"
             )
 
             self.healthcheck_api.append_metric(metric_name="datasets_generated", value=1)
@@ -835,6 +894,22 @@ class SubnetValidator(Base.BaseNeuron):
             return await self.dendrite.forward(
                 axon_to_query,
                 Base.Dereverberation_16kHz_Protocol(subnet_version=self.subnet_version),
+                timeout=timeout,
+                deserialize=True,
+            )
+        
+        elif sample_rate == 48000 and task == 'DENOISING':
+            return await self.dendrite.forward(
+                axon_to_query,
+                Base.Denoising_48kHz_Protocol(subnet_version=self.subnet_version),
+                timeout=timeout,
+                deserialize=True,
+            )
+            
+        elif sample_rate == 48000 and task == 'DEREVERBERATION':
+            return await self.dendrite.forward(
+                axon_to_query,
+                Base.Dereverberation_48kHz_Protocol(subnet_version=self.subnet_version),
                 timeout=timeout,
                 deserialize=True,
             )
