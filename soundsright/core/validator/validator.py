@@ -1615,6 +1615,7 @@ class SubnetValidator(Base.BaseNeuron):
                 enhanced_directory=self.sgmse_output_path,
                 noisy_directory=task_path,
                 sample_rate=sample_rate,
+                task=task,
                 log_level=self.log_level,
             )
         

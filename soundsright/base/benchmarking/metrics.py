@@ -550,46 +550,11 @@ def calculate_estoi_for_directories(clean_directory: str, enhanced_directory: st
     
     return output
     
-def calculate_metrics_dict(sample_rate: int, clean_directory: str, enhanced_directory: str, noisy_directory: str, log_level: str) -> dict:
+def calculate_metrics_dict(task: str, sample_rate: int, clean_directory: str, enhanced_directory: str, noisy_directory: str, log_level: str) -> dict:
     
     metrics_dict = {}
     
     if sample_rate == 16000:
-        try:
-            # SI_SDR
-            metrics_dict['SI_SDR'] = calculate_si_sdr_for_directories(
-                clean_directory=clean_directory,
-                enhanced_directory=enhanced_directory,
-                noisy_directory=noisy_directory,
-                sample_rate=sample_rate,
-                log_level=log_level,
-            )
-        except:
-            metrics_dict['SI_SDR'] = {}
-            
-        try:
-            # SI_SIR
-            metrics_dict['SI_SIR'] = calculate_si_sir_for_directories(
-                clean_directory=clean_directory,
-                enhanced_directory=enhanced_directory,
-                noisy_directory=noisy_directory,
-                sample_rate=sample_rate,
-                log_level=log_level,
-            )
-        except:
-            metrics_dict['SI_SIR'] = {}
-        
-        try:
-            # SI_SAR
-            metrics_dict['SI_SAR'] = calculate_si_sar_for_directories(
-                clean_directory=clean_directory,
-                enhanced_directory=enhanced_directory,
-                noisy_directory=noisy_directory,
-                sample_rate=sample_rate,
-                log_level=log_level,
-            )
-        except:
-            metrics_dict['SI_SAR'] = {}
             
         try:
             # PESQ
@@ -601,6 +566,57 @@ def calculate_metrics_dict(sample_rate: int, clean_directory: str, enhanced_dire
             )
         except:
             metrics_dict['PESQ'] = {}
+            
+        try:
+            # ESTOI
+            metrics_dict['ESTOI'] = calculate_estoi_for_directories(
+                clean_directory=clean_directory,
+                enhanced_directory=enhanced_directory,
+                sample_rate=sample_rate,
+                log_level=log_level,
+            )
+        except:
+            metrics_dict['ESTOI'] = {}
+
+    elif sample_rate == 48000:
+
+        if "denoising" in task.lower():
+                
+            try:
+                # SI_SIR
+                metrics_dict['SI_SIR'] = calculate_si_sir_for_directories(
+                    clean_directory=clean_directory,
+                    enhanced_directory=enhanced_directory,
+                    noisy_directory=noisy_directory,
+                    sample_rate=sample_rate,
+                    log_level=log_level,
+                )
+            except:
+                metrics_dict['SI_SIR'] = {}
+            
+            try:
+                # SI_SAR
+                metrics_dict['SI_SAR'] = calculate_si_sar_for_directories(
+                    clean_directory=clean_directory,
+                    enhanced_directory=enhanced_directory,
+                    noisy_directory=noisy_directory,
+                    sample_rate=sample_rate,
+                    log_level=log_level,
+                )
+            except:
+                metrics_dict['SI_SAR'] = {}
+
+        try:
+            # SI_SDR
+            metrics_dict['SI_SDR'] = calculate_si_sdr_for_directories(
+                clean_directory=clean_directory,
+                enhanced_directory=enhanced_directory,
+                noisy_directory=noisy_directory,
+                sample_rate=sample_rate,
+                log_level=log_level,
+            )
+        except:
+            metrics_dict['SI_SDR'] = {}
             
         try:
             # ESTOI

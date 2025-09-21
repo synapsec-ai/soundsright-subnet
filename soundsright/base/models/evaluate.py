@@ -485,7 +485,8 @@ class ModelEvaluationHandler:
                             clean_directory=tts_path,
                             enhanced_directory=model_output_path,
                             noisy_directory=dataset_path,
-                            sample_rate=16000,
+                            sample_rate=int(sample_rate),
+                            task=task,
                             log_level=self.log_level,
                         )
                     else: 

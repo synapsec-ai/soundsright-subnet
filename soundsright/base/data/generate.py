@@ -444,7 +444,7 @@ def generate_dataset_for_miner(
     """
     assert task in ['denoising', 'dereverberation', 'both'], "Input argument: task must be one of: 'denoising', 'dereverberation', 'both'"
     assert isinstance(sample_rate, int), "Input argument: sample_rate must be of type int"
-    assert sample_rate in [16000], "Input argument: sample_rate must be 16000"
+    assert sample_rate in [16000, 48000], "Input argument: sample_rate must be 16000 or 48000"
     assert reverb_data_dir or noise_data_dir, "At least one of input arguments: reverb_data_dir or noise_data_dir must be specified. If you want to generate both reverb and noise datasets (inputting 'both' into task), then both must be specified."
     
     dirs_to_make = []
