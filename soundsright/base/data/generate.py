@@ -461,7 +461,7 @@ def generate_dataset_for_miner(
         sample_rates = [sample_rate]
     )
     
-    tts_handler.create_openai_tts_dataset(
+    tts_handler.create_elevenlabs_tts_dataset(
         sample_rate = sample_rate,
         n=n,
         for_miner=True

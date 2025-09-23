@@ -18,7 +18,8 @@ from typing import (
     Iterator,
 )
 import os
-from openai import OpenAI
+from elevenlabs.client import ElevenLabs
+from elevenlabs.play import save
 import librosa
 import soundfile as sf
 from typing import List
@@ -705,12 +706,53 @@ class TTSHandler:
         self.print_text=print_text
         self.tts_base_path = tts_base_path
         self.sample_rates = sample_rates
-        api_key = os.getenv("OPENAI_API_KEY")
-        self.openai_client = OpenAI(api_key=api_key)
-        self.openai_voices = ['alloy','echo','fable','onyx','nova','shimmer']
+        self.api_key = os.getenv("ELEVENLABS_API_KEY")
         self.log_level = log_level
         self.rng = random.Random()
         self.rs = RandomSentence(rng=self.rng)
+        self.elevenlabs_client = None
+        self.elevenlabs_voice_ids = []
+
+    def _init_elevenlabs_client(self):
+        self.elevenlabs_client = ElevenLabs(api_key=self.api_key)
+
+    def _query_voice_ids(self):
+        output = []
+
+        self._init_elevenlabs_client()
+        
+        res = self.elevenlabs_client.voices.search()
+        has_more = res.has_more
+        next_page_token = res.next_page_token
+        output += [v.voice_id for v in res.voices]
+        while has_more:
+            res = self.elevenlabs_client.voices.search(next_page_token=next_page_token)
+            output += [v.voice_id for v in res.voices]
+            has_more = res.has_more
+            next_page_token = res.next_page_token
+        return output
+    
+    def get_all_elevenlabs_voice_ids(self, max_tries=10):
+        tries = 0
+        while tries < max_tries:
+            try: 
+                self.elevenlabs_voice_ids = self._query_voice_ids()
+                success = True
+                subnet_logger(
+                    severity="TRACE",
+                    message=f"Queried ElevenLabs voice ids: {self.elevenlabs_voice_ids}. Length: {len(self.elevenlabs_voice_ids)}",
+                    log_level=self.log_level
+                )
+                return
+
+            except Exception as e:
+                tries_remaining = max_tries - tries - 1
+                subnet_logger(
+                    severity="ERROR",
+                    message=f"Error querying ElevenLabs voice ids: {e}. Tries remaining: {tries_remaining}",
+                    log_level=self.log_level
+                )
+                tries += 1
 
     # Generates unique sentences for TTS 
     def _generate_random_sentence(self) -> str:
@@ -729,30 +771,26 @@ class TTSHandler:
         return output
         
     # Generates one output TTS file at correct sample rate
-    def _do_single_openai_tts_query(self, tts_file_path: str, sample_rate: int, voice: str = 'random'):
+    def _do_single_elevenlabs_tts_query(self, tts_file_path: str, sample_rate: int, voice: str = 'random'):
         # voice control
-        if voice == 'random' or voice not in self.openai_voices:
-            voice = self.rng.choice(self.openai_voices)
-        # define openai call params
-        params = {
-            'model':'tts-1-hd',
-            'voice':voice,
-            'input':self._generate_random_sentence()
-        }
-        # call openai with client 
+        if voice == 'random' or voice not in self.elevenlabs_voice_ids:
+            voice = self.rng.choice(self.elevenlabs_voice_ids)
+        
+        # call with client 
         try:
-            response=self.openai_client.audio.speech.create(**params)
-            response.stream_to_file(tts_file_path)
-            subnet_logger(
-                severity="TRACE",
-                message=f"Obtained TTS audio file: {tts_file_path} from OpenAI.",
-                log_level=self.log_level
+            self._init_elevenlabs_client()
+            audio = self.elevenlabs_client.text_to_speech.convert(
+                text=self._generate_random_sentence(),
+                voice_id=voice,
+                model_id="eleven_multilingual_v2",
+                output_format="pcm_44100"
             )
+            save(audio=audio, filename=tts_file_path)
         # raise error if it fails
         except Exception as e:
             subnet_logger(
                 severity="ERROR",
-                message="Could not get TTS audio file from OpenAI, please check configuration.",
+                message=f"Could not get TTS audio file from ElevenLabs because of error: {e}",
                 log_level=self.log_level
             )
         # resample in place if necessary
@@ -782,7 +820,7 @@ class TTSHandler:
             )
 
     # Creates TTS dataset of length n at specified sample rate
-    def create_openai_tts_dataset(self, sample_rate: int, n:int, for_miner: bool = False):
+    def create_elevenlabs_tts_dataset(self, sample_rate: int, n:int, for_miner: bool = False):
         # define output file location and make directory if it doesn't exist
         if for_miner: 
             output_dir = self.tts_base_path
@@ -791,13 +829,13 @@ class TTSHandler:
         os.makedirs(output_dir, exist_ok=True)
         # count to n and make files
         for i in range(n):
-            self._do_single_openai_tts_query(
+            self._do_single_elevenlabs_tts_query(
                 tts_file_path = os.path.join(output_dir, (str(i) + ".wav")),
                 sample_rate=sample_rate
             )
 
     # Create TTS dataset of length n for all sample rates
-    def create_openai_tts_dataset_for_all_sample_rates(self, n:int, seed:int = None):
+    def create_elevenlabs_tts_dataset_for_all_sample_rates(self, n:int, seed:int = None):
 
         if seed:
             self.rng = random.Random(seed)
@@ -807,7 +845,7 @@ class TTSHandler:
         )
             
         for sample_rate in self.sample_rates: 
-            self.create_openai_tts_dataset(
+            self.create_elevenlabs_tts_dataset(
                 sample_rate=sample_rate,
                 n=n
             )

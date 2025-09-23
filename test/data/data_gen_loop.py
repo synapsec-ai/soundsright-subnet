@@ -26,8 +26,8 @@ tts_handler = TTSHandler(tts_base_path=tts_base_path, sample_rates=sample_rates,
 print("TTSHandler initialized")
 for sr in sample_rates:
     print("Creating TTS dataset")
-    tts_handler.create_openai_tts_dataset_for_all_sample_rates(
-        n=10,
+    tts_handler.create_elevenlabs_tts_dataset_for_all_sample_rates(
+        n=2,
         seed=100
     )
 

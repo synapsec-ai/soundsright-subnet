@@ -235,7 +235,7 @@ class SubnetValidator(Base.BaseNeuron):
             )
 
             # Generate new TTS data
-            self.TTSHandler.create_openai_tts_dataset_for_all_sample_rates(n=self.dataset_size, seed=self.seed)
+            self.TTSHandler.create_elevenlabs_tts_dataset_for_all_sample_rates(n=self.dataset_size, seed=self.seed)
             
             tts_16000 = os.path.join(self.tts_path, "16000")
             tts_files_16000 = [f for f in os.listdir(tts_16000)]

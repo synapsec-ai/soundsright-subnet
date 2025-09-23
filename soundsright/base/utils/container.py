@@ -1083,7 +1083,7 @@ def prepare(port, log_level, timeout=10) -> bool:
             log_level=log_level,
         )
         return False
-    return True
+    return False
 
 def enhance_audio(port, log_level, timeout=600) -> bool:
     """
@@ -1161,6 +1161,23 @@ def download_enhanced(port, enhanced_dir, log_level, timeout=10) -> bool:
             log_level=log_level,
         )
         return False
+    
+def reset_model(port, log_level, timeout=30) -> bool:
+    url = f"http://127.0.0.1:{port}/reset/"
+    try:
+        res = requests.post(url, timeout=timeout)
+        if res.status_code==200:
+            data = res.json()
+            return data['reset']
+        return False
+    except Exception as e:
+        Utils.subnet_logger(
+            severity="ERROR",
+            message=f"Container model could not be reset due to error: {e}",
+            log_level=log_level,
+        )
+        return False
+    return False
     
 def cleanup_iptables():
     """Call this when stopping the container to clean up firewall rules"""
@@ -1290,3 +1307,6 @@ async def enhance_audio_async(port: int, log_level: str, timeout: int | float = 
 
 async def download_enhanced_async(port: int, enhanced_dir: str, log_level: str, timeout: int | float = 6000):
     return await asyncio.to_thread(download_enhanced, port, enhanced_dir, log_level, timeout)
+
+async def reset_model_async(port: int, log_level: str, timeout: int | float = 60):
+    return await asyncio.to_thread(reset_model, port, log_level, timeout)

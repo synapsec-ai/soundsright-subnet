@@ -56,6 +56,7 @@ class ModelEvaluationHandler:
             "upload":3,
             "enhance":400,
             "download":3,
+            "reset":10,
         }
 
         self.timeout_multipliers = {
@@ -64,6 +65,7 @@ class ModelEvaluationHandler:
             "upload":[1,0.7,0.4],
             "enhance":[1,0.95,0.95],
             "download":[1,0.7,0.4],
+            "reset":[1, 0.7, 0.4]
         }
 
         # Misc
@@ -411,6 +413,24 @@ class ModelEvaluationHandler:
             message=f"Download successful for miner: {hotkey}. Now verifying output.",
             log_level=self.log_level,
         )
+
+        Utils.subnet_logger(
+            severity="TRACE",
+            message=f"Download successful for miner: {hotkey}. Now resetting model files with timeout: {timeouts['reset']}.",
+            log_level=self.log_level,
+        )
+
+        reset_status = await Utils.reset_model_async(port=port, log_level=self.log_level, timeout=timeouts["reset"])
+
+        if not reset_status:
+
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Resetting model files failed for miner: {hotkey}.",
+                log_level=self.log_level,
+            )
+
+            return hotkey, False
 
         if not self.validate_all_noisy_files_are_enhanced(
             task_path=dataset_path,

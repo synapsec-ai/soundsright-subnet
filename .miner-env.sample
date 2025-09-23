@@ -7,7 +7,7 @@ HOTKEY=hotkey_name
 LOG_LEVEL=INFO
 
 # Necessary for dataset generation
-OPENAI_API_KEY=
+ELEVENLABS_API_KEY=
 
 # Miner model specification by task and sample rate. 
 # If you have not fine-tuned a model for a specific task and sample rate, just leave it blank.

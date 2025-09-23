@@ -40,6 +40,7 @@ from .container import (
     upload_audio,
     enhance_audio,
     download_enhanced,
+    reset_model,
     delete_container,
     do_start_container_async,
     start_container_async,
@@ -48,6 +49,7 @@ from .container import (
     prepare_async,
     enhance_audio_async,
     download_enhanced_async,
+    reset_model_async,
 )
 
 from .system import (
