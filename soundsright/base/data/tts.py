@@ -1,6 +1,7 @@
 import random
 import re
 import enum
+import io
 from types import ModuleType
 from dataclasses import dataclass
 from typing import (
@@ -22,6 +23,7 @@ from elevenlabs.client import ElevenLabs
 from elevenlabs.play import save
 import librosa
 import soundfile as sf
+from pydub import AudioSegment
 from typing import List
 
 from soundsright.base.templates import (
@@ -702,7 +704,7 @@ class RandomSentence:
 # Handles all TTS-related operations
 class TTSHandler:
     
-    def __init__(self, tts_base_path: str, sample_rates: List[int], log_level: str = "INFO", print_text: bool=False):
+    def __init__(self, tts_base_path: str, sample_rates: List[int], log_level: str = "INFO", print_text: bool=False, output_format: str = "pcm_44100"):
         self.print_text=print_text
         self.tts_base_path = tts_base_path
         self.sample_rates = sample_rates
@@ -712,6 +714,7 @@ class TTSHandler:
         self.rs = RandomSentence(rng=self.rng)
         self.elevenlabs_client = None
         self.elevenlabs_voice_ids = []
+        self.output_format = output_format
 
     def _init_elevenlabs_client(self):
         self.elevenlabs_client = ElevenLabs(api_key=self.api_key)
@@ -783,9 +786,13 @@ class TTSHandler:
                 text=self._generate_random_sentence(),
                 voice_id=voice,
                 model_id="eleven_multilingual_v2",
-                output_format="pcm_44100"
+                output_format=self.output_format
             )
-            save(audio=audio, filename=tts_file_path)
+            if "mp3" in self.output_format:
+                audio_seg = AudioSegment.from_file(io.BytesIO(audio), format="mp3")
+                audio_seg.export(tts_file_path, format="wav")
+            else: 
+                save(audio=audio, filename=tts_file_path)
         # raise error if it fails
         except Exception as e:
             subnet_logger(

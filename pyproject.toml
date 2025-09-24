@@ -53,7 +53,8 @@ validator = [
     "pystoi==0.4.1",
     "huggingface-hub==0.31.4",
     "chardet==5.2.0",
-    "elevenlabs==2.16.0"
+    "elevenlabs==2.16.0",
+    "pydub==0.25.1"
 ]
 testing = [
     "pytest==8.3.3",

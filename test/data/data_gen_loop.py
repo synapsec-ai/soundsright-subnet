@@ -22,7 +22,7 @@ if False:
     print("Downloading datasets")
     dataset_download(wham_path=wham_path, arni_path=arni_path, partial=True)
 
-tts_handler = TTSHandler(tts_base_path=tts_base_path, sample_rates=sample_rates, print_text=True)
+tts_handler = TTSHandler(tts_base_path=tts_base_path, sample_rates=sample_rates, print_text=True, output_format="mp3_44100_128")
 tts_handler.get_all_elevenlabs_voice_ids()
 print(tts_handler.elevenlabs_voice_ids)
 print("TTSHandler initialized")
