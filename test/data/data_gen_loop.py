@@ -9,7 +9,7 @@ noise_base_path = os.path.join(base_path,'test_data/noise')
 reverb_base_path = os.path.join(base_path,'test_data/reverb')
 arni_path = os.path.join(base_path,'test_data/arni')
 wham_path = os.path.join(base_path,'test_data/wham')
-sample_rates = [16000]
+sample_rates = [48000]
 
 for directory in [tts_base_path, noise_base_path, reverb_base_path, arni_path, wham_path]:
     if not os.path.exists(directory):
