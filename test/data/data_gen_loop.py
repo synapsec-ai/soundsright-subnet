@@ -23,6 +23,7 @@ if False:
     dataset_download(wham_path=wham_path, arni_path=arni_path, partial=True)
 
 tts_handler = TTSHandler(tts_base_path=tts_base_path, sample_rates=sample_rates, print_text=True)
+tts_handler.get_all_elevenlabs_voice_ids()
 print("TTSHandler initialized")
 for sr in sample_rates:
     print("Creating TTS dataset")
