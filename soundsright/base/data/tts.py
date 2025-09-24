@@ -789,6 +789,8 @@ class TTSHandler:
                 output_format=self.output_format
             )
             if "mp3" in self.output_format:
+                if not isinstance(audio, (bytes, bytearray)):
+                    audio = b"".join(audio)
                 audio_seg = AudioSegment.from_file(io.BytesIO(audio), format="mp3")
                 audio_seg.export(tts_file_path, format="wav")
             else: 
