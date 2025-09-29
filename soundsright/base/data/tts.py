@@ -794,15 +794,14 @@ class TTSHandler:
                 audio_seg = AudioSegment.from_file(io.BytesIO(audio), format="mp3")
                 audio_seg.export(tts_file_path, format="wav")
             else: 
-                # ElevenLabs pcm_44100 is 16-bit signed little-endian, mono, 44.1 kHz
                 if not isinstance(audio, (bytes, bytearray)):
                     audio = b"".join(audio)
 
                 audio_seg = AudioSegment(
                     data=audio,
-                    sample_width=2,     # 16-bit PCM
-                    frame_rate=sample_rate,   # match the 'pcm_44100' rate
-                    channels=1          # ElevenLabs outputs mono
+                    sample_width=2,
+                    frame_rate=sample_rate,
+                    channels=1
                 )
                 audio_seg.export(tts_file_path, format="wav")
         # raise error if it fails
