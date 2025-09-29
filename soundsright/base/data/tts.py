@@ -704,7 +704,7 @@ class RandomSentence:
 # Handles all TTS-related operations
 class TTSHandler:
     
-    def __init__(self, tts_base_path: str, sample_rates: List[int], log_level: str = "INFO", print_text: bool=False, output_format: str = "wav_44100"):
+    def __init__(self, tts_base_path: str, sample_rates: List[int], log_level: str = "INFO", print_text: bool=False, output_format: str = "pcm_44100"):
         self.print_text=print_text
         self.tts_base_path = tts_base_path
         self.sample_rates = sample_rates
@@ -794,7 +794,17 @@ class TTSHandler:
                 audio_seg = AudioSegment.from_file(io.BytesIO(audio), format="mp3")
                 audio_seg.export(tts_file_path, format="wav")
             else: 
-                save(audio=audio, filename=tts_file_path)
+                # ElevenLabs pcm_44100 is 16-bit signed little-endian, mono, 44.1 kHz
+                if not isinstance(audio, (bytes, bytearray)):
+                    audio = b"".join(audio)
+
+                audio_seg = AudioSegment(
+                    data=audio,
+                    sample_width=2,     # 16-bit PCM
+                    frame_rate=sample_rate,   # match the 'pcm_44100' rate
+                    channels=1          # ElevenLabs outputs mono
+                )
+                audio_seg.export(tts_file_path, format="wav")
         # raise error if it fails
         except Exception as e:
             subnet_logger(
