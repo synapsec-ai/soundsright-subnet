@@ -745,6 +745,7 @@ class TTSHandler:
                     message=f"Queried ElevenLabs voice ids: {self.elevenlabs_voice_ids}. Length: {len(self.elevenlabs_voice_ids)}",
                     log_level=self.log_level
                 )
+                print(self.elevenlabs_voice_ids)
                 return
 
             except Exception as e:
@@ -756,7 +757,6 @@ class TTSHandler:
                 )
                 tries += 1
 
-        print(self.elevenlabs_voice_ids)
 
     # Generates unique sentences for TTS 
     def _generate_random_sentence(self) -> str:
