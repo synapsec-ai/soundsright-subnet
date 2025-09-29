@@ -704,7 +704,7 @@ class RandomSentence:
 # Handles all TTS-related operations
 class TTSHandler:
     
-    def __init__(self, tts_base_path: str, sample_rates: List[int], log_level: str = "INFO", print_text: bool=False, output_format: str = "pcm_44100"):
+    def __init__(self, tts_base_path: str, sample_rates: List[int], log_level: str = "INFO", print_text: bool=False, output_format: str = "wav_44100"):
         self.print_text=print_text
         self.tts_base_path = tts_base_path
         self.sample_rates = sample_rates
