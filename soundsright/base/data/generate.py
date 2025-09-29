@@ -460,6 +460,8 @@ def generate_dataset_for_miner(
         tts_base_path=clean_dir, 
         sample_rates = [sample_rate]
     )
+
+    tts_handler.get_all_elevenlabs_voice_ids()
     
     tts_handler.create_elevenlabs_tts_dataset(
         sample_rate = sample_rate,
