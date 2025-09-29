@@ -740,7 +740,6 @@ class TTSHandler:
         while tries < max_tries:
             try: 
                 self.elevenlabs_voice_ids = self._query_voice_ids()
-                success = True
                 subnet_logger(
                     severity="TRACE",
                     message=f"Queried ElevenLabs voice ids: {self.elevenlabs_voice_ids}. Length: {len(self.elevenlabs_voice_ids)}",
@@ -756,6 +755,8 @@ class TTSHandler:
                     log_level=self.log_level
                 )
                 tries += 1
+
+        print(self.elevenlabs_voice_ids)
 
     # Generates unique sentences for TTS 
     def _generate_random_sentence(self) -> str:
