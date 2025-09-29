@@ -740,12 +740,12 @@ class TTSHandler:
         while tries < max_tries:
             try: 
                 self.elevenlabs_voice_ids = self._query_voice_ids()
+                print(self.elevenlabs_voice_ids)
                 subnet_logger(
                     severity="TRACE",
                     message=f"Queried ElevenLabs voice ids: {self.elevenlabs_voice_ids}. Length: {len(self.elevenlabs_voice_ids)}",
                     log_level=self.log_level
                 )
-                print(self.elevenlabs_voice_ids)
                 return
 
             except Exception as e:
