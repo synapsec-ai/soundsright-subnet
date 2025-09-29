@@ -852,6 +852,8 @@ class TTSHandler:
         self.rs = RandomSentence(
             rng=self.rng
         )
+        
+        self.get_all_elevenlabs_voice_ids()
             
         for sample_rate in self.sample_rates: 
             self.create_elevenlabs_tts_dataset(

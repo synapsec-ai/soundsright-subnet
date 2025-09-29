@@ -13,8 +13,8 @@ parser.add_argument(
     type=int,
     help="Sample rate must be an int, default is 16000.",
     required=False,
-    choices=[16000],
-    default=16000
+    choices=[16000, 48000],
+    default=48000
 )
 parser.add_argument(
     "--n",
