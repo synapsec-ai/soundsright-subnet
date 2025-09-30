@@ -1168,7 +1168,7 @@ def reset_model(port, log_level, timeout=30) -> bool:
         res = requests.post(url, timeout=timeout)
         if res.status_code==200:
             data = res.json()
-            return data['reset']
+            return data['status']
         return False
     except Exception as e:
         Utils.subnet_logger(

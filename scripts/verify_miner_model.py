@@ -133,6 +133,15 @@ def initialize_run_and_benchmark_model(model_namespace, model_name, model_revisi
         shutil.rmtree(model_output_dir)
         return False
     logging.info("Enhanced audio download successful.")
+
+    logging.info("Resetting model contents for another batch of enhancement:")
+    if not Utils.reset_model(port=6500, log_level="TRACE"):
+        logging.error("Could not reset model. Please check your /reset/ endpoint.")
+        Utils.delete_container(use_docker=False, log_level="TRACE")
+        shutil.rmtree(model_dir)
+        shutil.rmtree(model_output_dir)
+        return False
+    logging.info("Model reset successful.")
     
     Utils.delete_container(use_docker=False, log_level="TRACE")
     
