@@ -225,6 +225,13 @@ if __name__ == "__main__":
         help="The path to the CUDA directory",
         default="/usr/local/cuda-12.6"
     )
+
+    parser.add_argument(
+        "--sample_rate",
+        type=int,
+        help="Sample rate the model is fine-tuned for.",
+        default=48000
+    )
     
     args = parser.parse_args()
     
@@ -233,4 +240,5 @@ if __name__ == "__main__":
         model_name=args.model_name,
         model_revision=args.model_revision,
         cuda_directory=args.cuda_directory,
+        sample_rate=args.sample_rate
     )
