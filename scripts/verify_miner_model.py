@@ -63,9 +63,9 @@ def initialize_run_and_benchmark_model(model_namespace: str, model_name: str, mo
         if not os.path.exists(d):
             os.makedirs(d)
 
-    for d in [model_dir, model_output_dir, clean_dir, impure_dir]:
+    for d in [model_dir, model_output_dir, impure_dir]:
         reset_dir(d)
-        
+
     logging.info(f"{model_dir} exists: {os.path.exists(model_dir)}\n{model_output_dir} exists: {os.path.exists(model_output_dir)}")
 
     logging.info("Downloading model:")
