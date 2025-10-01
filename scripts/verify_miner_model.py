@@ -153,6 +153,12 @@ def initialize_run_and_benchmark_model(model_namespace: str, model_name: str, mo
     logging.info("Model reset successful.")
     
     Utils.delete_container(use_docker=False, log_level="TRACE")
+
+    clean_files = sorted([f for f in os.listdir(clean_dir) if f.lower().endswith('.wav')])
+    enhanced_files = sorted([f for f in os.listdir(model_output_dir) if f.lower().endswith('.wav')])
+    noisy_files = sorted([f for f in os.listdir(impure_dir) if f.lower().endswith('.wav')])
+    
+    logging.info(f"Clean files: {clean_files}\nNoisy files: {noisy_files}\nEnhanced files: {enhanced_files}")
     
     logging.info("Checking to make sure that all files were enhanced:")
     if not validate_all_reverb_files_are_enhanced(impure_dir=impure_dir, enhanced_dir=model_output_dir):
@@ -161,12 +167,6 @@ def initialize_run_and_benchmark_model(model_namespace: str, model_name: str, mo
         shutil.rmtree(model_output_dir)
         return False 
     logging.info("File validation successful.")
-    
-    clean_files = sorted([f for f in os.listdir(clean_dir) if f.lower().endswith('.wav')])
-    enhanced_files = sorted([f for f in os.listdir(model_output_dir) if f.lower().endswith('.wav')])
-    noisy_files = sorted([f for f in os.listdir(impure_dir) if f.lower().endswith('.wav')])
-    
-    logging.info(f"Clean files: {clean_files}\nNoisy files: {noisy_files}\nEnhanced files: {enhanced_files}")
     
     logging.info("Calculating metrics:")
     try:
