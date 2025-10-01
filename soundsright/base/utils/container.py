@@ -1168,7 +1168,10 @@ def reset_model(port, log_level, timeout=30) -> bool:
         res = requests.post(url, timeout=timeout)
         if res.status_code==200:
             data = res.json()
-            return data['status']
+            status = data['status']
+            noisy_dir_status = data["noisy"] == []
+            enhanced_dir_status = data["enhanced"] == []
+            return status and noisy_dir_status and enhanced_dir_status
         return False
     except Exception as e:
         Utils.subnet_logger(
