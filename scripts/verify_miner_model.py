@@ -18,16 +18,25 @@ logging.basicConfig(
     ]
 )
 
-def validate_all_reverb_files_are_enhanced(reverb_dir, enhanced_dir):
-    reverb_files = sorted([os.path.basename(f) for f in glob.glob(os.path.join(reverb_dir, '*.wav'))])
+def validate_all_reverb_files_are_enhanced(impure_dir, enhanced_dir):
+    reverb_files = sorted([os.path.basename(f) for f in glob.glob(os.path.join(impure_dir, '*.wav'))])
     enhanced_files = sorted([os.path.basename(f) for f in glob.glob(os.path.join(enhanced_dir, '*.wav'))])
     return reverb_files == enhanced_files
 
-def initialize_run_and_benchmark_model(model_namespace, model_name, model_revision, cuda_directory):
+def initialize_run_and_benchmark_model(model_namespace: str, model_name: str, model_revision: str, cuda_directory: str, sample_rate: int):
+
+    sample_rate = int(sample_rate)
+    if sample_rate not in [16000, 48000]:
+        logging.error(f"Specified sample rate: {sample_rate} is not one of: 16000, 48000")
 
     file_dir = os.path.dirname(os.path.abspath(__file__))
-    clean_dir = os.path.join(file_dir, "assets", "clean")
-    reverb_dir = os.path.join(file_dir, "assets", "reverb")
+
+    if sample_rate == 16000:
+        clean_dir = os.path.join(file_dir, "assets", "clean_16000hz")
+        impure_dir = os.path.join(file_dir, "assets", "impure_16000hz")
+    else: 
+        clean_dir = os.path.join(file_dir, "assets", "clean_48000hz")
+        impure_dir = os.path.join(file_dir, "assets", "impure_48000hz")
     
     output_base_path = os.path.dirname(os.path.abspath(__file__))
     model_dir = os.path.join(output_base_path, "model")
@@ -104,7 +113,7 @@ def initialize_run_and_benchmark_model(model_namespace, model_name, model_revisi
     time.sleep(10)
     
     logging.info("Uploading audio:")
-    if not Utils.upload_audio(port=6500, noisy_dir=reverb_dir, log_level="TRACE", timeout=300):
+    if not Utils.upload_audio(port=6500, noisy_dir=impure_dir, log_level="TRACE", timeout=300):
         logging.error("Reverb audio upload failed. Please check your /upload-audio/ endpoint.")
         Utils.delete_container(use_docker=False, log_level="TRACE")
         shutil.rmtree(model_dir)
@@ -146,7 +155,7 @@ def initialize_run_and_benchmark_model(model_namespace, model_name, model_revisi
     Utils.delete_container(use_docker=False, log_level="TRACE")
     
     logging.info("Checking to make sure that all files were enhanced:")
-    if not validate_all_reverb_files_are_enhanced(reverb_dir=reverb_dir, enhanced_dir=model_output_dir):
+    if not validate_all_reverb_files_are_enhanced(impure_dir=impure_dir, enhanced_dir=model_output_dir):
         logging.error("Mismatch between reverb files and enhanced files. Your model did not return all of the audio files it was expected to.")
         shutil.rmtree(model_dir)
         shutil.rmtree(model_output_dir)
@@ -155,7 +164,7 @@ def initialize_run_and_benchmark_model(model_namespace, model_name, model_revisi
     
     clean_files = sorted([f for f in os.listdir(clean_dir) if f.lower().endswith('.wav')])
     enhanced_files = sorted([f for f in os.listdir(model_output_dir) if f.lower().endswith('.wav')])
-    noisy_files = sorted([f for f in os.listdir(reverb_dir) if f.lower().endswith('.wav')])
+    noisy_files = sorted([f for f in os.listdir(impure_dir) if f.lower().endswith('.wav')])
     
     logging.info(f"Clean files: {clean_files}\nNoisy files: {noisy_files}\nEnhanced files: {enhanced_files}")
     
@@ -165,7 +174,7 @@ def initialize_run_and_benchmark_model(model_namespace, model_name, model_revisi
             sample_rate=16000,
             clean_directory=clean_dir,
             enhanced_directory=model_output_dir,
-            noisy_directory=reverb_dir,
+            noisy_directory=impure_dir,
             log_level="TRACE",
         )
         logging.info(f"Calculated model performance benchmarks: {metrics_dict}")
