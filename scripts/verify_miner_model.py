@@ -18,6 +18,24 @@ logging.basicConfig(
     ]
 )
 
+def reset_dir(directory):
+    # Check if the directory exists
+    if not os.path.exists(directory):
+        return
+
+    # Loop through all the files and subdirectories in the directory
+    for filename in os.listdir(directory):
+        file_path = os.path.join(directory, filename)
+        
+        # Check if it's a file or directory and remove accordingly
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)  # Remove the file or link
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)  # Remove the directory and its contents
+        except Exception as e:
+            logging.error(f"Exception when resetting directory: {e}")
+
 def validate_all_reverb_files_are_enhanced(impure_dir, enhanced_dir):
     reverb_files = sorted([os.path.basename(f) for f in glob.glob(os.path.join(impure_dir, '*.wav'))])
     enhanced_files = sorted([os.path.basename(f) for f in glob.glob(os.path.join(enhanced_dir, '*.wav'))])
@@ -44,7 +62,10 @@ def initialize_run_and_benchmark_model(model_namespace: str, model_name: str, mo
     for d in [model_dir, model_output_dir]:
         if not os.path.exists(d):
             os.makedirs(d)
-            
+
+    for d in [model_dir, model_output_dir, clean_dir, impure_dir]:
+        reset_dir(d)
+        
     logging.info(f"{model_dir} exists: {os.path.exists(model_dir)}\n{model_output_dir} exists: {os.path.exists(model_output_dir)}")
 
     logging.info("Downloading model:")
