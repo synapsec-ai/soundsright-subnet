@@ -186,7 +186,7 @@ def initialize_run_and_benchmark_model(model_namespace: str, model_name: str, mo
     
     return True 
 
-def verify_miner_model(model_namespace, model_name, model_revision, cuda_directory, sample_rate=sample_rate): 
+def verify_miner_model(model_namespace, model_name, model_revision, cuda_directory, sample_rate): 
     
     logging.info(f"Starting verificaiton for model: huggingface.co/{model_namespace}/{model_name}/tree/{model_revision}")
     
