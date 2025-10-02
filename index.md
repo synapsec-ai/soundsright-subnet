@@ -20,7 +20,7 @@ Miners in the subnet will upload their fine-tuned models to HuggingFace, and the
 
 The table below outlines the two-day competitions currently being held by the subnet. Competitions are distinguished by the sample rate of the testing data, the task and the metric used for benchmarking.
 
-| Sample Rate | Task | Benchmarking Metric | % of Total Weights | 
+| Sample Rate | Task | Benchmarking Metric | % of Total Scores | 
 | ----------- | ---- | ------ | --------------------------- |
 | 16 kHz | Denoising | PESQ | 15 |
 | 16 kHz | Denoising | ESTOI | 12.5 |

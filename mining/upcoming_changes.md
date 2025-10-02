@@ -87,7 +87,7 @@ The metrics used for benchmarking will now depend on the task/sample rate:
 
 This will result in a grand total of 10 competitions--the same as before, but spread out differently.
 
-The weights assigned to the scores of different competition winners will also change:
+The total available scores of different competitions will also change:
 
 | Sample Rate | Task | Benchmarking Metric | % of Total Score | 
 | ----------- | ---- | ------------------- | ---------------- |
