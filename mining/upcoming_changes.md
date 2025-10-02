@@ -78,13 +78,12 @@ Models will not be benchmarked if this endpoint is not provided, so please ensur
 
 The metrics used for benchmarking will now depend on the task/sample rate:
 
-**Denoising, 16kHz**: PESQ, ESTOI
-
-**Dereverberation, 16kHz**: PESQ, ESTOI
-
-**Denoising, 48kHz**: SI-SIR, SI-SAR, SI-SDR, ESTOI
-
-**Dereverberation, 48kHz**: SI-SDR, ESTOI
+| Task + Sample Rate | Metrics |
+| ------------------ | ------- |
+| Denoising, 16kHz | PESQ, ESTOI |
+| Dereverberation, 16kHz | PESQ, ESTOI |
+ |Denoising, 48kHz | SI-SIR, SI-SAR, SI-SDR, ESTOI |
+| Dereverberation, 48kHz | SI-SDR, ESTOI |
 
 This will result in a grand total of 10 competitions--the same as before, but spread out differently.
 
