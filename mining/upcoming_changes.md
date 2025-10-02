@@ -18,7 +18,7 @@ Mining on the subnet will change in the following ways:
 
 If you wish to generate datasets ahead of the update, the `generate_dataset.py` script in the `release/2.0.0` branch of the subnet repository has already been updated. Add your ElevenLabs API key to the .env file and you should be good to go. 
 
-Keep in mind that the following input arguments should be adjusted, on top of the ones already specified in the [generate dataset](generate_dataset.html) portion of the docs:
+Keep in mind that the following input arguments should be adjusted, on top of the ones already specified in the [generate dataset](generate_data.html) portion of the docs:
 
 | Argument | Description | Always Required |
 | :------: | :---------: | :--: | :------: |
