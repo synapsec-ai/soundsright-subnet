@@ -1,5 +1,5 @@
 ---
-title: Upcoming Changes with 48 kHz Competitions
+title: Upcoming Changes for v2.0.0
 parent: Mining
 nav_order: 5
 layout: page
@@ -23,7 +23,7 @@ Keep in mind that the following input arguments should be adjusted, on top of th
 | Argument | Description | Always Required |
 | :------: | :---------: | :--: | :------: |
 | --sample_rate | Sample rate, either 16000 or 48000. Default is 48000. | No |
-| --output_format | If your ElevenLabs subscription is below that of a Pro plan, you will need to adjust this to output MP3 (this will automatically get converted to .wav). Your input will be one of: mp3_44100_32, mp3_44100_64, mp3_44100_96, mp3_44100_128 or mp3_44100_192. The last portion of the input signifies the bitrate of the output audio. If you have a Pro Plan or above, ignore this section. The default is: pcm_44100 |  Yes |
+| --output_format | If your ElevenLabs subscription is below that of a Pro plan, you will need to adjust this to output MP3 (this will automatically get converted to .wav). Your input will be one of: mp3_44100_32, mp3_44100_64, mp3_44100_96, mp3_44100_128 or mp3_44100_192. The last portion of the input signifies the bitrate of the output audio. If you have a Pro Plan or above, ignore this section. The default is: pcm_44100 | No |
 
 ### Model Formatting
 
@@ -79,8 +79,11 @@ Models will not be benchmarked if this endpoint is not provided, so please ensur
 The metrics used for benchmarking will now depend on the task/sample rate:
 
 **Denoising, 16kHz**: PESQ, ESTOI
+
 **Dereverberation, 16kHz**: PESQ, ESTOI
+
 **Denoising, 48kHz**: SI-SIR, SI-SAR, SI-SDR, ESTOI
+
 **Dereverberation, 48kHz**: SI-SDR, ESTOI
 
 This will result in a grand total of 10 competitions--the same as before, but spread out differently.
