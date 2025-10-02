@@ -192,10 +192,11 @@ def initialize_run_and_benchmark_model(model_namespace: str, model_name: str, mo
     logging.info("Calculating metrics:")
     try:
         metrics_dict = Benchmarking.calculate_metrics_dict(
-            sample_rate=16000,
+            sample_rate=sample_rate,
             clean_directory=clean_dir,
             enhanced_directory=model_output_dir,
             noisy_directory=impure_dir,
+            task="denoising"
             log_level="TRACE",
         )
         logging.info(f"Calculated model performance benchmarks: {metrics_dict}")
