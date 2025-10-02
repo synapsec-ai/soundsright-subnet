@@ -91,16 +91,16 @@ The weights assigned to the scores of different competition winners will also ch
 
 | Sample Rate | Task | Benchmarking Metric | % of Total Score | 
 | ----------- | ---- | ------------------- | ---------------- |
-| 16 kHz | Denoising | PESQ |  |
-| 16 kHz | Denoising | ESTOI |  |
-| 16 kHz | Dereverberation | PESQ |  |
-| 16 kHz | Dereverberation | ESTOI |  |
-| 48 kHz | Denoising | ESTOI |  |
-| 48 kHz | Denoising | SI-SDR |  |
-| 48 kHz | Denoising | SI-SAR |  |
-| 48 kHz | Denoising | SI-SIR |  |
-| 48 kHz | Dereverberation | ESTOI |  |
-| 48 kHz | Dereverberation | SI-SDR |  |
+| 16 kHz | Denoising | PESQ | 7.8 |
+| 16 kHz | Denoising | ESTOI | 5.2 |
+| 16 kHz | Dereverberation | PESQ | 7.2 |
+| 16 kHz | Dereverberation | ESTOI | 4.8 |
+| 48 kHz | Denoising | ESTOI | 20 |
+| 48 kHz | Denoising | SI-SDR | 10 |
+| 48 kHz | Denoising | SI-SAR | 10 |
+| 48 kHz | Denoising | SI-SIR | 10 |
+| 48 kHz | Dereverberation | ESTOI | 15 |
+| 48 kHz | Dereverberation | SI-SDR | 10 |
 
 ## Changes for Validators
 
