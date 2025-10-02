@@ -422,7 +422,8 @@ def generate_dataset_for_miner(
     reverb_data_dir: str | None = None, 
     noise_data_dir: str | None = None, 
     noise_dir: str | None = None, 
-    reverb_dir: str | None = None
+    reverb_dir: str | None = None,
+    output_format: str = "pcm_44100",
 ) -> None:
     """Function to generate fine-tuning datasets for miners.
 
@@ -458,7 +459,8 @@ def generate_dataset_for_miner(
         
     tts_handler = Data.TTSHandler(
         tts_base_path=clean_dir, 
-        sample_rates = [sample_rate]
+        sample_rates = [sample_rate],
+        output_format=output_format
     )
 
     tts_handler.get_all_elevenlabs_voice_ids()
@@ -466,7 +468,7 @@ def generate_dataset_for_miner(
     tts_handler.create_elevenlabs_tts_dataset(
         sample_rate = sample_rate,
         n=n,
-        for_miner=True
+        for_miner=True,
     )
     
     if task.lower() == "denoising":

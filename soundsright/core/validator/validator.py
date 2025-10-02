@@ -106,43 +106,33 @@ class SubnetValidator(Base.BaseNeuron):
             'DEREVERBERATION_48000HZ':[],
         }
         self.competition_max_scores = {
-            'DENOISING_16000HZ':13,
-            'DEREVERBERATION_16000HZ':13,
-            'DENOISING_16000HZ_remainder':2,
+            'DENOISING_16000HZ':10,
+            'DEREVERBERATION_16000HZ':10,
+            'DENOISING_16000HZ_remainder':3,
             'DEREVERBERATION_16000HZ_remainder':2,
-            'DENOISING_48000HZ':30,
-            'DEREVERBERATION_48000HZ':30,
+            'DENOISING_48000HZ':45,
+            'DEREVERBERATION_48000HZ':20,
             'DENOISING_48000HZ_remainder':5,
             'DEREVERBERATION_48000HZ_remainder':5,
         }
         self.metric_proportions = {
             "DENOISING_16000HZ":{
-                "PESQ":0.3,
-                "ESTOI":0.25,
-                "SI_SDR":0.15,
-                "SI_SIR":0.15,
-                "SI_SAR":0.15,
+                "PESQ":0.6,
+                "ESTOI":0.4,
             },
             "DEREVERBERATION_16000HZ":{
-                "PESQ":0.3,
-                "ESTOI":0.25,
-                "SI_SDR":0.15,
-                "SI_SIR":0.15,
-                "SI_SAR":0.15,
+                "PESQ":0.6,
+                "ESTOI":0.4,
             },
             "DENOISING_48000HZ":{
-                "PESQ":0.3,
-                "ESTOI":0.25,
-                "SI_SDR":0.15,
-                "SI_SIR":0.15,
-                "SI_SAR":0.15,
+                "ESTOI":0.4,
+                "SI_SDR":0.2,
+                "SI_SIR":0.2,
+                "SI_SAR":0.2,
             },
             "DEREVERBERATION_48000HZ":{
-                "PESQ":0.3,
-                "ESTOI":0.25,
-                "SI_SDR":0.15,
-                "SI_SIR":0.15,
-                "SI_SAR":0.15,
+                "ESTOI":0.6,
+                "SI_SDR":0.4,
             },
         }
         self.competition_scores = {
