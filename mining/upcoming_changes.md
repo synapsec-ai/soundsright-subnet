@@ -90,7 +90,7 @@ This will result in a grand total of 10 competitions--the same as before, but sp
 The weights assigned to the scores of different competition winners will also change:
 
 | Sample Rate | Task | Benchmarking Metric | % of Total Score | 
-| ----------- | ---- | ------ | --------------------------- |
+| ----------- | ---- | ------------------- | ---------------- |
 | 16 kHz | Denoising | PESQ |  |
 | 16 kHz | Denoising | ESTOI |  |
 | 16 kHz | Dereverberation | PESQ |  |
