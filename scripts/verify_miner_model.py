@@ -196,7 +196,7 @@ def initialize_run_and_benchmark_model(model_namespace: str, model_name: str, mo
             clean_directory=clean_dir,
             enhanced_directory=model_output_dir,
             noisy_directory=impure_dir,
-            task="denoising"
+            task="denoising",
             log_level="TRACE",
         )
         logging.info(f"Calculated model performance benchmarks: {metrics_dict}")
