@@ -72,7 +72,11 @@ And a new function, ModelAPI.reset, must be added:
         return {"status": True, "noisy": os.listdir(self.noisy_audio_path), "enhanced": os.listdir(self.enhanced_audio_path)}
 ```
 
-Models will not be benchmarked if this endpoint is not provided, so please ensure that all of your models are up to date.
+Models will not be benchmarked if this endpoint is not provided, so please ensure that all of your models are up to date. The `scripts/verify_miner_model.py` script has been updated in the `release/2.0.0` branch of the subnet repo if you wish to check that your model is up-to-date. 
+
+For the model verification script, do note that the --sample_rate argument has been added to the list of input arguments for the script. The available options are 16000 and 48000.
+
+The other arguments have remained the same, as outlined in the [model formatting docs](model_formatting.html).
 
 ### Updated Scoring Mechanism
 
