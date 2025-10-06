@@ -501,6 +501,28 @@ class ModelEvaluationHandler:
                 if cache_entry and isinstance(cache_entry, dict):
 
                     if result: 
+
+                        Utils.subnet_logger(
+                            severity="TRACE",
+                            message=f"Calculating model benchmarks for sample rate: {sample_rate} and task: {task}",
+                            log_level=self.log_level
+                        )
+                        Utils.subnet_logger(
+                            severity="TRACE",
+                            message=f"Clean path: {tts_path}. Files in clean path: {os.listdir(tts_path)}",
+                            log_level=self.log_level
+                        )
+                        Utils.subnet_logger(
+                            severity="TRACE",
+                            message=f"Noisy path: {dataset_path}. Files in noisy path: {os.listdir(dataset_path)}",
+                            log_level=self.log_level
+                        )
+                        Utils.subnet_logger(
+                            severity="TRACE",
+                            message=f"Model output path: {model_output_path}. Files in path: {os.listdir(model_output_path)}",
+                            log_level=self.log_level
+                        )
+
                         metrics_dict = Benchmarking.calculate_metrics_dict(
                             clean_directory=tts_path,
                             enhanced_directory=model_output_path,
