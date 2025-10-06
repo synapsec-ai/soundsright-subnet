@@ -271,6 +271,8 @@ class SubnetMiner(Base.BaseNeuron):
             self.miner_model_data = {
                 "DENOISING_16000HZ":None,
                 "DEREVERBERATION_16000HZ":None,
+                "DENOISING_48000HZ":None,
+                "DEREVERBERATION_48000HZ":None
             }
 
     def update_miner_model_data(self):
