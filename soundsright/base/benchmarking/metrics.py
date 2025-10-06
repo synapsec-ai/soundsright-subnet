@@ -564,7 +564,11 @@ def calculate_metrics_dict(task: str, sample_rate: int, clean_directory: str, en
                 sample_rate=sample_rate,
                 log_level=log_level,
             )
-        except:
+        except Exception as e:
+            Utils.subnet_logger(
+                severity="ERROR",
+                message=f"Error calculating PESQ: {e}"
+            )
             metrics_dict['PESQ'] = {}
             
         try:
@@ -575,7 +579,11 @@ def calculate_metrics_dict(task: str, sample_rate: int, clean_directory: str, en
                 sample_rate=sample_rate,
                 log_level=log_level,
             )
-        except:
+        except Exception as e:
+            Utils.subnet_logger(
+                severity="ERROR",
+                message=f"Error calculating ESTOI: {e}"
+            )
             metrics_dict['ESTOI'] = {}
 
     elif sample_rate == 48000:
@@ -591,7 +599,11 @@ def calculate_metrics_dict(task: str, sample_rate: int, clean_directory: str, en
                     sample_rate=sample_rate,
                     log_level=log_level,
                 )
-            except:
+            except Exception as e:
+                Utils.subnet_logger(
+                    severity="ERROR",
+                    message=f"Error calculating SI-SIR: {e}"
+                )
                 metrics_dict['SI_SIR'] = {}
             
             try:
@@ -603,7 +615,11 @@ def calculate_metrics_dict(task: str, sample_rate: int, clean_directory: str, en
                     sample_rate=sample_rate,
                     log_level=log_level,
                 )
-            except:
+            except Exception as e:
+                Utils.subnet_logger(
+                    severity="ERROR",
+                    message=f"Error calculating SI-SAR: {e}"
+                )
                 metrics_dict['SI_SAR'] = {}
 
         try:
@@ -615,7 +631,11 @@ def calculate_metrics_dict(task: str, sample_rate: int, clean_directory: str, en
                 sample_rate=sample_rate,
                 log_level=log_level,
             )
-        except:
+        except Exception as e:
+            Utils.subnet_logger(
+                severity="ERROR",
+                message=f"Error calculating SI-SDR: {e}"
+            )
             metrics_dict['SI_SDR'] = {}
             
         try:
@@ -626,7 +646,11 @@ def calculate_metrics_dict(task: str, sample_rate: int, clean_directory: str, en
                 sample_rate=sample_rate,
                 log_level=log_level,
             )
-        except:
+        except Exception as e:
+            Utils.subnet_logger(
+                severity="ERROR",
+                message=f"Error calculating ESTOI: {e}"
+            )
             metrics_dict['ESTOI'] = {}
     
     return metrics_dict
