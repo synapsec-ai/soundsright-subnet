@@ -1757,7 +1757,7 @@ class SubnetValidator(Base.BaseNeuron):
                                 self.healthcheck_api.append_metric(metric_name="responses.total_valid_responses", value=1)
                                 
                                 # In case that synapse response is not formatted correctly and no known historical data:
-                                if not Utils.validate_miner_response(response.data):
+                                if not Utils.validate_miner_response(response.data, debug_mode=self.debug_mode):
                                     self.neuron_logger(
                                         severity="DEBUG",
                                         message=f"Miner response is invalid: {response.data}"

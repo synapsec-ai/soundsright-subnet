@@ -66,7 +66,7 @@ def validate_uid(uid):
         return False
     return True
     
-def validate_miner_response(response):
+def validate_miner_response(response, debug_mode=False):
     
     validation_dict = {
         'hf_model_namespace':str,
@@ -84,7 +84,7 @@ def validate_miner_response(response):
         if k not in validation_dict.keys() or not isinstance(response[k], validation_dict[k]) or response[k] == "":
             return False
         
-    if response["hf_model_namespace"] == "synapsecai":
+    if not debug_mode and response["hf_model_namespace"] == "synapsecai":
         return False
     
     return True
