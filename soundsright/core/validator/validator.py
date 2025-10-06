@@ -1050,6 +1050,8 @@ class SubnetValidator(Base.BaseNeuron):
             scores=self.scores,
             competition_scores_DENOISING_16000HZ=self.competition_scores['DENOISING_16000HZ'],
             competition_scores_DEREVERBERATION_16000HZ=self.competition_scores['DEREVERBERATION_16000HZ'],
+            competition_scores_DENOISING_48000HZ=self.competition_scores['DENOISING_48000HZ'],
+            competititon_scores_DEREVERBERATION_48000HZ=self.competition_scores['DEREVERBERATION_48000HZ'],
             hotkeys=self.hotkeys,
             last_updated_block=self.last_updated_block,
             next_competition_timestamp=self.next_competition_timestamp,
@@ -1176,7 +1178,9 @@ class SubnetValidator(Base.BaseNeuron):
                 
                 self.competition_scores = {
                     "DENOISING_16000HZ": state['competition_scores_DENOISING_16000HZ'],
-                    "DEREVERBERATION_16000HZ": state['competition_scores_DEREVERBERATION_16000HZ']
+                    "DEREVERBERATION_16000HZ": state['competition_scores_DEREVERBERATION_16000HZ'],
+                    "DENOISING_48000HZ": state['competition_scores_DENOISING_48000HZ'],
+                    "DEREVERBERATION_48000HZ": state['competition_scores_DEREVERBERATION_48000HZ'],
                 }
                 
                 self.neuron_logger(
@@ -1260,11 +1264,15 @@ class SubnetValidator(Base.BaseNeuron):
                 self.miner_models = {
                     'DENOISING_16000HZ':[],
                     'DEREVERBERATION_16000HZ':[],
+                    'DENOISING_48000HZ':[],
+                    'DEREVERBERATION_48000HZ':[],
                 }
         else:
             self.miner_models = {
                 'DENOISING_16000HZ':[],
                 'DEREVERBERATION_16000HZ':[],
+                'DENOISING_48000HZ':[],
+                'DEREVERBERATION_48000HZ':[],
             }
                 
         best_miner_models_filepath = os.path.join(self.cache_path, "best_miner_models.pickle")
@@ -1285,12 +1293,16 @@ class SubnetValidator(Base.BaseNeuron):
                 self.best_miner_models = {
                     'DENOISING_16000HZ':[],
                     'DEREVERBERATION_16000HZ':[],
+                    'DENOISING_48000HZ':[],
+                    'DEREVERBERATION_48000HZ':[],
                 }
         else:
             self.best_miner_models = {
-            'DENOISING_16000HZ':[],
-            'DEREVERBERATION_16000HZ':[],
-        }
+                'DENOISING_16000HZ':[],
+                'DEREVERBERATION_16000HZ':[],
+                'DENOISING_48000HZ':[],
+                'DEREVERBERATION_48000HZ':[],
+            }
             
         blacklisted_miner_models_filepath = os.path.join(self.cache_path, "blacklisted_miner_models.pickle")
         if os.path.exists(blacklisted_miner_models_filepath):
@@ -1310,11 +1322,15 @@ class SubnetValidator(Base.BaseNeuron):
                 self.blacklisted_miner_models = {
                     'DENOISING_16000HZ':[],
                     'DEREVERBERATION_16000HZ':[],
+                    'DENOISING_48000HZ':[],
+                    'DEREVERBERATION_48000HZ':[],
                 }
         else:
             self.blacklisted_miner_models = {
                 'DENOISING_16000HZ':[],
                 'DEREVERBERATION_16000HZ':[],
+                'DENOISING_48000HZ':[],
+                'DEREVERBERATION_48000HZ':[],
             }
 
     @Utils.timeout_decorator(timeout=30)
@@ -1681,6 +1697,8 @@ class SubnetValidator(Base.BaseNeuron):
         self.model_cache = {
             "DENOISING_16000HZ":[],
             "DEREVERBERATION_16000HZ":[],
+            'DENOISING_48000HZ':[],
+            'DEREVERBERATION_48000HZ':[],
         }
         
         # Initialize asyncio loop
