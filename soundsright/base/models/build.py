@@ -94,7 +94,7 @@ class ModelBuilder:
         self.eval_cache = {}
 
         # Timeouts
-        self.base_timeout = 450
+        self.base_timeout = 475
         self.timeout_multipliers = [1, 0.65, 0.5, 0.5, 0.5, 0.5]
         self.timeout = 1500
 
@@ -376,7 +376,7 @@ class ModelBuilder:
                     
                     # Find block that metadata was uploaded to chain for all models with identical directory hash
                     model_blocks_with_same_hash = []
-                    for model_data in self.miner_models:
+                    for model_data in self.miner_models[comp]:
                         if model_data['model_hash'] == model_hash:
                             model_blocks_with_same_hash.append(model_data['block'])
                     
