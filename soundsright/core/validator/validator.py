@@ -1109,6 +1109,8 @@ class SubnetValidator(Base.BaseNeuron):
         self.competition_scores = {
             "DENOISING_16000HZ":None,
             "DEREVERBERATION_16000HZ":None,
+            "DENOISING_48000HZ":None,
+            "DEREVERBERATION_48000HZ":None,
         }
         for competition in self.competition_scores.keys():
             self.competition_scores[competition] = np.zeros_like(self.metagraph.S, dtype=np.float32)
