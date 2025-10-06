@@ -214,7 +214,7 @@ class SubnetMiner(Base.BaseNeuron):
             hotkey=hotkey, 
         ))
 
-        if bytes_tuple and len(bytes_tuple == 32):
+        if bytes_tuple and len(bytes_tuple) == 32:
 
             # Convert commitment bytes to list of trusted UIDs
             trusted_uids = []
