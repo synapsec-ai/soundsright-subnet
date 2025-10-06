@@ -135,7 +135,12 @@ def calculate_si_sdr_for_directories(clean_directory: str, enhanced_directory: s
             si_sdr_score = float(energy_ratios(enhanced_audio, clean_audio, noise)[0])
             si_sdr_scores.append(si_sdr_score)
         
-        except:
+        except Exception as e:
+            Utils.subnet_logger(
+                severity="ERROR",
+                message=f"Exception occured during calculation of SI-SDR: {e}",
+                log_level=log_level
+            )
             continue
 
     if not si_sdr_scores:
@@ -231,7 +236,12 @@ def calculate_si_sir_for_directories(clean_directory: str, enhanced_directory: s
             si_sir_score = float(energy_ratios(enhanced_audio, clean_audio, noise)[1])
             si_sir_scores.append(si_sir_score)
         
-        except:
+        except Exception as e:
+            Utils.subnet_logger(
+                severity="ERROR",
+                message=f"Exception occured during calculation of SI-SIR: {e}",
+                log_level=log_level
+            )
             continue
 
     if not si_sir_scores:
@@ -326,7 +336,12 @@ def calculate_si_sar_for_directories(clean_directory: str, enhanced_directory: s
             # Calculate the SI_SAR score
             si_sar_score = float(energy_ratios(enhanced_audio, clean_audio, noise)[2])
             si_sar_scores.append(si_sar_score)
-        except:
+        except Exception as e:
+            Utils.subnet_logger(
+                severity="ERROR",
+                message=f"Exception occured during calculation of SI-SAR: {e}",
+                log_level=log_level
+            )
             continue
 
     if not si_sar_scores:
@@ -427,6 +442,11 @@ def calculate_pesq_for_directories(clean_directory: str, enhanced_directory: str
             
             pesq_scores.append(pesq_score)
         except Exception as e:
+            Utils.subnet_logger(
+                severity="ERROR",
+                message=f"Exception occured during calculation of PESQ: {e}",
+                log_level=log_level
+            )
             continue
 
     if not pesq_scores:
@@ -515,7 +535,12 @@ def calculate_estoi_for_directories(clean_directory: str, enhanced_directory: st
             # Calculate the ESTOI score
             estoi_score = float(stoi(x=clean_audio, y=enhanced_audio, fs_sig=sample_rate))
             estoi_scores.append(estoi_score)
-        except:
+        except Exception as e:
+            Utils.subnet_logger(
+                severity="ERROR",
+                message=f"Exception occured during calculation of ESTOI: {e}",
+                log_level=log_level
+            )
             continue
 
     if not estoi_scores:
