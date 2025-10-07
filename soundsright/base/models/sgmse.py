@@ -218,7 +218,7 @@ class SGMSEHandler:
                 log_level=self.log_level
             )
             
-            Utils.delete_container(port=6500, log_level=self.log_level)
+            Utils.delete_container(use_docker=self.use_docker, log_level=self.log_level)
             return False
             
         Utils.subnet_logger(
