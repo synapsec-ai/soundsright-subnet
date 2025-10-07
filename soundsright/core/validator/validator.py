@@ -1977,7 +1977,7 @@ class SubnetValidator(Base.BaseNeuron):
                 message=f"Evaluation expected to end at: {completion_ref}. Next competition timestamp: {self.next_competition_timestamp}"
             )
 
-            if completion_ref >= self.next_competition_timestamp:
+            if completion_ref >= self.next_competition_timestamp and not self.debug_mode:
 
                 self.neuron_logger(
                     severity="TRACE",
