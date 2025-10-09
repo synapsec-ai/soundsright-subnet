@@ -125,7 +125,7 @@ class ModelEvaluationHandler:
 
         sr_multiplier = 1
         if sample_rate==48000:
-            sr_multiplier = 1.5
+            sr_multiplier = 1.75
 
         timeouts = {}
         index = concurrent_length - 1
