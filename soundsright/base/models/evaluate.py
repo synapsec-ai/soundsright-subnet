@@ -265,7 +265,7 @@ class ModelEvaluationHandler:
 
         tag_name = f"{hotkey}_{competition}".lower()
         competition_components = competition.split("_")
-        task, sample_rate = competition_components[0], int(competition_components[1].replace("HZ", ""))
+        task, sample_rate = competition_components[0], competition_components[1].replace("HZ", "")
 
         Utils.subnet_logger(
             severity="INFO",
@@ -282,7 +282,7 @@ class ModelEvaluationHandler:
 
         self.prepare_directory(dir_path=model_output_path)
 
-        timeouts = self.calculate_timeouts(concurrent_length=concurrent_length, sample_rate=sample_rate)
+        timeouts = self.calculate_timeouts(concurrent_length=concurrent_length, sample_rate=int(sample_rate))
 
         Utils.subnet_logger(
             severity="TRACE",
