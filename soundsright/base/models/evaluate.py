@@ -121,7 +121,11 @@ class ModelEvaluationHandler:
         
         return False
 
-    def calculate_timeouts(self, concurrent_length: int):
+    def calculate_timeouts(self, concurrent_length: int, sample_rate: int):
+
+        sr_multiplier = 1
+        if sample_rate==48000:
+            sr_multiplier = 1.25
 
         timeouts = {}
         index = concurrent_length - 1
@@ -133,8 +137,10 @@ class ModelEvaluationHandler:
             concurrent_length = 3
 
         for key in self.base_timeouts.keys():
-
-            timeouts[key] = self.base_timeouts[key] * self.timeout_multipliers[key][index] * concurrent_length
+            if key == "enhance":
+                timeouts[key] = self.base_timeouts[key] * self.timeout_multipliers[key][index] * concurrent_length * sr_multiplier
+            else: 
+                timeouts[key] = self.base_timeouts[key] * self.timeout_multipliers[key][index] * concurrent_length
 
         Utils.subnet_logger(
             severity="TRACE",
@@ -259,7 +265,7 @@ class ModelEvaluationHandler:
 
         tag_name = f"{hotkey}_{competition}".lower()
         competition_components = competition.split("_")
-        task, sample_rate = competition_components[0], competition_components[1].replace("HZ", "")
+        task, sample_rate = competition_components[0], int(competition_components[1].replace("HZ", ""))
 
         Utils.subnet_logger(
             severity="INFO",
@@ -276,7 +282,7 @@ class ModelEvaluationHandler:
 
         self.prepare_directory(dir_path=model_output_path)
 
-        timeouts = self.calculate_timeouts(concurrent_length=concurrent_length)
+        timeouts = self.calculate_timeouts(concurrent_length=concurrent_length, sample_rate=sample_rate)
 
         Utils.subnet_logger(
             severity="TRACE",
