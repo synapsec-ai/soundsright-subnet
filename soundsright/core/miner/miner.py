@@ -290,6 +290,11 @@ class SubnetMiner(Base.BaseNeuron):
                 namespace = os.getenv(f"{task}_{sample_rate}_HF_MODEL_NAMESPACE")
                 name = os.getenv(f"{task}_{sample_rate}_HF_MODEL_NAME")
                 revision = os.getenv(f"{task}_{sample_rate}_HF_MODEL_REVISION")
+
+                self.neuron_logger(
+                    severity="TRACE",
+                    message=f".env params: namespace: {namespace}, name: {name}, revision: {revision}"
+                )
                 
                 # If model is specified for this competition
                 if namespace and name and revision: 
