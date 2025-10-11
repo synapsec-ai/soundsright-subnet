@@ -46,7 +46,7 @@ class ModelEvaluationHandler:
         self.competitions_list = competitions_list
         self.ports_list = ports_list
         self.current_ports_list = []
-        self.models_per_iteration = 3
+        self.models_per_iteration = 2
         self.tasks = []
 
         # Timeout calculations
