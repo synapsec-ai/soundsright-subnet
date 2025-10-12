@@ -801,7 +801,7 @@ class TTSHandler:
 
                 audio_seg = AudioSegment(
                     data=audio,
-                    sample_width=2,
+                    sample_width=4,
                     frame_rate=original_sr,
                     channels=1
                 )
