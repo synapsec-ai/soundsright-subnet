@@ -778,6 +778,8 @@ class TTSHandler:
         # voice control
         if voice == 'random' or voice not in self.elevenlabs_voice_ids:
             voice = self.rng.choice(self.elevenlabs_voice_ids)
+
+        original_sr = int(self.output_format.split('_')[-1]) if '_' in self.output_format else 44100
         
         # call with client 
         try:
@@ -800,7 +802,7 @@ class TTSHandler:
                 audio_seg = AudioSegment(
                     data=audio,
                     sample_width=2,
-                    frame_rate=sample_rate,
+                    frame_rate=original_sr,
                     channels=1
                 )
                 audio_seg.export(tts_file_path, format="wav")
