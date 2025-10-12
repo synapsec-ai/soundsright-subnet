@@ -705,6 +705,7 @@ class RandomSentence:
 class TTSHandler:
     
     def __init__(self, tts_base_path: str, sample_rates: List[int], log_level: str = "INFO", print_text: bool=False, output_format: str = "pcm_44100"):
+
         self.print_text=print_text
         self.tts_base_path = tts_base_path
         self.sample_rates = sample_rates
@@ -775,6 +776,14 @@ class TTSHandler:
         
     # Generates one output TTS file at correct sample rate
     def _do_single_elevenlabs_tts_query(self, tts_file_path: str, sample_rate: int, voice: str = 'random'):
+        """
+        Creates TTS data entry with Elevenlabs
+
+        Arguments:
+        - tts_file_path: File path for output data
+        - sample_rate: Sample rate of output (either 16000 or 48000)
+        - voice: Either a valid ElevenLabs voice id, or 'random'. If 'random' is selected a random voice id will be chosen.
+        """
         # voice control
         if voice == 'random' or voice not in self.elevenlabs_voice_ids:
             voice = self.rng.choice(self.elevenlabs_voice_ids)
