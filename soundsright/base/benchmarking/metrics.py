@@ -515,23 +515,12 @@ def calculate_estoi_for_directories(clean_directory: str, enhanced_directory: st
         try:
             clean_audio_path = os.path.join(clean_directory, file_name)
             enhanced_audio_path = os.path.join(enhanced_directory, file_name)
-            Utils.subnet_logger(
-                severity="TRACE",
-                message=f"ESTOI calculation: clean_audio_path: {clean_audio_path}. enhanced_audio_path: {enhanced_audio_path}",
-                log_level=log_level
-            )
             
             # Load the clean audio file
             clean_audio, clean_sr = sf.read(clean_audio_path)
             # Load the enhanced audio file
             enhanced_audio, enhanced_sr = sf.read(enhanced_audio_path)
 
-            Utils.subnet_logger(
-                severity="TRACE",
-                message=f"Clean audio: sr: {clean_sr} len: {len(clean_audio)}. Enhanced audio: sr: {enhanced_sr}. len: {len(enhanced_audio)}",
-                log_level=log_level
-            )
-            
             if clean_sr != enhanced_sr:
                 continue
 
@@ -545,11 +534,6 @@ def calculate_estoi_for_directories(clean_directory: str, enhanced_directory: st
 
             # Calculate the ESTOI score
             estoi_score = float(stoi(x=clean_audio, y=enhanced_audio, fs_sig=sample_rate))
-            Utils.subnet_logger(
-                severity="TRACE",
-                message=f"ESTOI score: {estoi_score}",
-                log_level=log_level
-            )
             estoi_scores.append(estoi_score)
         except Exception as e:
             Utils.subnet_logger(
