@@ -41,6 +41,7 @@ class ModelBuilder:
         next_competition_timestamp: int,
         avg_model_eval_time: int,
         use_docker: bool,
+        debug_mode: bool,
         log_level: str,
     ):
 
@@ -57,6 +58,7 @@ class ModelBuilder:
         self.next_competition_timestamp = next_competition_timestamp
         self.avg_model_eval_time = avg_model_eval_time
         self.use_docker=use_docker
+        self.debug_mode = debug_mode
 
         # Calculations
         self.max_image_count = 0
@@ -346,23 +348,24 @@ class ModelBuilder:
                 log_level=self.log_level
             ))
 
-            if not model_hash or model_hash in self.forbidden_model_hashes:
-                Utils.subnet_logger(
-                    severity="DEBUG",
-                    message=f"Model hash for model: {model_id} with revision: {revision} could not be calculated or is invalid.",
-                    log_level=self.log_level
-                )
-                self._reset_dir(directory=model_dir)
-                return None, None 
+            if not self.debug_mode:
+                if not model_hash or model_hash in self.forbidden_model_hashes:
+                    Utils.subnet_logger(
+                        severity="DEBUG",
+                        message=f"Model hash for model: {model_id} with revision: {revision} could not be calculated or is invalid.",
+                        log_level=self.log_level
+                    )
+                    self._reset_dir(directory=model_dir)
+                    return None, None 
             
-            if not Models.verify_directory_files(directory=model_dir):
-                Utils.subnet_logger(
-                    severity="DEBUG",
-                    message=f"Model: {model_id} with revision: {revision} contains a forbidden file.",
-                    log_level=self.log_level
-                )
-                self._reset_dir(directory=model_dir)
-                return None, None
+                if not Models.verify_directory_files(directory=model_dir):
+                    Utils.subnet_logger(
+                        severity="DEBUG",
+                        message=f"Model: {model_id} with revision: {revision} contains a forbidden file.",
+                        log_level=self.log_level
+                    )
+                    self._reset_dir(directory=model_dir)
+                    return None, None
             
             Utils.subnet_logger(
                 severity="TRACE",

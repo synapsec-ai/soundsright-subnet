@@ -2041,6 +2041,7 @@ class SubnetValidator(Base.BaseNeuron):
                 next_competition_timestamp=self.next_competition_timestamp,
                 avg_model_eval_time=self.avg_model_eval_time,
                 use_docker=self.use_docker,
+                debug_mode=self.debug_mode,
                 log_level=self.log_level,
             )
 
