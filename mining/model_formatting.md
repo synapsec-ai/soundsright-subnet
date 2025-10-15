@@ -8,7 +8,7 @@ layout: page
 
 Models submitted to validators must follow a few formatting guidelines, and we have provided a [template](https://huggingface.co/synapsecai/soundsright-template) for miners to use. Your model will not be scored by validators unless it follows the guidelines exactly.
 
-The `main` branch of this template is what should be modified by miners to create their own models. The branches `DENOISING_16000Hz` and `DEREVERBERATION_16000HZ` serve as tutorials, being fitted with different pretrained checkpoints of [SGMSE+](https://huggingface.co/sp-uhh/speech-enhancement-sgmse). 
+The `main` branch of this template is what should be modified by miners to create their own models. The branches `DENOISING_16000HZ`, `DEREVERBERATION_16000HZ`, `DENOISING_48000HZ`, and `DEREVERBERATION_48000HZ` serve as tutorials, being fitted with different pretrained checkpoints of [SGMSE+](https://huggingface.co/sp-uhh/speech-enhancement-sgmse). 
 
 For detailed instructions on how to format your model, please reference the `README.md` in the `main` branch of the model template.
 
@@ -89,7 +89,7 @@ pip install httpx==0.27.2
 
 Once the installation is complete, run your script with the following command:
 ```
-(.venv) $ python3 scripts/verify_miner_model.py --model_namespace <your_namespace_here> --model_name <your_model_name_here> --model_revision <your_model_revision_here> --cuda_directory <cuda_directory_here>
+(.venv) $ python3 scripts/verify_miner_model.py --model_namespace <your_namespace_here> --model_name <your_model_name_here> --model_revision <your_model_revision_here> --sample_rate <either 16000 or 48000> --cuda_directory <cuda_directory_here> 
 ```
 
 For the `cuda_directory` flag, the default is `/usr/local/cuda-12.6`. If you are running a different version of CUDA you will need to adjust this accordingly.

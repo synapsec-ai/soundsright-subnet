@@ -18,7 +18,7 @@ Generally, mining on the subnet looks like this:
 
 Note that there is **no fine-tuning script contained within the miner neuron itself**--all miners are responsible for fine-tuning their models externally. Miner neurons are only used to communicate model data to validators. 
 
-However this repository does contain scripts which can be used to generate fine-tuning datasets. Note that miners will need to have an OpenAI API key in order for this to work. Please reference the [dataset generation docs](generate_data.html) for more information.
+However this repository does contain scripts which can be used to generate fine-tuning datasets. Note that miners will need to have an ElevenLabs API key in order for this to work. Please reference the [dataset generation docs](generate_data.html) for more information.
 
 Also, **each miner can only submit models for one specific task and sample rate**. If you wish to provide models for multiple tasks and/or sample rates, you will need to register multiple miners.
 
@@ -95,7 +95,7 @@ The contents of the .env file must then be adjusted. The following variables app
 | WALLET | The name of your coldkey. |
 | HOTKEY | The name of your hotkey. |
 | LOG_LEVEL | Specifies the level of logging you will see on the validator. Choose between INFO, INFOX, DEBUG. DEBUGX, TRACE, and TRACEX. |
-| OPENAI_API_KEY | Your OpenAI API key. This is not needed to run the miner, only to generate training datasets. |
+| ELEVENLABS_API_KEY | Your ElevenLabs API key. This is not needed to run the miner, only to generate training datasets. |
 
 In addition to this, the model being submitted to the competition must be specified in the .env file. Specifically, the model namespace, name, and revision must be specified in the .env for the particular competition being entered in by the miner. 
 
@@ -120,21 +120,36 @@ HOTKEY=hotkey_name
 LOG_LEVEL=INFO
 
 # Necessary for dataset generation
-OPENAI_API_KEY=
+ELEVENLABS_API_KEY=
 
 # Miner model specification by task and sample rate. 
 # If you have not fine-tuned a model for a specific task and sample rate, just leave it blank.
 # NOTE: EACH MINER CAN ONLY RESPOND FOR ONE TASK AND ONE SAMPLE RATE. 
 # PLEASE REGISTER ANOTHER MINER IF YOU HAVE ANOTHER MODEL FOR ANOTHER TASK OR SAMPLE RATE.
+
 # 16kHz Sample Rate, Denoising Task
-DENOISING_16000HZ_HF_MODEL_NAMESPACE=synapsecai
-DENOISING_16000HZ_HF_MODEL_NAME=mymodel
-DENOISING_16000HZ_HF_MODEL_REVISION=6bab4cf9116d72c1bc4f8e857e7cd5c40795a882
+DENOISING_16000HZ_HF_MODEL_NAMESPACE=my_hf_username
+DENOISING_16000HZ_HF_MODEL_NAME=my_cool_model
+# REVISION MUST BE A COMMIT HASH
+DENOISING_16000HZ_HF_MODEL_REVISION=09364255b014d5c343fb5910572f39eb6b282dc9
 
 # 16kHz Sample Rate, Dereverberation Task
 DEREVERBERATION_16000HZ_HF_MODEL_NAMESPACE=
 DEREVERBERATION_16000HZ_HF_MODEL_NAME=
+# REVISION MUST BE A COMMIT HASH
 DEREVERBERATION_16000HZ_HF_MODEL_REVISION=
+
+# 48kHz Sample Rate, Denoising Task
+DENOISING_48000HZ_HF_MODEL_NAMESPACE=
+DENOISING_48000HZ_HF_MODEL_NAME=
+# REVISION MUST BE A COMMIT HASH
+DENOISING_48000HZ_HF_MODEL_REVISION=
+
+# 48kHz Sample Rate, Dereverberation Task
+DEREVERBERATION_48000HZ_HF_MODEL_NAMESPACE=
+DEREVERBERATION_48000HZ_HF_MODEL_NAME=
+# REVISION MUST BE A COMMIT HASH
+DEREVERBERATION_48000HZ_HF_MODEL_REVISION=
 
 # HealthCheck API
 HEALTHCHECK_API_HOST=0.0.0.0

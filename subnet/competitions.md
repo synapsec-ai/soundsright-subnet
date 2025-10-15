@@ -23,7 +23,7 @@ The table below denotes a few commonly used sample rates and their applications.
 | 44.1 kHz | A sample rate that covers the entire range of human hearing. | CD's, Spotify, audiobooks |
 | 48 kHz | A sample rate that covers the entire range of human hearing and also divides evenly with video frame rates to make syncing easier. | Films, television, high-quality digital media (live-streaming, Youtube, etc.) |
 
-Currently, the subnet only hosts competitions for 16kHz sample rate, but this will change with future releases. Please reference the [roadmap](roadmap.html) for more information.
+Currently, the subnet hosts competitions for 16kHz and 48kHz sample rates.
 
 ## Tasks
 

@@ -20,18 +20,18 @@ Miners in the subnet will upload their fine-tuned models to HuggingFace, and the
 
 The table below outlines the two-day competitions currently being held by the subnet. Competitions are distinguished by the sample rate of the testing data, the task and the metric used for benchmarking.
 
-| Sample Rate | Task | Benchmarking Metric | % of Total Scores | 
-| ----------- | ---- | ------ | --------------------------- |
-| 16 kHz | Denoising | PESQ | 15 |
-| 16 kHz | Denoising | ESTOI | 12.5 |
-| 16 kHz | Denoising | SI-SDR | 7.5 |
-| 16 kHz | Denoising | SI-SAR | 7.5 |
-| 16 kHz | Denoising | SI-SIR | 7.5 |
-| 16 kHz | Dereverberation | PESQ | 15 |
-| 16 kHz | Dereverberation | ESTOI | 12.5 |
-| 16 kHz | Dereverberation | SI-SDR | 7.5 |
-| 16 kHz | Dereverberation | SI-SAR | 7.5 |
-| 16 kHz | Dereverberation | SI-SIR | 7.5 |
+| Sample Rate | Task | Benchmarking Metric | % of Total Score | 
+| ----------- | ---- | ------------------- | ---------------- |
+| 16 kHz | Denoising | PESQ | 7.8 |
+| 16 kHz | Denoising | ESTOI | 5.2 |
+| 16 kHz | Dereverberation | PESQ | 7.2 |
+| 16 kHz | Dereverberation | ESTOI | 4.8 |
+| 48 kHz | Denoising | ESTOI | 20 |
+| 48 kHz | Denoising | SI-SDR | 10 |
+| 48 kHz | Denoising | SI-SAR | 10 |
+| 48 kHz | Denoising | SI-SIR | 10 |
+| 48 kHz | Dereverberation | ESTOI | 15 |
+| 48 kHz | Dereverberation | SI-SDR | 10 |
 
 For more details about sample rates, tasks and metrics, please reference the [competition docs](subnet/competitions.html).
 

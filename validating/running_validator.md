@@ -98,6 +98,10 @@ pm2 set pm2-logrotate:compress true
 pm2 set pm2-logrotate:retain 7
 ```
 
+#### 2.6 Obtain ElevenLabs API Key
+
+To run the validator, a [Pro Plan with ElevenLabs](https://elevenlabs.io/pricing) is required. You will be asked to enter your API key into the .env file.
+
 ### 3. Preparation
 
 This section covers setting up the repository, virtual environment, regenerating wallets, and setting up environmental variables.
@@ -138,7 +142,7 @@ The contents of the `.env` file must be adjusted according to the validator conf
 | WALLET | The name of your coldkey. |
 | HOTKEY | The name of your hotkey. |
 | LOG_LEVEL | Specifies the level of logging you will see on the validator. Choose between INFO, INFOX, DEBUG. DEBUGX, TRACE, and TRACEX. |
-| OPENAI_API_KEY | Your OpenAI API key. |
+| ELEVENLABS_API_KEY | Your ElevenLabs API key. |
 | CUDA_DIRECTORY | Path that points to the CUDA directory. |
 
 .env example:
@@ -147,7 +151,7 @@ NETUID=105
 SUBTENSOR_CHAIN_ENDPOINT=wss://entrypoint-finney.opentensor.ai:443
 WALLET=my_coldkey
 HOTKEY=my_hotkey
-OPENAI_API_KEY=THIS-IS-AN-OPENAI-API-KEY-wfhwe78r78frfg7e8ghrveh78ehrg
+ELEVENLABS_API_KEY=THIS-IS-AN-ELEVENLABS-API-KEY-wfhwe78r78frfg7e8ghrveh78ehrg
 CUDA_DIRECTORY=/usr/local/cuda-12.6
 
 # Available: INFO, INFOX, DEBUG, DEBUGX, TRACE, TRACEX
