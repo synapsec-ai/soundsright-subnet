@@ -18,16 +18,43 @@ logging.basicConfig(
     ]
 )
 
-def validate_all_reverb_files_are_enhanced(reverb_dir, enhanced_dir):
-    reverb_files = sorted([os.path.basename(f) for f in glob.glob(os.path.join(reverb_dir, '*.wav'))])
+def reset_dir(directory):
+    # Check if the directory exists
+    if not os.path.exists(directory):
+        return
+
+    # Loop through all the files and subdirectories in the directory
+    for filename in os.listdir(directory):
+        file_path = os.path.join(directory, filename)
+        
+        # Check if it's a file or directory and remove accordingly
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)  # Remove the file or link
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)  # Remove the directory and its contents
+        except Exception as e:
+            logging.error(f"Exception when resetting directory: {e}")
+
+def validate_all_reverb_files_are_enhanced(impure_dir, enhanced_dir):
+    reverb_files = sorted([os.path.basename(f) for f in glob.glob(os.path.join(impure_dir, '*.wav'))])
     enhanced_files = sorted([os.path.basename(f) for f in glob.glob(os.path.join(enhanced_dir, '*.wav'))])
     return reverb_files == enhanced_files
 
-def initialize_run_and_benchmark_model(model_namespace, model_name, model_revision, cuda_directory):
+def initialize_run_and_benchmark_model(model_namespace: str, model_name: str, model_revision: str, cuda_directory: str, sample_rate: int):
+
+    sample_rate = int(sample_rate)
+    if sample_rate not in [16000, 48000]:
+        logging.error(f"Specified sample rate: {sample_rate} is not one of: 16000, 48000")
 
     file_dir = os.path.dirname(os.path.abspath(__file__))
-    clean_dir = os.path.join(file_dir, "assets", "clean")
-    reverb_dir = os.path.join(file_dir, "assets", "reverb")
+
+    if sample_rate == 16000:
+        clean_dir = os.path.join(file_dir, "assets", "clean_16000hz")
+        impure_dir = os.path.join(file_dir, "assets", "impure_16000hz")
+    else: 
+        clean_dir = os.path.join(file_dir, "assets", "clean_48000hz")
+        impure_dir = os.path.join(file_dir, "assets", "impure_48000hz")
     
     output_base_path = os.path.dirname(os.path.abspath(__file__))
     model_dir = os.path.join(output_base_path, "model")
@@ -35,7 +62,10 @@ def initialize_run_and_benchmark_model(model_namespace, model_name, model_revisi
     for d in [model_dir, model_output_dir]:
         if not os.path.exists(d):
             os.makedirs(d)
-            
+
+    for d in [model_dir, model_output_dir]:
+        reset_dir(d)
+
     logging.info(f"{model_dir} exists: {os.path.exists(model_dir)}\n{model_output_dir} exists: {os.path.exists(model_output_dir)}")
 
     logging.info("Downloading model:")
@@ -104,7 +134,7 @@ def initialize_run_and_benchmark_model(model_namespace, model_name, model_revisi
     time.sleep(10)
     
     logging.info("Uploading audio:")
-    if not Utils.upload_audio(port=6500, noisy_dir=reverb_dir, log_level="TRACE", timeout=300):
+    if not Utils.upload_audio(port=6500, noisy_dir=impure_dir, log_level="TRACE", timeout=300):
         logging.error("Reverb audio upload failed. Please check your /upload-audio/ endpoint.")
         Utils.delete_container(use_docker=False, log_level="TRACE")
         shutil.rmtree(model_dir)
@@ -133,30 +163,40 @@ def initialize_run_and_benchmark_model(model_namespace, model_name, model_revisi
         shutil.rmtree(model_output_dir)
         return False
     logging.info("Enhanced audio download successful.")
+
+    logging.info("Resetting model contents for another batch of enhancement:")
+    if not Utils.reset_model(port=6500, log_level="TRACE"):
+        logging.error("Could not reset model. Please check your /reset/ endpoint.")
+        Utils.delete_container(use_docker=False, log_level="TRACE")
+        shutil.rmtree(model_dir)
+        shutil.rmtree(model_output_dir)
+        return False
+    logging.info("Model reset successful.")
     
     Utils.delete_container(use_docker=False, log_level="TRACE")
+
+    clean_files = sorted([f for f in os.listdir(clean_dir) if f.lower().endswith('.wav')])
+    enhanced_files = sorted([f for f in os.listdir(model_output_dir) if f.lower().endswith('.wav')])
+    noisy_files = sorted([f for f in os.listdir(impure_dir) if f.lower().endswith('.wav')])
+    
+    logging.info(f"Clean files: {clean_files}\nNoisy files: {noisy_files}\nEnhanced files: {enhanced_files}")
     
     logging.info("Checking to make sure that all files were enhanced:")
-    if not validate_all_reverb_files_are_enhanced(reverb_dir=reverb_dir, enhanced_dir=model_output_dir):
+    if not validate_all_reverb_files_are_enhanced(impure_dir=impure_dir, enhanced_dir=model_output_dir):
         logging.error("Mismatch between reverb files and enhanced files. Your model did not return all of the audio files it was expected to.")
         shutil.rmtree(model_dir)
         shutil.rmtree(model_output_dir)
         return False 
     logging.info("File validation successful.")
     
-    clean_files = sorted([f for f in os.listdir(clean_dir) if f.lower().endswith('.wav')])
-    enhanced_files = sorted([f for f in os.listdir(model_output_dir) if f.lower().endswith('.wav')])
-    noisy_files = sorted([f for f in os.listdir(reverb_dir) if f.lower().endswith('.wav')])
-    
-    logging.info(f"Clean files: {clean_files}\nNoisy files: {noisy_files}\nEnhanced files: {enhanced_files}")
-    
     logging.info("Calculating metrics:")
     try:
         metrics_dict = Benchmarking.calculate_metrics_dict(
-            sample_rate=16000,
+            sample_rate=sample_rate,
             clean_directory=clean_dir,
             enhanced_directory=model_output_dir,
-            noisy_directory=reverb_dir,
+            noisy_directory=impure_dir,
+            task="denoising",
             log_level="TRACE",
         )
         logging.info(f"Calculated model performance benchmarks: {metrics_dict}")
@@ -168,11 +208,11 @@ def initialize_run_and_benchmark_model(model_namespace, model_name, model_revisi
     
     return True 
 
-def verify_miner_model(model_namespace, model_name, model_revision, cuda_directory): 
+def verify_miner_model(model_namespace, model_name, model_revision, cuda_directory, sample_rate): 
     
     logging.info(f"Starting verificaiton for model: huggingface.co/{model_namespace}/{model_name}/tree/{model_revision}")
     
-    if not initialize_run_and_benchmark_model(model_namespace=model_namespace, model_name=model_name, model_revision=model_revision, cuda_directory=cuda_directory):
+    if not initialize_run_and_benchmark_model(model_namespace=model_namespace, model_name=model_name, model_revision=model_revision, cuda_directory=cuda_directory, sample_rate=sample_rate):
         logging.critical(f"MODEL VERIFICATION FAILED.")
         return
 
@@ -207,6 +247,13 @@ if __name__ == "__main__":
         help="The path to the CUDA directory",
         default="/usr/local/cuda-12.6"
     )
+
+    parser.add_argument(
+        "--sample_rate",
+        type=int,
+        help="Sample rate the model is fine-tuned for.",
+        default=48000
+    )
     
     args = parser.parse_args()
     
@@ -215,4 +262,5 @@ if __name__ == "__main__":
         model_name=args.model_name,
         model_revision=args.model_revision,
         cuda_directory=args.cuda_directory,
+        sample_rate=args.sample_rate
     )

@@ -65,7 +65,7 @@ class BaseNeuron:
         self.healthcheck_api = None
         self.log_level = "INFO"
         self.start_date = datetime(2025, 7, 7, 9, 0, tzinfo=timezone.utc) # Reference for when to start competitions (June 19, 2025 @ 9:00 AM GMT)
-        self.period_days = 2 # Competition length
+        self.period_days = 3 # Competition length
         self.wc_prevention_protcool = False # Switch to toggle whether or not to use the WC Prevention Protocol
 
     def config(self, bt_classes: list) -> bt.config:

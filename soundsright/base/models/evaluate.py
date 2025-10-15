@@ -46,7 +46,7 @@ class ModelEvaluationHandler:
         self.competitions_list = competitions_list
         self.ports_list = ports_list
         self.current_ports_list = []
-        self.models_per_iteration = 3
+        self.models_per_iteration = 2
         self.tasks = []
 
         # Timeout calculations
@@ -56,6 +56,7 @@ class ModelEvaluationHandler:
             "upload":3,
             "enhance":400,
             "download":3,
+            "reset":10,
         }
 
         self.timeout_multipliers = {
@@ -64,6 +65,7 @@ class ModelEvaluationHandler:
             "upload":[1,0.7,0.4],
             "enhance":[1,0.95,0.95],
             "download":[1,0.7,0.4],
+            "reset":[1, 0.7, 0.4]
         }
 
         # Misc
@@ -119,7 +121,11 @@ class ModelEvaluationHandler:
         
         return False
 
-    def calculate_timeouts(self, concurrent_length: int):
+    def calculate_timeouts(self, concurrent_length: int, sample_rate: int):
+
+        sr_multiplier = 1
+        if sample_rate==48000:
+            sr_multiplier = 1.75
 
         timeouts = {}
         index = concurrent_length - 1
@@ -131,8 +137,10 @@ class ModelEvaluationHandler:
             concurrent_length = 3
 
         for key in self.base_timeouts.keys():
-
-            timeouts[key] = self.base_timeouts[key] * self.timeout_multipliers[key][index] * concurrent_length
+            if key == "enhance":
+                timeouts[key] = self.base_timeouts[key] * self.timeout_multipliers[key][index] * concurrent_length * sr_multiplier
+            else: 
+                timeouts[key] = self.base_timeouts[key] * self.timeout_multipliers[key][index] * concurrent_length
 
         Utils.subnet_logger(
             severity="TRACE",
@@ -274,7 +282,7 @@ class ModelEvaluationHandler:
 
         self.prepare_directory(dir_path=model_output_path)
 
-        timeouts = self.calculate_timeouts(concurrent_length=concurrent_length)
+        timeouts = self.calculate_timeouts(concurrent_length=concurrent_length, sample_rate=int(sample_rate))
 
         Utils.subnet_logger(
             severity="TRACE",
@@ -412,6 +420,24 @@ class ModelEvaluationHandler:
             log_level=self.log_level,
         )
 
+        Utils.subnet_logger(
+            severity="TRACE",
+            message=f"Download successful for miner: {hotkey}. Now resetting model files with timeout: {timeouts['reset']}.",
+            log_level=self.log_level,
+        )
+
+        reset_status = await Utils.reset_model_async(port=port, log_level=self.log_level, timeout=timeouts["reset"])
+
+        if not reset_status:
+
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Resetting model files failed for miner: {hotkey}.",
+                log_level=self.log_level,
+            )
+
+            return hotkey, False
+
         if not self.validate_all_noisy_files_are_enhanced(
             task_path=dataset_path,
             model_output_path=model_output_path
@@ -461,9 +487,9 @@ class ModelEvaluationHandler:
                 index = hotkeys.index(hotkey)
                 competition = competitions[index]
                 model_output_path = os.path.join(self.base_model_output_path, hotkey)
-                tts_path = os.path.join(self.tts_path, "16000")
                 competition_components = competition.split("_")
                 task, sample_rate = competition_components[0], competition_components[1].replace("HZ", "")
+                tts_path = os.path.join(self.tts_path, sample_rate)
 
                 if "denoising" in task.lower():
                     dataset_path = os.path.join(self.noise_path, sample_rate)
@@ -481,11 +507,34 @@ class ModelEvaluationHandler:
                 if cache_entry and isinstance(cache_entry, dict):
 
                     if result: 
+
+                        Utils.subnet_logger(
+                            severity="TRACE",
+                            message=f"Calculating model benchmarks for sample rate: {sample_rate} and task: {task}",
+                            log_level=self.log_level
+                        )
+                        Utils.subnet_logger(
+                            severity="TRACE",
+                            message=f"Clean path: {tts_path}. Files in clean path: {os.listdir(tts_path)}",
+                            log_level=self.log_level
+                        )
+                        Utils.subnet_logger(
+                            severity="TRACE",
+                            message=f"Noisy path: {dataset_path}. Files in noisy path: {os.listdir(dataset_path)}",
+                            log_level=self.log_level
+                        )
+                        Utils.subnet_logger(
+                            severity="TRACE",
+                            message=f"Model output path: {model_output_path}. Files in path: {os.listdir(model_output_path)}",
+                            log_level=self.log_level
+                        )
+
                         metrics_dict = Benchmarking.calculate_metrics_dict(
                             clean_directory=tts_path,
                             enhanced_directory=model_output_path,
                             noisy_directory=dataset_path,
-                            sample_rate=16000,
+                            sample_rate=int(sample_rate),
+                            task=task,
                             log_level=self.log_level,
                         )
                     else: 

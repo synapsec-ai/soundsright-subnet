@@ -2,7 +2,7 @@ NETUID=105
 SUBTENSOR_CHAIN_ENDPOINT=wss://entrypoint-finney.opentensor.ai:443
 WALLET=coldkey_name
 HOTKEY=hotkey_name
-OPENAI_API_KEY=
+ELEVENLABS_API_KEY=
 CUDA_DIRECTORY=/usr/local/cuda-12.6
 
 # Available: INFO, INFOX, DEBUG, DEBUGX, TRACE, TRACEX

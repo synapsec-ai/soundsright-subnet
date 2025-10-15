@@ -85,57 +85,79 @@ class SubnetValidator(Base.BaseNeuron):
         # Benchmarking / Scoring Object Init
         self.scores = None
         self.weights_objects = []
-        self.sample_rates = [16000]
+        self.sample_rates = [16000, 48000]
         self.tasks = ['DENOISING','DEREVERBERATION']
         self.miner_models = {
             'DENOISING_16000HZ':[],
             'DEREVERBERATION_16000HZ':[],
+            'DENOISING_48000HZ':[],
+            'DEREVERBERATION_48000HZ':[],
         }
         self.best_miner_models = {
             'DENOISING_16000HZ':[],
             'DEREVERBERATION_16000HZ':[],
+            'DENOISING_48000HZ':[],
+            'DEREVERBERATION_48000HZ':[],
         }
         self.blacklisted_miner_models = {
             "DENOISING_16000HZ":[],
             "DEREVERBERATION_16000HZ":[],
+            'DENOISING_48000HZ':[],
+            'DEREVERBERATION_48000HZ':[],
         }
         self.competition_max_scores = {
-            'DENOISING_16000HZ':40,
-            'DEREVERBERATION_16000HZ':40,
-            'DENOISING_16000HZ_remainder':10,
-            'DEREVERBERATION_16000HZ_remainder':10,
+            'DENOISING_16000HZ':10,
+            'DEREVERBERATION_16000HZ':10,
+            'DENOISING_16000HZ_remainder':3,
+            'DEREVERBERATION_16000HZ_remainder':2,
+            'DENOISING_48000HZ':45,
+            'DEREVERBERATION_48000HZ':20,
+            'DENOISING_48000HZ_remainder':5,
+            'DEREVERBERATION_48000HZ_remainder':5,
         }
         self.metric_proportions = {
             "DENOISING_16000HZ":{
-                "PESQ":0.3,
-                "ESTOI":0.25,
-                "SI_SDR":0.15,
-                "SI_SIR":0.15,
-                "SI_SAR":0.15,
+                "PESQ":0.6,
+                "ESTOI":0.4,
             },
             "DEREVERBERATION_16000HZ":{
-                "PESQ":0.3,
-                "ESTOI":0.25,
-                "SI_SDR":0.15,
-                "SI_SIR":0.15,
-                "SI_SAR":0.15,
+                "PESQ":0.6,
+                "ESTOI":0.4,
+            },
+            "DENOISING_48000HZ":{
+                "ESTOI":0.4,
+                "SI_SDR":0.2,
+                "SI_SIR":0.2,
+                "SI_SAR":0.2,
+            },
+            "DEREVERBERATION_48000HZ":{
+                "ESTOI":0.6,
+                "SI_SDR":0.4,
             },
         }
         self.competition_scores = {
             'DENOISING_16000HZ':None,
             'DEREVERBERATION_16000HZ':None,
+            'DENOISING_48000HZ':None,
+            'DEREVERBERATION_48000HZ':None,
         }
         self.sgmse_benchmarks = {
             "DENOISING_16000HZ":None,
             "DEREVERBERATION_16000HZ":None,
+            "DENOISING_48000HZ":None,
+            "DEREVERBERATION_48000HZ":None,
         }
         self.models_evaluated_today = {
             "DENOISING_16000HZ":[],
             "DEREVERBERATION_16000HZ":[],
+            "DENOISING_48000HZ":[],
+            "DEREVERBERATION_48000HZ":[],
         }
         self.model_cache = {
             "DENOISING_16000HZ":[],
             "DEREVERBERATION_16000HZ":[],
+            "DENOISING_48000HZ":[],
+            "DEREVERBERATION_48000HZ":[],
         }
 
         # Remote Logging
@@ -184,6 +206,11 @@ class SubnetValidator(Base.BaseNeuron):
         # Check to see if we need to generate a new dataset
         if override:
 
+            self.TTSHandler = Data.TTSHandler(
+                tts_base_path=self.tts_path, 
+                sample_rates=self.sample_rates
+            )
+
             self.neuron_logger(
                 severity="INFO",
                 message=f"Generating new dataset."
@@ -198,14 +225,20 @@ class SubnetValidator(Base.BaseNeuron):
             )
 
             # Generate new TTS data
-            self.TTSHandler.create_openai_tts_dataset_for_all_sample_rates(n=self.dataset_size, seed=self.seed)
+            self.TTSHandler.create_elevenlabs_tts_dataset_for_all_sample_rates(n=self.dataset_size, seed=self.seed)
             
             tts_16000 = os.path.join(self.tts_path, "16000")
             tts_files_16000 = [f for f in os.listdir(tts_16000)]
+            tts_48000 = os.path.join(self.tts_path, "16000")
+            tts_files_48000 = [f for f in os.listdir(tts_48000)]
             
             self.neuron_logger(
                 severity="DEBUG",
                 message=f"TTS files generated in directory: {tts_16000} are: {tts_files_16000}"
+            )
+            self.neuron_logger(
+                severity="DEBUG",
+                message=f"TTS files generated in directory: {tts_48000} are: {tts_files_48000}"
             )
 
             # Generate new noise/reverb data
@@ -234,6 +267,22 @@ class SubnetValidator(Base.BaseNeuron):
             self.neuron_logger(
                 severity="DEBUG",
                 message=f"Reverb files generated in directory: {reverb_16000}: {reverb_files_16000}"
+            )
+
+            noise_48000 = os.path.join(self.noise_path, "48000")
+            noise_files_48000 = [f for f in os.listdir(noise_48000)]
+            
+            self.neuron_logger(
+                severity="DEBUG",
+                message=f"Noise files generated in directory: {noise_48000}: {noise_files_48000}"
+            )
+            
+            reverb_48000 = os.path.join(self.reverb_path, "48000")
+            reverb_files_48000 = [f for f in os.listdir(reverb_48000)]
+            
+            self.neuron_logger(
+                severity="DEBUG",
+                message=f"Reverb files generated in directory: {reverb_48000}: {reverb_files_48000}"
             )
 
             self.healthcheck_api.append_metric(metric_name="datasets_generated", value=1)
@@ -839,6 +888,22 @@ class SubnetValidator(Base.BaseNeuron):
                 deserialize=True,
             )
         
+        elif sample_rate == 48000 and task == 'DENOISING':
+            return await self.dendrite.forward(
+                axon_to_query,
+                Base.Denoising_48kHz_Protocol(subnet_version=self.subnet_version),
+                timeout=timeout,
+                deserialize=True,
+            )
+            
+        elif sample_rate == 48000 and task == 'DEREVERBERATION':
+            return await self.dendrite.forward(
+                axon_to_query,
+                Base.Dereverberation_48kHz_Protocol(subnet_version=self.subnet_version),
+                timeout=timeout,
+                deserialize=True,
+            )
+        
     async def send_feedback_synapse(self, uid_to_query: int, competition: str, data: dict, timeout: int = 5) -> List[bt.Synapse]:
         """
         Sends FeedbackSynapse to miners 
@@ -985,6 +1050,8 @@ class SubnetValidator(Base.BaseNeuron):
             scores=self.scores,
             competition_scores_DENOISING_16000HZ=self.competition_scores['DENOISING_16000HZ'],
             competition_scores_DEREVERBERATION_16000HZ=self.competition_scores['DEREVERBERATION_16000HZ'],
+            competition_scores_DENOISING_48000HZ=self.competition_scores['DENOISING_48000HZ'],
+            competititon_scores_DEREVERBERATION_48000HZ=self.competition_scores['DEREVERBERATION_48000HZ'],
             hotkeys=self.hotkeys,
             last_updated_block=self.last_updated_block,
             next_competition_timestamp=self.next_competition_timestamp,
@@ -1042,6 +1109,8 @@ class SubnetValidator(Base.BaseNeuron):
         self.competition_scores = {
             "DENOISING_16000HZ":None,
             "DEREVERBERATION_16000HZ":None,
+            "DENOISING_48000HZ":None,
+            "DEREVERBERATION_48000HZ":None,
         }
         for competition in self.competition_scores.keys():
             self.competition_scores[competition] = np.zeros_like(self.metagraph.S, dtype=np.float32)
@@ -1111,7 +1180,9 @@ class SubnetValidator(Base.BaseNeuron):
                 
                 self.competition_scores = {
                     "DENOISING_16000HZ": state['competition_scores_DENOISING_16000HZ'],
-                    "DEREVERBERATION_16000HZ": state['competition_scores_DEREVERBERATION_16000HZ']
+                    "DEREVERBERATION_16000HZ": state['competition_scores_DEREVERBERATION_16000HZ'],
+                    "DENOISING_48000HZ": state['competition_scores_DENOISING_48000HZ'],
+                    "DEREVERBERATION_48000HZ": state['competition_scores_DEREVERBERATION_48000HZ'],
                 }
                 
                 self.neuron_logger(
@@ -1195,11 +1266,15 @@ class SubnetValidator(Base.BaseNeuron):
                 self.miner_models = {
                     'DENOISING_16000HZ':[],
                     'DEREVERBERATION_16000HZ':[],
+                    'DENOISING_48000HZ':[],
+                    'DEREVERBERATION_48000HZ':[],
                 }
         else:
             self.miner_models = {
                 'DENOISING_16000HZ':[],
                 'DEREVERBERATION_16000HZ':[],
+                'DENOISING_48000HZ':[],
+                'DEREVERBERATION_48000HZ':[],
             }
                 
         best_miner_models_filepath = os.path.join(self.cache_path, "best_miner_models.pickle")
@@ -1220,12 +1295,16 @@ class SubnetValidator(Base.BaseNeuron):
                 self.best_miner_models = {
                     'DENOISING_16000HZ':[],
                     'DEREVERBERATION_16000HZ':[],
+                    'DENOISING_48000HZ':[],
+                    'DEREVERBERATION_48000HZ':[],
                 }
         else:
             self.best_miner_models = {
-            'DENOISING_16000HZ':[],
-            'DEREVERBERATION_16000HZ':[],
-        }
+                'DENOISING_16000HZ':[],
+                'DEREVERBERATION_16000HZ':[],
+                'DENOISING_48000HZ':[],
+                'DEREVERBERATION_48000HZ':[],
+            }
             
         blacklisted_miner_models_filepath = os.path.join(self.cache_path, "blacklisted_miner_models.pickle")
         if os.path.exists(blacklisted_miner_models_filepath):
@@ -1245,11 +1324,15 @@ class SubnetValidator(Base.BaseNeuron):
                 self.blacklisted_miner_models = {
                     'DENOISING_16000HZ':[],
                     'DEREVERBERATION_16000HZ':[],
+                    'DENOISING_48000HZ':[],
+                    'DEREVERBERATION_48000HZ':[],
                 }
         else:
             self.blacklisted_miner_models = {
                 'DENOISING_16000HZ':[],
                 'DEREVERBERATION_16000HZ':[],
+                'DENOISING_48000HZ':[],
+                'DEREVERBERATION_48000HZ':[],
             }
 
     @Utils.timeout_decorator(timeout=30)
@@ -1540,6 +1623,7 @@ class SubnetValidator(Base.BaseNeuron):
                 enhanced_directory=self.sgmse_output_path,
                 noisy_directory=task_path,
                 sample_rate=sample_rate,
+                task=task,
                 log_level=self.log_level,
             )
         
@@ -1615,6 +1699,8 @@ class SubnetValidator(Base.BaseNeuron):
         self.model_cache = {
             "DENOISING_16000HZ":[],
             "DEREVERBERATION_16000HZ":[],
+            'DENOISING_48000HZ':[],
+            'DEREVERBERATION_48000HZ':[],
         }
         
         # Initialize asyncio loop
@@ -1671,7 +1757,7 @@ class SubnetValidator(Base.BaseNeuron):
                                 self.healthcheck_api.append_metric(metric_name="responses.total_valid_responses", value=1)
                                 
                                 # In case that synapse response is not formatted correctly and no known historical data:
-                                if not Utils.validate_miner_response(response.data):
+                                if not Utils.validate_miner_response(response.data, debug_mode=self.debug_mode):
                                     self.neuron_logger(
                                         severity="DEBUG",
                                         message=f"Miner response is invalid: {response.data}"
@@ -1891,7 +1977,7 @@ class SubnetValidator(Base.BaseNeuron):
                 message=f"Evaluation expected to end at: {completion_ref}. Next competition timestamp: {self.next_competition_timestamp}"
             )
 
-            if completion_ref >= self.next_competition_timestamp:
+            if completion_ref >= self.next_competition_timestamp and not self.debug_mode:
 
                 self.neuron_logger(
                     severity="TRACE",
@@ -1955,6 +2041,7 @@ class SubnetValidator(Base.BaseNeuron):
                 next_competition_timestamp=self.next_competition_timestamp,
                 avg_model_eval_time=self.avg_model_eval_time,
                 use_docker=self.use_docker,
+                debug_mode=self.debug_mode,
                 log_level=self.log_level,
             )
 

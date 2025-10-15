@@ -13,8 +13,8 @@ parser.add_argument(
     type=int,
     help="Sample rate must be an int, default is 16000.",
     required=False,
-    choices=[16000],
-    default=16000
+    choices=[16000, 48000],
+    default=48000
 )
 parser.add_argument(
     "--n",
@@ -53,6 +53,13 @@ parser.add_argument(
     help="The directory where data to generate reverberation datasets will be stored. You only need to input this if you want to generate a dataset for the dereverberation task.",
     default=None,
 )
+parser.add_argument(
+    "--output_format",
+    type=str,
+    help="Output format for ElevenLabs TTS. Available options: mp3_44100_32, mp3_44100_64, mp3_44100_96, mp3_44100_128, mp3_44100_192, pcm_44100. Default is: pcm_44100",
+    choices=["mp3_44100_32", "mp3_44100_64", "mp3_44100_96", "mp3_44100_128", "mp3_44100_192", "pcm_44100"],
+    default="pcm_44100",
+)
 
 args = parser.parse_args()
 
@@ -65,4 +72,5 @@ generate_dataset_for_miner(
     noise_data_dir=args.noise_data_dir,
     reverb_dir=args.reverb_dir,
     noise_dir=args.noise_dir,
+    output_format=args.output_format
 )

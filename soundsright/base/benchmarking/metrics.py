@@ -135,7 +135,12 @@ def calculate_si_sdr_for_directories(clean_directory: str, enhanced_directory: s
             si_sdr_score = float(energy_ratios(enhanced_audio, clean_audio, noise)[0])
             si_sdr_scores.append(si_sdr_score)
         
-        except:
+        except Exception as e:
+            Utils.subnet_logger(
+                severity="ERROR",
+                message=f"Exception occured during calculation of SI-SDR: {e}",
+                log_level=log_level
+            )
             continue
 
     if not si_sdr_scores:
@@ -231,7 +236,12 @@ def calculate_si_sir_for_directories(clean_directory: str, enhanced_directory: s
             si_sir_score = float(energy_ratios(enhanced_audio, clean_audio, noise)[1])
             si_sir_scores.append(si_sir_score)
         
-        except:
+        except Exception as e:
+            Utils.subnet_logger(
+                severity="ERROR",
+                message=f"Exception occured during calculation of SI-SIR: {e}",
+                log_level=log_level
+            )
             continue
 
     if not si_sir_scores:
@@ -326,7 +336,12 @@ def calculate_si_sar_for_directories(clean_directory: str, enhanced_directory: s
             # Calculate the SI_SAR score
             si_sar_score = float(energy_ratios(enhanced_audio, clean_audio, noise)[2])
             si_sar_scores.append(si_sar_score)
-        except:
+        except Exception as e:
+            Utils.subnet_logger(
+                severity="ERROR",
+                message=f"Exception occured during calculation of SI-SAR: {e}",
+                log_level=log_level
+            )
             continue
 
     if not si_sar_scores:
@@ -427,6 +442,11 @@ def calculate_pesq_for_directories(clean_directory: str, enhanced_directory: str
             
             pesq_scores.append(pesq_score)
         except Exception as e:
+            Utils.subnet_logger(
+                severity="ERROR",
+                message=f"Exception occured during calculation of PESQ: {e}",
+                log_level=log_level
+            )
             continue
 
     if not pesq_scores:
@@ -500,7 +520,7 @@ def calculate_estoi_for_directories(clean_directory: str, enhanced_directory: st
             clean_audio, clean_sr = sf.read(clean_audio_path)
             # Load the enhanced audio file
             enhanced_audio, enhanced_sr = sf.read(enhanced_audio_path)
-            
+
             if clean_sr != enhanced_sr:
                 continue
 
@@ -515,7 +535,12 @@ def calculate_estoi_for_directories(clean_directory: str, enhanced_directory: st
             # Calculate the ESTOI score
             estoi_score = float(stoi(x=clean_audio, y=enhanced_audio, fs_sig=sample_rate))
             estoi_scores.append(estoi_score)
-        except:
+        except Exception as e:
+            Utils.subnet_logger(
+                severity="ERROR",
+                message=f"Exception occured during calculation of ESTOI: {e}",
+                log_level=log_level
+            )
             continue
 
     if not estoi_scores:
@@ -550,46 +575,11 @@ def calculate_estoi_for_directories(clean_directory: str, enhanced_directory: st
     
     return output
     
-def calculate_metrics_dict(sample_rate: int, clean_directory: str, enhanced_directory: str, noisy_directory: str, log_level: str) -> dict:
+def calculate_metrics_dict(task: str, sample_rate: int, clean_directory: str, enhanced_directory: str, noisy_directory: str, log_level: str) -> dict:
     
     metrics_dict = {}
     
     if sample_rate == 16000:
-        try:
-            # SI_SDR
-            metrics_dict['SI_SDR'] = calculate_si_sdr_for_directories(
-                clean_directory=clean_directory,
-                enhanced_directory=enhanced_directory,
-                noisy_directory=noisy_directory,
-                sample_rate=sample_rate,
-                log_level=log_level,
-            )
-        except:
-            metrics_dict['SI_SDR'] = {}
-            
-        try:
-            # SI_SIR
-            metrics_dict['SI_SIR'] = calculate_si_sir_for_directories(
-                clean_directory=clean_directory,
-                enhanced_directory=enhanced_directory,
-                noisy_directory=noisy_directory,
-                sample_rate=sample_rate,
-                log_level=log_level,
-            )
-        except:
-            metrics_dict['SI_SIR'] = {}
-        
-        try:
-            # SI_SAR
-            metrics_dict['SI_SAR'] = calculate_si_sar_for_directories(
-                clean_directory=clean_directory,
-                enhanced_directory=enhanced_directory,
-                noisy_directory=noisy_directory,
-                sample_rate=sample_rate,
-                log_level=log_level,
-            )
-        except:
-            metrics_dict['SI_SAR'] = {}
             
         try:
             # PESQ
@@ -599,7 +589,11 @@ def calculate_metrics_dict(sample_rate: int, clean_directory: str, enhanced_dire
                 sample_rate=sample_rate,
                 log_level=log_level,
             )
-        except:
+        except Exception as e:
+            Utils.subnet_logger(
+                severity="ERROR",
+                message=f"Error calculating PESQ: {e}"
+            )
             metrics_dict['PESQ'] = {}
             
         try:
@@ -610,7 +604,78 @@ def calculate_metrics_dict(sample_rate: int, clean_directory: str, enhanced_dire
                 sample_rate=sample_rate,
                 log_level=log_level,
             )
-        except:
+        except Exception as e:
+            Utils.subnet_logger(
+                severity="ERROR",
+                message=f"Error calculating ESTOI: {e}"
+            )
+            metrics_dict['ESTOI'] = {}
+
+    elif sample_rate == 48000:
+
+        if "denoising" in task.lower():
+                
+            try:
+                # SI_SIR
+                metrics_dict['SI_SIR'] = calculate_si_sir_for_directories(
+                    clean_directory=clean_directory,
+                    enhanced_directory=enhanced_directory,
+                    noisy_directory=noisy_directory,
+                    sample_rate=sample_rate,
+                    log_level=log_level,
+                )
+            except Exception as e:
+                Utils.subnet_logger(
+                    severity="ERROR",
+                    message=f"Error calculating SI-SIR: {e}"
+                )
+                metrics_dict['SI_SIR'] = {}
+            
+            try:
+                # SI_SAR
+                metrics_dict['SI_SAR'] = calculate_si_sar_for_directories(
+                    clean_directory=clean_directory,
+                    enhanced_directory=enhanced_directory,
+                    noisy_directory=noisy_directory,
+                    sample_rate=sample_rate,
+                    log_level=log_level,
+                )
+            except Exception as e:
+                Utils.subnet_logger(
+                    severity="ERROR",
+                    message=f"Error calculating SI-SAR: {e}"
+                )
+                metrics_dict['SI_SAR'] = {}
+
+        try:
+            # SI_SDR
+            metrics_dict['SI_SDR'] = calculate_si_sdr_for_directories(
+                clean_directory=clean_directory,
+                enhanced_directory=enhanced_directory,
+                noisy_directory=noisy_directory,
+                sample_rate=sample_rate,
+                log_level=log_level,
+            )
+        except Exception as e:
+            Utils.subnet_logger(
+                severity="ERROR",
+                message=f"Error calculating SI-SDR: {e}"
+            )
+            metrics_dict['SI_SDR'] = {}
+            
+        try:
+            # ESTOI
+            metrics_dict['ESTOI'] = calculate_estoi_for_directories(
+                clean_directory=clean_directory,
+                enhanced_directory=enhanced_directory,
+                sample_rate=sample_rate,
+                log_level=log_level,
+            )
+        except Exception as e:
+            Utils.subnet_logger(
+                severity="ERROR",
+                message=f"Error calculating ESTOI: {e}"
+            )
             metrics_dict['ESTOI'] = {}
     
     return metrics_dict

@@ -171,3 +171,5 @@ Gemfile.lock
 
 # Misc
 test_data
+
+.DS_store
