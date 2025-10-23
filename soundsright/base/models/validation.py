@@ -29,6 +29,14 @@ def get_file_content_hash(filepath, chunk_size=8192):
     
     return sha256_hash.hexdigest()
 
+def get_checkpoint_hash(directory):
+
+    checkpoint_filetypes = [".pt", ".pth", ".ckpt", ".h5", ".bin", ".safetensors", ".msgpack", ".npz", ".onnx", ".engine"]
+    output = []
+
+
+    return output
+
 def verify_directory_files(directory):
     
     forbidden_hashes = [
