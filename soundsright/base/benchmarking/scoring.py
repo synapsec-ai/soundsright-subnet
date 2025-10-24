@@ -619,6 +619,39 @@ def filter_models_with_same_hash(new_competition_miner_models: list, hotkeys: li
     # Return a list of unique items with the lowest 'block' value for each 'model_hash'
     return list(unique_models.values())
 
+def filter_models_with_same_ckpt_hash(new_competition_miner_models: list, hotkeys: list) -> list:
+    """
+    Filter out model results if any checkpoint hash in a model's `ckpt_hash` list
+    matches any hash in another model's list, keeping the model with the lower block. 
+    """
+
+    candidates = []
+    for item in new_competition_miner_models:
+        if Utils.validate_model_benchmark(item):
+            hk = item.get("hotkey")
+            if hk in hotkeys:
+                uid = hotkeys.index(hk)
+                block = item.get("block", float("inf"))
+                hashes = item.get("ckpt_hash") or []
+                if not isinstance(hashes, (list, tuple, set)):
+                    hashes = [str(hashes)]
+                hash_set = {str(h).strip() for h in hashes if str(h).strip()}
+                candidates.append((block, uid, hash_set, item))
+
+    candidates.sort(key=lambda x: (x[0], x[1]))
+
+    accepted = []
+    claimed_hashes = set() 
+
+    for block, uid, hash_set, item in candidates:
+        if hash_set and any(h in claimed_hashes for h in hash_set):
+            continue
+        accepted.append(item)
+        claimed_hashes.update(hash_set)
+
+    return accepted
+
+
 def filter_models_with_same_metadata(new_competition_miner_models: list, hotkeys: list) -> list:
     """Filter out model results if there are two models with the same model (namspace, name, revision and class).
     

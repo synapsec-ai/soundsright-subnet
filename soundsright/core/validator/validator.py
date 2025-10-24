@@ -2095,7 +2095,12 @@ class SubnetValidator(Base.BaseNeuron):
                 hotkeys=self.hotkeys
             )
 
-            filtered_models[comp] = hash_metadata_filtered_models
+            hash_metadata_ckpt_filtered_models = Benchmarking.filter_models_with_same_ckpt_hash(
+                new_competition_miner_models=hash_metadata_filtered_models,
+                hotkeys=self.hotkeys,
+            )
+
+            filtered_models[comp] = hash_metadata_ckpt_filtered_models
 
         self.miner_models = filtered_models
 

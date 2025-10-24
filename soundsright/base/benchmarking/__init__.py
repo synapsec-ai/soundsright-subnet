@@ -15,6 +15,7 @@ from .scoring import (
     calculate_overall_scores,
     filter_models_with_same_hash,
     filter_models_with_same_metadata,
+    filter_models_with_same_ckpt_hash,
     filter_models_for_deregistered_miners,
     remove_blacklist_duplicates
 )

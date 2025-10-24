@@ -34,6 +34,13 @@ def get_checkpoint_hash(directory):
     checkpoint_filetypes = [".pt", ".pth", ".ckpt", ".h5", ".bin", ".safetensors", ".msgpack", ".npz", ".onnx", ".engine"]
     output = []
 
+    for root, _, files in os.walk(directory):
+        for file in files:
+            if any(file.endswith(ext) for ext in checkpoint_filetypes):
+                filepath = os.path.join(root, file)
+                file_hash = get_file_content_hash(filepath)
+                if file_hash:
+                    output.append((filepath, file_hash))
 
     return output
 
