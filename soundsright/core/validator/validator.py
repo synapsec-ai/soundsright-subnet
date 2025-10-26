@@ -1999,6 +1999,8 @@ class SubnetValidator(Base.BaseNeuron):
                 new_competition_miner_models[competition].append(benchmark)
                 self.models_evaluated_today[competition].append(benchmark)
 
+        self.neuron_logger(f"Models evaluated so far this competition: {self.models_evaluated_today}")
+
         return new_competition_miner_models
 
     def run_competitions_async(self):
@@ -2085,16 +2087,31 @@ class SubnetValidator(Base.BaseNeuron):
         filtered_models = {}
         for comp in new_competition_miner_models.keys():
 
+            self.neuron_logger(
+                severity="TRACE",
+                message=f"Pre-filtered models: {new_competition_miner_models[comp]}"
+            )
+
              # In the case that multiple models have the same hash, we only want to include the model with the earliest block when the metadata was uploaded to the chain
             hash_filtered_models = Benchmarking.filter_models_with_same_hash(
                 new_competition_miner_models=new_competition_miner_models[comp],
                 hotkeys=self.hotkeys
+            )
+
+            self.neuron_logger(
+                severity="TRACE",
+                message=f"Hash filtered models: {hash_filtered_models}"
             )
             
             # In the case that multiple models have the same metadata, we only want to include the model with the earliest block when the metadata was uploaded to the chain
             hash_metadata_filtered_models = Benchmarking.filter_models_with_same_metadata(
                 new_competition_miner_models=hash_filtered_models,
                 hotkeys=self.hotkeys
+            )
+
+            self.neuron_logger(
+                severity="TRACE",
+                message=f"Hash and metadata filtered models: {hash_metadata_filtered_models}"
             )
 
             hash_metadata_ckpt_filtered_models = Benchmarking.filter_models_with_same_ckpt_hash(
@@ -2104,7 +2121,7 @@ class SubnetValidator(Base.BaseNeuron):
 
             self.neuron_logger(
                 severity="TRACE",
-                message=f"Filtered models: {hash_metadata_ckpt_filtered_models}"
+                message=f"Hash, metadata, and ckpt hash filtered models: {hash_metadata_ckpt_filtered_models}"
             )
 
             filtered_models[comp] = hash_metadata_ckpt_filtered_models
