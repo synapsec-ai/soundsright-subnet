@@ -2102,6 +2102,11 @@ class SubnetValidator(Base.BaseNeuron):
                 hotkeys=self.hotkeys,
             )
 
+            self.neuron_logger(
+                severity="TRACE",
+                message=f"Filtered models: {hash_metadata_ckpt_filtered_models}"
+            )
+
             filtered_models[comp] = hash_metadata_ckpt_filtered_models
 
         self.miner_models = filtered_models
