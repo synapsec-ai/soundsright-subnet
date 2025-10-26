@@ -968,6 +968,8 @@ class SubnetValidator(Base.BaseNeuron):
                         # If the hotkey matches
                         if model_data["hotkey"] == hotkey:
 
+                            model_data["seed"] = self.seed
+
                             model_feedback["data"] = model_data
                             model_feedback["competition"] = competition
 
