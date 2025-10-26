@@ -350,6 +350,11 @@ class ModelBuilder:
             ))
 
             ckpt_hash = Models.get_checkpoint_hash(directory=model_dir)
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Model id: {model_id} has model checkpoint hash: {ckpt_hash}",
+                log_level=self.log_level
+            )
 
             if not self.debug_mode:
                 if not model_hash or model_hash in self.forbidden_model_hashes:
