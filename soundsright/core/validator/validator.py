@@ -2092,7 +2092,7 @@ class SubnetValidator(Base.BaseNeuron):
 
             self.neuron_logger(
                 severity="TRACE",
-                message=f"Pre-filtered models: {new_competition_miner_models[comp]}"
+                message=f"Pre-filtered models for competition: {comp}: {new_competition_miner_models[comp]}. Hotkeys: {self.hotkeys}"
             )
 
              # In the case that multiple models have the same hash, we only want to include the model with the earliest block when the metadata was uploaded to the chain
