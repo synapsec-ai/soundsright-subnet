@@ -97,6 +97,7 @@ def validate_model_benchmark(model_benchmark):
         'hf_model_revision':str,
         'hotkey':str,
         'model_hash':str,
+        'ckpt_hash': str,
         'block':int,
         'metrics':dict,
     }
