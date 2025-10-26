@@ -40,7 +40,7 @@ def get_checkpoint_hash(directory):
                 filepath = os.path.join(root, file)
                 file_hash = get_file_content_hash(filepath)
                 if file_hash:
-                    output.append((filepath, file_hash))
+                    output.append((file_hash))
 
     return output
 
