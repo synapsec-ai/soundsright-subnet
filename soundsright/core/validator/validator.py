@@ -1999,7 +1999,10 @@ class SubnetValidator(Base.BaseNeuron):
                 new_competition_miner_models[competition].append(benchmark)
                 self.models_evaluated_today[competition].append(benchmark)
 
-        self.neuron_logger(f"Models evaluated so far this competition: {self.models_evaluated_today}")
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Models evaluated so far this competition: {self.models_evaluated_today}"
+        )
 
         return new_competition_miner_models
 
