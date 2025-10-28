@@ -1085,7 +1085,7 @@ def prepare(port, log_level, timeout=10) -> bool:
         return False
     return False
 
-def enhance_audio(port, log_level, timeout=800) -> bool:
+def enhance_audio(port, log_level, timeout=1000) -> bool:
     """
     Trigger audio enhancement on the API.
 
