@@ -13,6 +13,7 @@ from .validation import (
     is_valid_commit_hash_format,
     is_commit_hash,
     check_repo_exists,
+    get_checkpoint_hash,
 )
 
 from .sgmse import SGMSEHandler

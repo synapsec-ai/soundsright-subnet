@@ -54,7 +54,7 @@ class ModelEvaluationHandler:
             "status":60,
             "prepare":10,
             "upload":3,
-            "enhance":400,
+            "enhance":450,
             "download":3,
             "reset":10,
         }
@@ -553,7 +553,8 @@ class ModelEvaluationHandler:
                         'hf_model_name':model_metadata['hf_model_name'],
                         'hf_model_namespace':model_metadata['hf_model_namespace'],
                         'hf_model_revision':model_metadata['hf_model_revision'],
-                        'model_hash':cache_entry["hash"],
+                        'model_hash':cache_entry['model_hash'],
+                        'ckpt_hash':cache_entry['ckpt_hash'],
                         'block':cache_entry["block"],
                         'metrics':metrics_dict,
                     }

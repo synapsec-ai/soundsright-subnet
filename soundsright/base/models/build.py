@@ -171,14 +171,15 @@ class ModelBuilder:
 
                     time.sleep(2)
                 
-                    model_hash, model_block = self.validate_model(
+                    model_hash, model_block, ckpt_hash = self.validate_model(
                         model_data=model_data,
                         competition=competition,
                     )
 
-                    if model_hash and model_block and isinstance(model_hash, str) and isinstance(model_block, int):
+                    if model_hash and model_block and ckpt_hash and isinstance(model_hash, str) and isinstance(model_block, int) and isinstance(ckpt_hash, list):
 
-                        model_data["hash"] = model_hash
+                        model_data["model_hash"] = model_hash
+                        model_data["ckpt_hash"] = ckpt_hash
                         model_data["block"] = model_block
 
                         self.eval_cache[competition].append(model_data)
@@ -216,7 +217,7 @@ class ModelBuilder:
             )
 
             if not isinstance(model_data, dict):
-                return None, None 
+                return None, None, None
 
             uid = model_data.get("uid", None)
             model_metadata = model_data.get("response_data", None)
@@ -229,7 +230,7 @@ class ModelBuilder:
                     log_level=self.log_level
                 )
 
-                return None, None 
+                return None, None, None
             
             hotkey = self.hotkeys[uid]
             port = 6500 + int(uid)
@@ -244,7 +245,7 @@ class ModelBuilder:
                     message=f"Either namespace: {namespace} or name: {name} or revision: {revision} is invalid. Model verification failed.",
                     log_level=self.log_level
                 )
-                return None, None
+                return None, None, None
             
             if not isinstance(namespace, str) or not isinstance(name, str) or not isinstance(revision, str):
                 Utils.subnet_logger(
@@ -252,7 +253,7 @@ class ModelBuilder:
                     message=f"Either namespace: {namespace} or name: {name} or revision: {revision} is invalid. Model verification failed.",
                     log_level=self.log_level
                 )
-                return None, None 
+                return None, None, None
             
             model_id = f"{namespace}/{name}"
             
@@ -271,7 +272,7 @@ class ModelBuilder:
                     message=f"Model block: {model_block} is invalid. Model verification failed.",
                     log_level=self.log_level
                 )
-                return None, None 
+                return None, None, None
             
             # Update model upload block if necessary
             if isinstance(historical_block, int) and historical_block < model_block:
@@ -294,7 +295,7 @@ class ModelBuilder:
                     message=f"Model: {namespace}/{name} metadata could not be validated with on-chain metadata. Exiting model evaluation.",
                     log_level=self.log_level
                 )
-                return None, None
+                return None, None, None
             
             # 3. Verify upload block is before seed determination
             if model_block >= self.seed_reference_block:
@@ -303,7 +304,7 @@ class ModelBuilder:
                     message=f"Model: {namespace}/{name} was submitted on block: {model_block} which is greater than the seed reference block: {self.seed_reference_block}. Exiting model evaluation.",
                     log_level=self.log_level
                 )
-                return None, None
+                return None, None, None
         
             Utils.subnet_logger(
                 severity="TRACE",
@@ -327,7 +328,7 @@ class ModelBuilder:
                         message=f"Model with namespace: {namespace} or name: {name} or revision: {revision} and block: {model_block} was not submitted first. Model verification failed.",
                         log_level=self.log_level
                     )
-                    return None, None
+                    return None, None, None
                 
             Utils.subnet_logger(
                 severity="TRACE",
@@ -348,6 +349,13 @@ class ModelBuilder:
                 log_level=self.log_level
             ))
 
+            ckpt_hash = Models.get_checkpoint_hash(directory=model_dir)
+            Utils.subnet_logger(
+                severity="TRACE",
+                message=f"Model id: {model_id} has model checkpoint hash: {ckpt_hash}",
+                log_level=self.log_level
+            )
+
             if not self.debug_mode:
                 if not model_hash or model_hash in self.forbidden_model_hashes:
                     Utils.subnet_logger(
@@ -356,7 +364,7 @@ class ModelBuilder:
                         log_level=self.log_level
                     )
                     self._reset_dir(directory=model_dir)
-                    return None, None 
+                    return None, None, None
             
                 if not Models.verify_directory_files(directory=model_dir):
                     Utils.subnet_logger(
@@ -365,7 +373,7 @@ class ModelBuilder:
                         log_level=self.log_level
                     )
                     self._reset_dir(directory=model_dir)
-                    return None, None
+                    return None, None, None
             
             Utils.subnet_logger(
                 severity="TRACE",
@@ -394,7 +402,7 @@ class ModelBuilder:
                             log_level=self.log_level
                         )   
                         self._reset_dir(directory=model_dir)
-                        return None, None 
+                        return None, None, None
                 
             Utils.subnet_logger(
                 severity="TRACE",
@@ -403,7 +411,7 @@ class ModelBuilder:
             )
                 
             if not Utils.replace_string_in_directory(directory=model_dir, old_string="6500", new_string=str(port)):
-                return None, None
+                return None, None, None
             
             Utils.subnet_logger(
                 severity="TRACE",
@@ -411,7 +419,7 @@ class ModelBuilder:
                 log_level=self.log_level
             )
             
-            return model_hash, model_block
+            return model_hash, model_block, ckpt_hash
 
         except Exception as e:
 
@@ -421,7 +429,7 @@ class ModelBuilder:
                 log_level=self.log_level
             )
 
-            return None, None
+            return None, None, None
         
     def get_eval_cache_length(self):
         output = 0

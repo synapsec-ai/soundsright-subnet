@@ -968,6 +968,8 @@ class SubnetValidator(Base.BaseNeuron):
                         # If the hotkey matches
                         if model_data["hotkey"] == hotkey:
 
+                            model_data["seed"] = self.seed
+
                             model_feedback["data"] = model_data
                             model_feedback["competition"] = competition
 
@@ -1182,7 +1184,7 @@ class SubnetValidator(Base.BaseNeuron):
                     "DENOISING_16000HZ": state['competition_scores_DENOISING_16000HZ'],
                     "DEREVERBERATION_16000HZ": state['competition_scores_DEREVERBERATION_16000HZ'],
                     "DENOISING_48000HZ": state['competition_scores_DENOISING_48000HZ'],
-                    "DEREVERBERATION_48000HZ": state['competition_scores_DEREVERBERATION_48000HZ'],
+                    "DEREVERBERATION_48000HZ": state['competititon_scores_DEREVERBERATION_48000HZ'],
                 }
                 
                 self.neuron_logger(
@@ -1878,18 +1880,6 @@ class SubnetValidator(Base.BaseNeuron):
                 message=f"Filtered model cache by validity: {self.model_cache}",
             )
 
-            self.neuron_logger(
-                severity="TRACE",
-                message="Filtering model cache by coldkey.",
-            )
-
-            self.filter_cache_by_ck()
-
-            self.neuron_logger(
-                severity="TRACE",
-                message=f"Filtered model cache by coldkey: {self.model_cache}",
-            )
-
     def filter_cache_by_validity(self):
         """Makes sure repo and revision exists, and revision is a commit hash."""
         new_model_cache = {}
@@ -2009,6 +1999,11 @@ class SubnetValidator(Base.BaseNeuron):
                 new_competition_miner_models[competition].append(benchmark)
                 self.models_evaluated_today[competition].append(benchmark)
 
+        self.neuron_logger(
+            severity="TRACE",
+            message=f"Models evaluated so far this competition: {self.models_evaluated_today}"
+        )
+
         return new_competition_miner_models
 
     def run_competitions_async(self):
@@ -2095,10 +2090,20 @@ class SubnetValidator(Base.BaseNeuron):
         filtered_models = {}
         for comp in new_competition_miner_models.keys():
 
+            self.neuron_logger(
+                severity="TRACE",
+                message=f"Pre-filtered models for competition: {comp}: {new_competition_miner_models[comp]}. Hotkeys: {self.hotkeys}"
+            )
+
              # In the case that multiple models have the same hash, we only want to include the model with the earliest block when the metadata was uploaded to the chain
             hash_filtered_models = Benchmarking.filter_models_with_same_hash(
                 new_competition_miner_models=new_competition_miner_models[comp],
                 hotkeys=self.hotkeys
+            )
+
+            self.neuron_logger(
+                severity="TRACE",
+                message=f"Hash filtered models: {hash_filtered_models}"
             )
             
             # In the case that multiple models have the same metadata, we only want to include the model with the earliest block when the metadata was uploaded to the chain
@@ -2107,7 +2112,22 @@ class SubnetValidator(Base.BaseNeuron):
                 hotkeys=self.hotkeys
             )
 
-            filtered_models[comp] = hash_metadata_filtered_models
+            self.neuron_logger(
+                severity="TRACE",
+                message=f"Hash and metadata filtered models: {hash_metadata_filtered_models}"
+            )
+
+            hash_metadata_ckpt_filtered_models = Benchmarking.filter_models_with_same_ckpt_hash(
+                new_competition_miner_models=hash_metadata_filtered_models,
+                hotkeys=self.hotkeys,
+            )
+
+            self.neuron_logger(
+                severity="TRACE",
+                message=f"Hash, metadata, and ckpt hash filtered models: {hash_metadata_ckpt_filtered_models}"
+            )
+
+            filtered_models[comp] = hash_metadata_ckpt_filtered_models
 
         self.miner_models = filtered_models
 
