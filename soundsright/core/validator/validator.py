@@ -1184,7 +1184,7 @@ class SubnetValidator(Base.BaseNeuron):
                     "DENOISING_16000HZ": state['competition_scores_DENOISING_16000HZ'],
                     "DEREVERBERATION_16000HZ": state['competition_scores_DEREVERBERATION_16000HZ'],
                     "DENOISING_48000HZ": state['competition_scores_DENOISING_48000HZ'],
-                    "DEREVERBERATION_48000HZ": state['competition_scores_DEREVERBERATION_48000HZ'],
+                    "DEREVERBERATION_48000HZ": state['competititon_scores_DEREVERBERATION_48000HZ'],
                 }
                 
                 self.neuron_logger(
