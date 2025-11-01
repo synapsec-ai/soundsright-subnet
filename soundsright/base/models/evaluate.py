@@ -54,7 +54,7 @@ class ModelEvaluationHandler:
             "status":60,
             "prepare":10,
             "upload":3,
-            "enhance":450,
+            "enhance":500,
             "download":3,
             "reset":10,
         }
