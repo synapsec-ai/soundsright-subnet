@@ -13,10 +13,10 @@ class ModuleConfig:
     def __init__(self):
 
         # Determine module code version
-        self.__version__ = "2.1.1"
+        self.__version__ = "2.1.2"
 
         # Determine the score version
-        self.__score_version__ = "5"
+        self.__score_version__ = "6"
 
         # Convert the version into a single integer
         self.__version_split__ = self.__version__.split(".")
