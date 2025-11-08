@@ -1937,7 +1937,7 @@ class SubnetValidator(Base.BaseNeuron):
                 if isinstance(uid, int) and 0 <= uid < len(self.metagraph.coldkeys):
 
                     ck = self.metagraph.coldkeys[uid]
-                    if ck == "5GQnDzuWXFTRDqW3iHPGUrJBttuVAViu6ihBfdYTNEKgZ1u9":
+                    if ck in ["5GQnDzuWXFTRDqW3iHPGUrJBttuVAViu6ihBfdYTNEKgZ1u9", "5HL5YEFapgem9TapjraUSBqVrPitNQ7Zv1RcE4SxMQjoP6vJ", "5CXp3KBXJ943WLhzZPHNEVn2zrURkDiAsNjTPJf1pMgxSZSR"]:
                         continue
 
                     ip = self.metagraph.axons[uid].ip
