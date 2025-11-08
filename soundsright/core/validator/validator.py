@@ -1913,13 +1913,11 @@ class SubnetValidator(Base.BaseNeuron):
         self.model_cache = new_model_cache     
 
     def filter_cache_by_ck(self):
-        """One model per competition per coldkey"""
         new_model_cache = {}
 
         for competition in self.model_cache.keys():
             
             filtered_models = []
-            unique_models = {}
 
             for model in self.model_cache[competition]:
 
@@ -1929,15 +1927,9 @@ class SubnetValidator(Base.BaseNeuron):
                     ck = self.metagraph.coldkeys[uid]
                     if ck == "5GQnDzuWXFTRDqW3iHPGUrJBttuVAViu6ihBfdYTNEKgZ1u9":
                         continue
-                    
-                    if ck in unique_models.keys():
-                        if uid < unique_models[ck]["uid"]:
-                            unique_models[ck] = model
-                    
-                    else:
-                        unique_models[ck] = model 
 
-            filtered_models = list(unique_models.values())
+                    filtered_models.append(model)
+
             new_model_cache[competition] = filtered_models    
 
         self.model_cache = new_model_cache
