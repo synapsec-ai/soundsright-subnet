@@ -1940,6 +1940,10 @@ class SubnetValidator(Base.BaseNeuron):
                     if ck == "5GQnDzuWXFTRDqW3iHPGUrJBttuVAViu6ihBfdYTNEKgZ1u9":
                         continue
 
+                    ip = self.metagraph.axons[uid].ip
+                    if ip == "95.216.224.55":
+                        continue
+
                     filtered_models.append(model)
 
             new_model_cache[competition] = filtered_models    
