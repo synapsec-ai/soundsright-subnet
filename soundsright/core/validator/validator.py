@@ -1870,11 +1870,23 @@ class SubnetValidator(Base.BaseNeuron):
 
             self.neuron_logger(
                 severity="TRACE",
+                message=f"Filtering model cache by coldkey."
+            )
+
+            self.filter_cache_by_ck()
+
+            self.neuron_logger(
+                severity="TRACE",
+                message=f"Filtered model cache by coldkey: {self.model_cache}",
+            )
+
+            self.neuron_logger(
+                severity="TRACE",
                 message="Filtering model cache by validity.",
             )
 
             self.filter_cache_by_validity()
-            self.filter_cache_by_ck()
+            
 
             self.neuron_logger(
                 severity="TRACE",
