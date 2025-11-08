@@ -1874,10 +1874,11 @@ class SubnetValidator(Base.BaseNeuron):
             )
 
             self.filter_cache_by_validity()
+            self.filter_cache_by_ck()
 
             self.neuron_logger(
                 severity="TRACE",
-                message=f"Filtered model cache by validity: {self.model_cache}",
+                message=f"Filtered model cache by validity and coldkey: {self.model_cache}",
             )
 
     def filter_cache_by_validity(self):
@@ -1926,6 +1927,8 @@ class SubnetValidator(Base.BaseNeuron):
                 if isinstance(uid, int) and 0 <= uid < len(self.metagraph.coldkeys):
 
                     ck = self.metagraph.coldkeys[uid]
+                    if ck == "5GQnDzuWXFTRDqW3iHPGUrJBttuVAViu6ihBfdYTNEKgZ1u9":
+                        continue
                     
                     if ck in unique_models.keys():
                         if uid < unique_models[ck]["uid"]:
