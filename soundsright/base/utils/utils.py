@@ -84,7 +84,7 @@ def validate_miner_response(response, debug_mode=False):
         if k not in validation_dict.keys() or not isinstance(response[k], validation_dict[k]) or response[k] == "":
             return False
         
-    if not debug_mode and response["hf_model_namespace"] == "synapsecai":
+    if not debug_mode and response["hf_model_namespace"] in ("synapsecai", "kerr0x23"):
         return False
     
     return True

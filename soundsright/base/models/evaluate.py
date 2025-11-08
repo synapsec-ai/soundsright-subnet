@@ -52,9 +52,9 @@ class ModelEvaluationHandler:
         # Timeout calculations
         self.base_timeouts = {
             "status":60,
-            "prepare":10,
+            "prepare":30,
             "upload":3,
-            "enhance":500,
+            "enhance":600,
             "download":3,
             "reset":10,
         }

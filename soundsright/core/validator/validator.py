@@ -1870,14 +1870,27 @@ class SubnetValidator(Base.BaseNeuron):
 
             self.neuron_logger(
                 severity="TRACE",
+                message=f"Filtering model cache by coldkey."
+            )
+
+            self.filter_cache_by_ck()
+
+            self.neuron_logger(
+                severity="TRACE",
+                message=f"Filtered model cache by coldkey: {self.model_cache}",
+            )
+
+            self.neuron_logger(
+                severity="TRACE",
                 message="Filtering model cache by validity.",
             )
 
             self.filter_cache_by_validity()
+            
 
             self.neuron_logger(
                 severity="TRACE",
-                message=f"Filtered model cache by validity: {self.model_cache}",
+                message=f"Filtered model cache by validity and coldkey: {self.model_cache}",
             )
 
     def filter_cache_by_validity(self):
@@ -1912,13 +1925,11 @@ class SubnetValidator(Base.BaseNeuron):
         self.model_cache = new_model_cache     
 
     def filter_cache_by_ck(self):
-        """One model per competition per coldkey"""
         new_model_cache = {}
 
         for competition in self.model_cache.keys():
             
             filtered_models = []
-            unique_models = {}
 
             for model in self.model_cache[competition]:
 
@@ -1926,15 +1937,11 @@ class SubnetValidator(Base.BaseNeuron):
                 if isinstance(uid, int) and 0 <= uid < len(self.metagraph.coldkeys):
 
                     ck = self.metagraph.coldkeys[uid]
-                    
-                    if ck in unique_models.keys():
-                        if uid < unique_models[ck]["uid"]:
-                            unique_models[ck] = model
-                    
-                    else:
-                        unique_models[ck] = model 
+                    if ck == "5GQnDzuWXFTRDqW3iHPGUrJBttuVAViu6ihBfdYTNEKgZ1u9":
+                        continue
 
-            filtered_models = list(unique_models.values())
+                    filtered_models.append(model)
+
             new_model_cache[competition] = filtered_models    
 
         self.model_cache = new_model_cache
