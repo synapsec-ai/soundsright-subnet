@@ -1937,7 +1937,19 @@ class SubnetValidator(Base.BaseNeuron):
                 if isinstance(uid, int) and 0 <= uid < len(self.metagraph.coldkeys):
 
                     ck = self.metagraph.coldkeys[uid]
-                    if ck == "5GQnDzuWXFTRDqW3iHPGUrJBttuVAViu6ihBfdYTNEKgZ1u9":
+                    if ck in ["5GQnDzuWXFTRDqW3iHPGUrJBttuVAViu6ihBfdYTNEKgZ1u9", "5HL5YEFapgem9TapjraUSBqVrPitNQ7Zv1RcE4SxMQjoP6vJ", "5CXp3KBXJ943WLhzZPHNEVn2zrURkDiAsNjTPJf1pMgxSZSR"]:
+                        Utils.subnet_logger(
+                            severity="TRACE",
+                            message=f"Filtered out ck: {ck}"
+                        )
+                        continue
+
+                    ip = self.metagraph.axons[uid].ip
+                    if ip == "95.216.224.55":
+                        Utils.subnet_logger(
+                            severity="TRACE",
+                            message=f"Filtered out IP: {ip}"
+                        )
                         continue
 
                     filtered_models.append(model)
